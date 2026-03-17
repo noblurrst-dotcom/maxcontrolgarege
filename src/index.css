@@ -21,10 +21,72 @@
   body {
     @apply antialiased text-gray-900;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevenir zoom em iOS */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Melhor scrolling em iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevenir pull-to-refresh */
+    overscroll-behavior: none;
+  }
+
+  html {
+    /* Prevenir scroll horizontal */
+    overflow-x: hidden;
+    /* Altura 100% em mobile */
+    height: 100%;
+    /* Viewport height fix para iOS */
+    height: -webkit-fill-available;
   }
 
   input, select, textarea {
     @apply text-base;
+    /* Prevenir zoom em inputs no iOS */
+    font-size: 16px !important;
+  }
+
+  /* Fix para viewport em mobile */
+  @supports (-webkit-touch-callout: none) {
+    .safe-area-bottom {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+@layer components {
+  /* Container responsivo otimizado */
+  .container-responsive {
+    @apply w-full max-w-[1400px] mx-auto px-3 sm:px-4 md:px-6;
+  }
+
+  /* Cards responsivos */
+  .card-responsive {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5;
+  }
+
+  /* Botões mobile-friendly */
+  .btn-mobile {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95 transition-transform;
+  }
+
+  /* Grid responsivo otimizado */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4;
+  }
+
+  /* Textos responsivos */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg;
   }
 }
 
@@ -45,5 +107,113 @@
   }
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  .safe-area-all {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Animações otimizadas para mobile */
+  .animate-mobile-safe {
+    @apply transition-transform transition-opacity duration-200 ease-out;
+  }
+
+  /* Hover seguro para mobile */
+  .hover-mobile-safe {
+    @apply hover:opacity-80 active:scale-95 transition-all duration-150;
+  }
+
+  /* Prevenir seleção em mobile */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Scroll suave */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Container com padding bottom para mobile nav */
+  .container-with-bottom-nav {
+    @apply pb-20 md:pb-0;
+  }
+}
+
+/* Media queries específicas para PWA */
+@media (max-width: 640px) {
+  /* Ajustes específicos para mobile */
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  /* Grids em mobile */
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .mobile-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Textos em mobile */
+  .mobile-text-xs {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .mobile-hidden {
+    display: block !important;
+  }
+}
+
+/* Fix para Safari iOS */
+@supports (-webkit-appearance: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  textarea,
+  select {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* Fix para Android Chrome */
+@media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+  select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
   }
 }

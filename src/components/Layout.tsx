@@ -66,8 +66,8 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 shadow-lg" style={{ backgroundColor: brand.cor_secundaria }}>
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-6">
+      <header className="sticky top-0 z-40 shadow-lg safe-area-top" style={{ backgroundColor: brand.cor_secundaria }}>
+        <div className="container-responsive">
           <div className="h-14 sm:h-16 flex items-center justify-between">
             {/* Logo */}
             <div
@@ -182,7 +182,7 @@ export default function Layout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+      <main className="flex-1 container-responsive container-with-bottom-nav py-4 sm:py-6">
         <Outlet />
       </main>
 
@@ -195,7 +195,7 @@ export default function Layout() {
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setMobileMoreOpen(false) }}
-                className={`flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors active:scale-95 ${
+                className={`btn-mobile flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors ${
                   isActive
                     ? ''
                     : 'text-gray-400'
@@ -203,20 +203,20 @@ export default function Layout() {
                 style={isActive ? { color: brand.cor_primaria } : undefined}
               >
                 <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                <span className={`mobile-text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
               </button>
             )
           })}
           {/* More button */}
           <button
             onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-            className={`flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors active:scale-95 ${
+            className={`btn-mobile flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors ${
               isMoreActive || mobileMoreOpen ? '' : 'text-gray-400'
             }`}
             style={isMoreActive || mobileMoreOpen ? { color: brand.cor_primaria } : undefined}
           >
             <MoreHorizontal size={20} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} />
-            <span className={`text-[10px] ${isMoreActive || mobileMoreOpen ? 'font-bold' : 'font-medium'}`}>Mais</span>
+            <span className={`mobile-text-xs ${isMoreActive || mobileMoreOpen ? 'font-bold' : 'font-medium'}`}>Mais</span>
           </button>
         </div>
 
