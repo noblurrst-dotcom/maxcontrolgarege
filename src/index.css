@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary-50: #f5ffe6;
+  --color-primary-100: #e8ffbf;
+  --color-primary-200: #d9ff80;
+  --color-primary-300: #d4ff4d;
+  --color-primary-400: #d2ff2b;
+  --color-primary-500: #CFFF04;
+  --color-primary-600: #a6cc03;
+  --color-primary-700: #7d9902;
+  --color-primary-800: #536602;
+  --color-primary-900: #2a3301;
+  --color-dark-800: #1a1a2e;
+  --color-dark-900: #0f0f1a;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-gray-900;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input, select, textarea {
+    @apply text-base;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
