@@ -10,6 +10,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, nome: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
+  signInWithApple: () => Promise<{ error: Error | null }>
+  resetPassword: (email: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -62,8 +65,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    })
+    return { error: error as Error | null }
+  }
+
+  const signInWithApple = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: window.location.origin }
+    })
+    return { error: error as Error | null }
+  }
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    })
+    return { error: error as Error | null }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, configured: !!isSupabaseConfigured, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, configured: !!isSupabaseConfigured, signIn, signUp, signOut, signInWithGoogle, signInWithApple, resetPassword }}>
       {children}
     </AuthContext.Provider>
   )
