@@ -10,22 +10,40 @@ import {
   Menu,
   X,
   DollarSign,
-    ClipboardCheck,
+  ClipboardCheck,
   Briefcase,
   MoreHorizontal,
   Settings,
+  Moon,
+  Sun,
+  UserCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useBrand } from '../contexts/BrandContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
   const { brand } = useBrand()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    if (profileOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [profileOpen])
 
   const handleSignOut = async () => {
     await signOut()
@@ -34,7 +52,6 @@ export default function Layout() {
   }
 
   const nomeUsuario = user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
-  const iniciais = nomeUsuario.slice(0, 2).toUpperCase()
 
   const navItems = [
     { path: '/', label: 'Painel', icon: LayoutDashboard },
@@ -44,7 +61,6 @@ export default function Layout() {
     { path: '/checklists', label: 'Checklists', icon: ClipboardCheck },
     { path: '/financeiro', label: 'Financeiro', icon: DollarSign },
     { path: '/servicos', label: 'Serviços', icon: Briefcase },
-    { path: '/configuracoes', label: 'Configurações', icon: Settings },
   ]
 
   const bottomNavItems = [
@@ -58,7 +74,6 @@ export default function Layout() {
     { path: '/financeiro', icon: DollarSign, label: 'Financeiro' },
     { path: '/checklists', icon: ClipboardCheck, label: 'Checklists' },
     { path: '/servicos', icon: Briefcase, label: 'Serviços' },
-    { path: '/configuracoes', icon: Settings, label: 'Config.' },
   ]
 
   const isMoreActive = moreItems.some(i => location.pathname === i.path)
@@ -112,28 +127,65 @@ export default function Layout() {
 
             {/* Right side */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => navigate('/vendas')}
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-opacity hover:opacity-90"
-                style={{ backgroundColor: brand.cor_primaria, color: brand.cor_secundaria }}
-              >
-                + Nova Venda
-              </button>
-              <div
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center cursor-pointer"
-                style={{ backgroundColor: brand.cor_primaria }}
-                title={nomeUsuario}
-              >
-                <span className="text-[10px] sm:text-xs font-bold" style={{ color: brand.cor_secundaria }}>{iniciais}</span>
+              {/* Profile dropdown */}
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: brand.cor_primaria }}
+                  title={nomeUsuario}
+                >
+                  <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: brand.cor_secundaria }} />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Nome do usuário */}
+                    <div className="px-4 py-2.5 border-b border-gray-100">
+                      <p className="text-sm font-bold text-gray-900 truncate">{nomeUsuario}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                    </div>
+
+                    {/* Configurações */}
+                    <button
+                      onClick={() => { navigate('/configuracoes'); setProfileOpen(false) }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings size={16} className="text-gray-400" />
+                      Configurações
+                    </button>
+
+                    {/* Modo noturno */}
+                    <button
+                      onClick={toggleTheme}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="flex items-center gap-3">
+                        {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-gray-400" />}
+                        {isDark ? 'Modo claro' : 'Modo noturno'}
+                      </span>
+                      <span className={`w-8 h-[18px] rounded-full flex items-center px-0.5 transition-colors ${
+                        isDark ? 'bg-primary-500 justify-end' : 'bg-gray-200 justify-start'
+                      }`}>
+                        <span className="w-3.5 h-3.5 bg-white rounded-full shadow-sm" />
+                      </span>
+                    </button>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100 my-1" />
+
+                    {/* Sair */}
+                    <button
+                      onClick={() => { setProfileOpen(false); handleSignOut() }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      Sair da conta
+                    </button>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={handleSignOut}
-                className="p-1.5 sm:p-2 text-gray-500 hover:text-red-400 transition-colors"
-                title="Sair"
-              >
-                <LogOut size={16} className="sm:hidden" />
-                <LogOut size={18} className="hidden sm:block" />
-              </button>
+
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-1.5 text-gray-400 hover:text-white transition-colors"
@@ -171,12 +223,6 @@ export default function Layout() {
                 )
               })}
             </div>
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-2 rounded-xl text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-            >
-              <LogOut size={16} /> Sair da conta
-            </button>
           </div>
         )}
       </header>

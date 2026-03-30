@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { fmt as formatCurrencyUtil, safeGetStorage } from '../lib/utils'
 import {
   ShoppingCart,
   CalendarPlus,
@@ -16,7 +17,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import type { Checklist } from '../types'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 function getSaudacao() {
@@ -26,9 +27,7 @@ function getSaudacao() {
   return 'boa noite'
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
+const formatCurrency = formatCurrencyUtil
 
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -379,10 +378,10 @@ export default function Dashboard() {
   }
 
   // Dados do localStorage
-  const vendas = useMemo(() => { try { return JSON.parse(localStorage.getItem('vendas') || '[]') } catch { return [] } }, [])
-  const agendamentos = useMemo(() => { try { return JSON.parse(localStorage.getItem('agendamentos') || '[]') } catch { return [] } }, [])
-  const clientes = useMemo(() => { try { return JSON.parse(localStorage.getItem('clientes') || '[]') } catch { return [] } }, [])
-  const financeiro = useMemo(() => { try { return JSON.parse(localStorage.getItem('financeiro') || '[]') } catch { return [] } }, [])
+  const vendas = useMemo(() => safeGetStorage<any[]>('vendas', []), [])
+  const agendamentos = useMemo(() => safeGetStorage<any[]>('agendamentos', []), [])
+  const clientes = useMemo(() => safeGetStorage<any[]>('clientes', []), [])
+  const financeiro = useMemo(() => safeGetStorage<any[]>('financeiro', []), [])
   
   // Métricas financeiras do mês
   const isMes = (d: string) => { const dt = new Date(d); return dt.getMonth() === mesNum && dt.getFullYear() === anoNum }
@@ -403,10 +402,22 @@ export default function Dashboard() {
     return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 5)
   }, [vendas])
 
-  // Taxa de comparecimento (agendamentos concluídos / total deste mês)
-  const agendMes = useMemo(() => agendamentos.filter((a: any) => isMes(a.data_hora || a.created_at)), [agendamentos])
-  const agendConcluidos = agendMes.filter((a: any) => a.status === 'concluido').length
-  const taxaComparecimento = agendMes.length > 0 ? Math.round((agendConcluidos / agendMes.length) * 100) : 0
+  // Semana atual para calendário semanal
+  const [semanaOffset, setSemanaOffset] = useState(0)
+  const inicioSemana = useMemo(() => {
+    const base = startOfWeek(new Date(), { weekStartsOn: 1 }) // Começa na segunda
+    return addDays(base, semanaOffset * 7)
+  }, [semanaOffset])
+  const diasDaSemana = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i)), [inicioSemana])
+
+  // Agendamentos da semana para o calendário semanal
+  const agendamentosDaSemana = useMemo(() => {
+    return agendamentos.filter((a: any) => {
+      if (!a.data_hora) return false
+      const dataAgend = new Date(a.data_hora)
+      return diasDaSemana.some(d => isSameDay(d, dataAgend))
+    })
+  }, [agendamentos, diasDaSemana])
 
 
   // Vendas por forma de pagamento
@@ -470,30 +481,127 @@ export default function Dashboard() {
         <ResumoFinanceiro entradas={vendasMes + entradasMes} saidas={saidasMes} saldo={saldoMes} />
       </div>
 
-      
-      {/* Taxas e indicadores */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <CardTitle>Taxa de Comparecimento (Agendamentos)</CardTitle>
-            <span className="text-xs text-gray-400">Este mês</span>
-          </div>
-          {agendMes.length > 0 ? (
+      {/* Calendário Semanal */}
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <CalendarPlus size={20} className="text-primary-600" />
             <div>
-              <div className="flex items-end gap-2 mb-2">
-                <span className="text-3xl font-bold text-primary-600">{taxaComparecimento}%</span>
-                <span className="text-xs text-gray-400 mb-1">{agendConcluidos} de {agendMes.length} agendamentos</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3">
-                <div className="bg-primary-500 h-3 rounded-full transition-all" style={{ width: `${taxaComparecimento}%` }} />
-              </div>
+              <h3 className="text-base font-bold text-gray-900">Agenda semanal</h3>
+              <p className="text-[11px] text-gray-400">
+                {format(diasDaSemana[0], "d MMM", { locale: ptBR })} — {format(diasDaSemana[6], "d MMM yyyy", { locale: ptBR })}
+              </p>
             </div>
-          ) : (
-            <p className="text-sm text-gray-400 py-4 text-center">Não há dados de comparecimento.</p>
-          )}
-        </Card>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSemanaOffset(s => s - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft size={18} className="text-gray-500" />
+            </button>
+            <button
+              onClick={() => setSemanaOffset(0)}
+              className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              Hoje
+            </button>
+            <button onClick={() => setSemanaOffset(s => s + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronRight size={18} className="text-gray-500" />
+            </button>
+          </div>
+        </div>
 
-      </div>
+        {/* Grid semanal estilo Google Calendar */}
+        <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5">
+          <div className="min-w-[640px]">
+            {/* Header com dias da semana */}
+            <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
+              <div /> {/* espaço para coluna de horários */}
+              {diasDaSemana.map((dia) => {
+                const ehHoje = isToday(dia)
+                return (
+                  <div key={dia.toISOString()} className="text-center">
+                    <p className={`text-[10px] font-semibold uppercase tracking-wider ${ehHoje ? 'text-primary-600' : 'text-gray-400'}`}>
+                      {format(dia, 'EEE', { locale: ptBR })}
+                    </p>
+                    <p className={`text-lg font-bold mt-0.5 leading-none ${
+                      ehHoje ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center' : 'text-gray-700'
+                    }`}>
+                      {format(dia, 'd')}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Time slots */}
+            <div className="relative max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+              {Array.from({ length: 14 }, (_, i) => i + 7).map((hora) => {
+                const horaStr = `${String(hora).padStart(2, '0')}:00`
+                return (
+                  <div key={hora} className="grid grid-cols-[50px_repeat(7,1fr)] min-h-[48px] group">
+                    {/* Horário */}
+                    <div className="text-[10px] font-medium text-gray-400 pr-2 text-right pt-0.5 -mt-1.5 select-none">
+                      {horaStr}
+                    </div>
+                    {/* Colunas dos dias */}
+                    {diasDaSemana.map((dia) => {
+                      const dStr = format(dia, 'yyyy-MM-dd')
+                      const agendsDaHora = agendamentosDaSemana.filter((a: any) => {
+                        const dt = new Date(a.data_hora)
+                        return (a.data_hora || '').startsWith(dStr) && dt.getHours() === hora
+                      })
+                      const ehHoje = isToday(dia)
+                      return (
+                        <div
+                          key={dia.toISOString() + hora}
+                          className={`border-t border-l border-gray-100 px-0.5 py-0.5 relative ${
+                            ehHoje ? 'bg-primary-50/30' : 'group-hover:bg-gray-50/50'
+                          }`}
+                        >
+                          {agendsDaHora.map((ag: any, idx: number) => {
+                            const statusColors: Record<string, string> = {
+                              pendente: 'bg-amber-100 border-amber-300 text-amber-800',
+                              confirmado: 'bg-blue-100 border-blue-300 text-blue-800',
+                              em_andamento: 'bg-primary-100 border-primary-300 text-primary-800',
+                              concluido: 'bg-emerald-100 border-emerald-300 text-emerald-800',
+                              cancelado: 'bg-red-100 border-red-300 text-red-700 line-through opacity-60',
+                            }
+                            const cor = statusColors[ag.status] || 'bg-gray-100 border-gray-300 text-gray-700'
+                            return (
+                              <div
+                                key={ag.id || idx}
+                                title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + formatCurrency(ag.valor) : ''}`}
+                                className={`text-[9px] leading-tight font-semibold px-1.5 py-1 rounded-md border-l-2 truncate cursor-default mb-0.5 ${cor}`}
+                              >
+                                {ag.nome_cliente || 'Agendamento'}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Legenda de status */}
+        <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
+          {[
+            { label: 'Pendente', color: 'bg-amber-300' },
+            { label: 'Confirmado', color: 'bg-blue-300' },
+            { label: 'Em andamento', color: 'bg-primary-400' },
+            { label: 'Concluído', color: 'bg-emerald-300' },
+            { label: 'Cancelado', color: 'bg-red-300' },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${s.color}`} />
+              <span className="text-[10px] text-gray-400">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Vendas por forma de pagamento + Top clientes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">

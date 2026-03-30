@@ -128,6 +128,7 @@ export interface Agendamento {
   id: string;
   user_id: string;
   cliente_id: string | null;
+  venda_id?: string | null;
   nome_cliente: string;
   telefone_cliente: string;
   servico: string;

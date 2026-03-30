@@ -28,10 +28,11 @@ export default function Servicos() {
   const carregarServicos = async () => {
     setLoading(true)
     try {
+      if (!user) return
       const { data, error } = await supabase
         .from('servicos')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .order('nome')
 
       if (error) throw error
@@ -69,6 +70,11 @@ export default function Servicos() {
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Formato inválido. Use JPG, PNG, WebP ou GIF.')
+      return
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error('A foto deve ter no máximo 5MB')
       return

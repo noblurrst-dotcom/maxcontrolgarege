@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
-import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import type { Agendamento, Servico } from '../types'
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
-function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+import type { Agendamento, Servico, Venda } from '../types'
+import { uid, fmt, safeGetStorage, safeSetStorage, sanitizePhone } from '../lib/utils'
+import { useDebounce } from '../hooks/useDebounce'
+import ClientePicker from '../components/ClientePicker'
 
 const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
   pendente: { label: 'Pendente', color: 'text-amber-600', bg: 'bg-amber-100' },
@@ -17,13 +17,15 @@ const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; 
   cancelado: { label: 'Cancelado', color: 'text-red-500', bg: 'bg-red-100' },
 }
 
-const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '' })
+const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '' })
 
 export default function Agenda() {
   const { user } = useAuth()
-  const [lista, setLista] = useState<Agendamento[]>(() => { try { return JSON.parse(localStorage.getItem('agendamentos') || '[]') } catch { return [] } })
+  const [lista, setLista] = useState<Agendamento[]>(() => safeGetStorage<Agendamento[]>('agendamentos', []))
   const [servicos, setServicos] = useState<Servico[]>([])
+  const vendas = useMemo(() => safeGetStorage<Venda[]>('vendas', []), [])
   const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todos' | Agendamento['status']>('todos')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(initForm())
@@ -38,10 +40,11 @@ export default function Agenda() {
 
   const carregarServicos = async () => {
     try {
+      if (!user) return
       const { data, error } = await supabase
         .from('servicos')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .order('nome')
 
       if (error) throw error
@@ -52,7 +55,7 @@ export default function Agenda() {
     }
   }
 
-  const salvar = (l: Agendamento[]) => { setLista(l); localStorage.setItem('agendamentos', JSON.stringify(l)) }
+  const salvar = (l: Agendamento[]) => { setLista(l); safeSetStorage('agendamentos', l) }
 
   const adicionar = () => {
     if (!form.nome_cliente || !form.data_hora) return
@@ -60,6 +63,7 @@ export default function Agenda() {
     const desconto = parseFloat(form.desconto || '0')
     const novo: Agendamento = {
       id: uid(), user_id: '', cliente_id: null,
+      venda_id: form.vendaId || null,
       nome_cliente: form.nome_cliente, telefone_cliente: form.telefone_cliente,
       servico: form.servico, titulo: form.titulo,
       data_hora: form.data_hora, data_hora_fim: form.data_hora_fim,
@@ -78,20 +82,22 @@ export default function Agenda() {
   const enviarWhatsApp = (a: Agendamento) => {
     const dataStr = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
     const texto = `*Agendamento*${a.titulo ? ` - ${a.titulo}` : ''}\nCliente: ${a.nome_cliente}\n${a.servico ? `Serviço: ${a.servico}\n` : ''}Data: ${dataStr}${a.valor ? `\nValor: ${fmt(a.valor - (a.desconto || 0))}` : ''}${a.observacoes ? `\nObs: ${a.observacoes}` : ''}`
-    const tel = a.telefone_cliente?.replace(/\D/g, '')
-    window.open(`https://wa.me/${tel ? '55' + tel : ''}?text=${encodeURIComponent(texto)}`, '_blank')
+    const tel = sanitizePhone(a.telefone_cliente || '')
+    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
-  const filtradas = lista.filter((a) => {
-    const t = busca.toLowerCase()
+  const filtradas = useMemo(() => lista.filter((a) => {
+    const t = buscaDebounced.toLowerCase()
     const matchBusca = a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
     const matchStatus = filtroStatus === 'todos' || a.status === filtroStatus
     return matchBusca && matchStatus
-  })
+  }), [lista, buscaDebounced, filtroStatus])
 
   const hojeStr = format(hoje, 'yyyy-MM-dd')
-  const agendHoje = lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length
-  const pendentes = lista.filter((a) => a.status === 'pendente').length
+  const { agendHoje, pendentes } = useMemo(() => ({
+    agendHoje: lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length,
+    pendentes: lista.filter((a) => a.status === 'pendente').length,
+  }), [lista, hojeStr])
   const confirmados = lista.filter((a) => a.status === 'confirmado' || a.status === 'em_andamento').length
   const concluidos = lista.filter((a) => a.status === 'concluido').length
 
@@ -193,19 +199,61 @@ export default function Agenda() {
               <button onClick={() => setModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
+              {/* Vincular a uma venda */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1.5">
+                  <Link2 size={12} /> Vincular a uma venda (opcional)
+                </label>
+                <select
+                  value={form.vendaId}
+                  onChange={(e) => {
+                    const vId = e.target.value
+                    if (vId) {
+                      const v = vendas.find(vd => vd.id === vId)
+                      if (v) {
+                        setForm(prev => ({
+                          ...prev,
+                          vendaId: vId,
+                          nome_cliente: v.nome_cliente,
+                          servico: v.descricao,
+                          titulo: v.descricao || v.nome_cliente,
+                          valor: String(v.valor_total || v.valor),
+                          desconto: String(v.desconto || 0),
+                          servicoSelecionado: '',
+                        }))
+                        return
+                      }
+                    }
+                    setForm(prev => ({ ...prev, vendaId: '' }))
+                  }}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Sem vínculo — preencher manualmente</option>
+                  {vendas.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome_cliente} — {v.descricao || 'Sem descrição'} — {fmt(v.valor_total || v.valor)} — {new Date(v.data_venda).toLocaleDateString('pt-BR')}
+                    </option>
+                  ))}
+                </select>
+                {form.vendaId && (
+                  <p className="text-[10px] text-primary-600 font-medium mt-1 flex items-center gap-1">
+                    <Link2 size={10} /> Vinculado a venda de {vendas.find(v => v.id === form.vendaId)?.nome_cliente}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Título do agendamento</label>
                 <input type="text" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ex: Polimento Honda Civic" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Cliente *</label>
-                  <input type="text" value={form.nome_cliente} onChange={(e) => setForm({ ...form, nome_cliente: e.target.value })} placeholder="Nome do cliente" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
-                  <input type="tel" value={form.telefone_cliente} onChange={(e) => setForm({ ...form, telefone_cliente: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
+              <ClientePicker
+                value={form.nome_cliente}
+                telefone={form.telefone_cliente}
+                onChange={(nome, tel) => setForm({ ...form, nome_cliente: nome, telefone_cliente: tel || form.telefone_cliente })}
+              />
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
+                <input type="tel" value={form.telefone_cliente} onChange={(e) => setForm({ ...form, telefone_cliente: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Serviço</label>

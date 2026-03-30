@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -38,6 +39,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <BrandProvider>
       <AuthProvider>
         <Toaster
@@ -77,6 +79,7 @@ function App() {
         </Suspense>
       </AuthProvider>
       </BrandProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, ArrowRight } from 'lucide-react'
 import type { Venda, FormaPagamento, PreVenda, PreVendaItem } from '../types'
 import { useBrand } from '../contexts/BrandContext'
-import jsPDF from 'jspdf'
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
-function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { useDebounce } from '../hooks/useDebounce'
+import ClientePicker from '../components/ClientePicker'
+// jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
   { value: 'pix', label: 'Pix' },
@@ -23,22 +23,25 @@ const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: 
 export default function Vendas() {
   const { brand } = useBrand()
   const [tab, setTab] = useState<'vendas' | 'prevenda'>('vendas')
-  const [vendas, setVendas] = useState<Venda[]>(() => { try { return JSON.parse(localStorage.getItem('vendas') || '[]') } catch { return [] } })
+  const [vendas, setVendas] = useState<Venda[]>(() => safeGetStorage<Venda[]>('vendas', []))
   const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'aberta' | 'fechada'>('todas')
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Venda | null>(null)
+  const [editDetalhe, setEditDetalhe] = useState<{ valor: string; desconto: string; forma_pagamento: FormaPagamento; parcelas: string; descontoTipo: 'valor' | 'percentual' } | null>(null)
   const [form, setForm] = useState(initForm())
+  const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
 
   // Pré-Venda state
-  const [preVendas, setPreVendas] = useState<PreVenda[]>(() => { try { return JSON.parse(localStorage.getItem('pre_vendas') || '[]') } catch { return [] } })
+  const [preVendas, setPreVendas] = useState<PreVenda[]>(() => safeGetStorage<PreVenda[]>('pre_vendas', []))
   const [pvModal, setPvModal] = useState(false)
   const [pvDetalhe, setPvDetalhe] = useState<PreVenda | null>(null)
   const [pvForm, setPvForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
   const [pvItens, setPvItens] = useState<PreVendaItem[]>([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
 
-  const salvar = (l: Venda[]) => { setVendas(l); localStorage.setItem('vendas', JSON.stringify(l)) }
-  const salvarPv = (l: PreVenda[]) => { setPreVendas(l); localStorage.setItem('pre_vendas', JSON.stringify(l)) }
+  const salvar = (l: Venda[]) => { setVendas(l); safeSetStorage('vendas', l) }
+  const salvarPv = (l: PreVenda[]) => { setPreVendas(l); safeSetStorage('pre_vendas', l) }
 
   // Pré-Venda helpers
   const pvSubtotal = pvItens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0)
@@ -77,7 +80,8 @@ export default function Vendas() {
     setTab('vendas')
   }
 
-  const exportarPvPDF = (o: PreVenda) => {
+  const exportarPvPDF = async (o: PreVenda) => {
+    const { default: jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     const pw = doc.internal.pageSize.getWidth()
     const margin = 20
@@ -122,7 +126,8 @@ export default function Vendas() {
   const adicionar = () => {
     if (!form.nome_cliente || !form.valor) return
     const valor = parseFloat(form.valor)
-    const desconto = parseFloat(form.desconto || '0')
+    const descRaw = parseFloat(form.desconto || '0')
+    const desconto = descontoTipo === 'percentual' ? valor * (descRaw / 100) : descRaw
     const valorTotal = Math.max(valor - desconto, 0)
     const nova: Venda = {
       id: uid(), user_id: '', cliente_id: null, nome_cliente: form.nome_cliente,
@@ -145,19 +150,23 @@ export default function Vendas() {
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
-  const filtradas = vendas.filter((v) => {
-    const t = busca.toLowerCase()
+  const filtradas = useMemo(() => vendas.filter((v) => {
+    const t = buscaDebounced.toLowerCase()
     const matchBusca = v.nome_cliente.toLowerCase().includes(t) || v.descricao.toLowerCase().includes(t)
     const matchStatus = filtroStatus === 'todas' || v.status === filtroStatus
     return matchBusca && matchStatus
-  })
+  }), [vendas, buscaDebounced, filtroStatus])
 
-  const hoje = new Date().toISOString().split('T')[0]
-  const totalHoje = vendas.filter((v) => v.data_venda === hoje).reduce((a, v) => a + (v.valor_total || v.valor), 0)
-  const mesAtual = new Date().getMonth()
-  const anoAtual = new Date().getFullYear()
-  const totalMes = vendas.filter((v) => { const d = new Date(v.data_venda); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual }).reduce((a, v) => a + (v.valor_total || v.valor), 0)
-  const abertas = vendas.filter(v => v.status === 'aberta').length
+  const { totalHoje, totalMes, abertas } = useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0]
+    const mesAtual = new Date().getMonth()
+    const anoAtual = new Date().getFullYear()
+    return {
+      totalHoje: vendas.filter((v) => v.data_venda === hoje).reduce((a, v) => a + (v.valor_total || v.valor), 0),
+      totalMes: vendas.filter((v) => { const d = new Date(v.data_venda); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual }).reduce((a, v) => a + (v.valor_total || v.valor), 0),
+      abertas: vendas.filter(v => v.status === 'aberta').length,
+    }
+  }, [vendas])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -167,11 +176,9 @@ export default function Vendas() {
           <p className="text-sm text-gray-400 mt-0.5">{vendas.length} venda{vendas.length !== 1 ? 's' : ''}{abertas > 0 ? ` · ${abertas} aberta${abertas !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <div className="flex gap-2">
-          {tab === 'prevenda' && (
-            <button onClick={() => setPvModal(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-xs font-bold transition-colors shadow-sm">
-              <Plus size={14} /> Nova Pré-Venda
-            </button>
-          )}
+          <button onClick={() => { setPvModal(true); setTab('prevenda') }} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
+            <FileText size={14} /> Nova Pré-Venda
+          </button>
           <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
             <Plus size={16} /> Nova Venda
           </button>
@@ -264,10 +271,10 @@ export default function Vendas() {
               <button onClick={() => setModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Cliente *</label>
-                <input type="text" value={form.nome_cliente} onChange={(e) => setForm({ ...form, nome_cliente: e.target.value })} placeholder="Nome do cliente" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-              </div>
+              <ClientePicker
+                value={form.nome_cliente}
+                onChange={(nome) => setForm({ ...form, nome_cliente: nome })}
+              />
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Serviços / Descrição</label>
                 <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Polimento completo + Higienização" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
@@ -278,8 +285,14 @@ export default function Vendas() {
                   <input type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Desconto (R$)</label>
-                  <input type="number" step="0.01" value={form.desconto} onChange={(e) => setForm({ ...form, desconto: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Desconto</label>
+                  <div className="flex gap-1">
+                    <input type="number" step="0.01" value={form.desconto} onChange={(e) => setForm({ ...form, desconto: e.target.value })} placeholder="0,00" className="flex-1 min-w-0 px-3 py-2.5 border border-gray-200 rounded-l-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                    <div className="flex border border-gray-200 rounded-r-xl overflow-hidden">
+                      <button type="button" onClick={() => setDescontoTipo('valor')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'valor' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400 hover:text-gray-600'}`}>R$</button>
+                      <button type="button" onClick={() => setDescontoTipo('percentual')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'percentual' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400 hover:text-gray-600'}`}>%</button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -314,9 +327,19 @@ export default function Vendas() {
               {form.valor && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-1">
                   <p className="text-xs font-bold text-gray-600 mb-2">Resumo da venda</p>
-                  <div className="flex justify-between text-xs"><span className="text-gray-500">Sub-total</span><span className="font-semibold">{fmt(parseFloat(form.valor) || 0)}</span></div>
-                  {parseFloat(form.desconto || '0') > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="font-semibold text-red-500">-{fmt(parseFloat(form.desconto))}</span></div>}
-                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-emerald-600">{fmt(Math.max((parseFloat(form.valor) || 0) - (parseFloat(form.desconto || '0')), 0))}</span></div>
+                  {(() => {
+                    const subtotal = parseFloat(form.valor) || 0
+                    const descRaw = parseFloat(form.desconto || '0')
+                    const descValor = descontoTipo === 'percentual' ? subtotal * (descRaw / 100) : descRaw
+                    const total = Math.max(subtotal - descValor, 0)
+                    return (
+                      <>
+                        <div className="flex justify-between text-xs"><span className="text-gray-500">Sub-total</span><span className="font-semibold">{fmt(subtotal)}</span></div>
+                        {descRaw > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto{descontoTipo === 'percentual' ? ` (${descRaw}%)` : ''}</span><span className="font-semibold text-red-500">-{fmt(descValor)}</span></div>}
+                        <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-emerald-600">{fmt(total)}</span></div>
+                      </>
+                    )
+                  })()}
                 </div>
               )}
               <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
@@ -329,11 +352,11 @@ export default function Vendas() {
 
       {/* Modal Detalhe da Venda */}
       {detalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDetalhe(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setDetalhe(null); setEditDetalhe(null) }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">Venda - {detalhe.status === 'fechada' ? 'Fechada' : 'Aberta'}</h2>
-              <button onClick={() => setDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <button onClick={() => { setDetalhe(null); setEditDetalhe(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -341,13 +364,108 @@ export default function Vendas() {
                 <div><p className="text-sm font-bold text-gray-900">{detalhe.nome_cliente}</p><p className="text-xs text-gray-400">Cliente</p></div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-bold text-gray-600 mb-2">Resumo da venda</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-600">Resumo da venda</p>
+                  {!editDetalhe && (
+                    <button
+                      onClick={() => setEditDetalhe({
+                        valor: String(detalhe.valor),
+                        desconto: String(detalhe.desconto || 0),
+                        forma_pagamento: detalhe.forma_pagamento,
+                        parcelas: String(detalhe.parcelas || 1),
+                        descontoTipo: 'valor',
+                      })}
+                      className="text-[10px] font-bold text-primary-600 hover:text-primary-700 transition-colors"
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
                 <div className="flex justify-between text-xs"><span className="text-gray-500">Venda do dia</span><span>{new Date(detalhe.data_venda).toLocaleDateString('pt-BR')}</span></div>
                 {detalhe.descricao && <div className="flex justify-between text-xs"><span className="text-gray-500">Serviços</span><span>{detalhe.descricao}</span></div>}
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Subtotal</span><span>{fmt(detalhe.valor)}</span></div>
-                {detalhe.desconto > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="text-red-500">-{fmt(detalhe.desconto)}</span></div>}
-                <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Valor total</span><span className="text-emerald-600">{fmt(detalhe.valor_total || detalhe.valor)}</span></div>
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Pagamento</span><span>{FORMAS.find(f => f.value === detalhe.forma_pagamento)?.label}{detalhe.parcelas > 1 ? ` · ${detalhe.parcelas}x` : ''}</span></div>
+
+                {editDetalhe ? (
+                  <div className="space-y-3 pt-2 border-t border-gray-200 mt-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-medium text-gray-500 mb-1 block">Valor (R$)</label>
+                        <input type="number" step="0.01" value={editDetalhe.valor} onChange={(e) => setEditDetalhe({ ...editDetalhe, valor: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-gray-500 mb-1 block">Desconto</label>
+                        <div className="flex gap-0.5">
+                          <input type="number" step="0.01" value={editDetalhe.desconto} onChange={(e) => setEditDetalhe({ ...editDetalhe, desconto: e.target.value })} className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-l-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                          <div className="flex border border-gray-200 rounded-r-lg overflow-hidden">
+                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'valor' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'valor' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400'}`}>R$</button>
+                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'percentual' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'percentual' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400'}`}>%</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-medium text-gray-500 mb-1 block">Pagamento</label>
+                        <select value={editDetalhe.forma_pagamento} onChange={(e) => setEditDetalhe({ ...editDetalhe, forma_pagamento: e.target.value as FormaPagamento })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                          {FORMAS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-gray-500 mb-1 block">Parcelas</label>
+                        <select value={editDetalhe.parcelas} onChange={(e) => setEditDetalhe({ ...editDetalhe, parcelas: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                          {PARCELAS.map((p) => <option key={p} value={p}>{p}x</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {(() => {
+                      const edSub = parseFloat(editDetalhe.valor) || 0
+                      const edDescRaw = parseFloat(editDetalhe.desconto) || 0
+                      const edDescVal = editDetalhe.descontoTipo === 'percentual' ? edSub * (edDescRaw / 100) : edDescRaw
+                      return (
+                        <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2">
+                          <span>Novo total</span>
+                          <span className="text-emerald-600">{fmt(Math.max(edSub - edDescVal, 0))}</span>
+                        </div>
+                      )
+                    })()}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditDetalhe(null)}
+                        className="flex-1 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => {
+                          const novoValor = parseFloat(editDetalhe.valor) || detalhe.valor
+                          const descRaw = parseFloat(editDetalhe.desconto) || 0
+                          const novoDesconto = editDetalhe.descontoTipo === 'percentual' ? novoValor * (descRaw / 100) : descRaw
+                          const novoTotal = Math.max(novoValor - novoDesconto, 0)
+                          const atualizada = {
+                            ...detalhe,
+                            valor: novoValor,
+                            desconto: novoDesconto,
+                            valor_total: novoTotal,
+                            forma_pagamento: editDetalhe.forma_pagamento,
+                            parcelas: parseInt(editDetalhe.parcelas) || 1,
+                          }
+                          salvar(vendas.map(v => v.id === detalhe.id ? atualizada : v))
+                          setDetalhe(atualizada)
+                          setEditDetalhe(null)
+                        }}
+                        className="flex-1 py-2 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Salvar alterações
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Subtotal</span><span>{fmt(detalhe.valor)}</span></div>
+                    {detalhe.desconto > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="text-red-500">-{fmt(detalhe.desconto)}</span></div>}
+                    <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Valor total</span><span className="text-emerald-600">{fmt(detalhe.valor_total || detalhe.valor)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Pagamento</span><span>{FORMAS.find(f => f.value === detalhe.forma_pagamento)?.label}{detalhe.parcelas > 1 ? ` · ${detalhe.parcelas}x` : ''}</span></div>
+                  </>
+                )}
                 {detalhe.funcionario && <div className="flex justify-between text-xs"><span className="text-gray-500">Funcionário</span><span>{detalhe.funcionario}</span></div>}
                 {detalhe.observacoes && <div className="text-xs text-gray-500 mt-2"><span className="font-medium">Obs:</span> {detalhe.observacoes}</div>}
               </div>

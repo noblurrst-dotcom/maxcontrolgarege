@@ -25,14 +25,20 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const isDev = import.meta.env.DEV
       return (
         <div style={{ padding: 40, fontFamily: 'sans-serif', background: '#fee2e2', minHeight: '100vh' }}>
           <h1 style={{ color: '#dc2626', fontSize: 24 }}>Erro na aplicação</h1>
-          <pre style={{ background: '#fff', padding: 16, borderRadius: 8, marginTop: 16, overflow: 'auto', fontSize: 14, color: '#333' }}>
-            {this.state.error?.message}
-            {'\n\n'}
-            {this.state.error?.stack}
-          </pre>
+          <p style={{ color: '#666', marginTop: 8, fontSize: 16 }}>
+            Algo deu errado. Tente recarregar a página.
+          </p>
+          {isDev && (
+            <pre style={{ background: '#fff', padding: 16, borderRadius: 8, marginTop: 16, overflow: 'auto', fontSize: 14, color: '#333' }}>
+              {this.state.error?.message}
+              {'\n\n'}
+              {this.state.error?.stack}
+            </pre>
+          )}
           <button
             onClick={() => window.location.reload()}
             style={{ marginTop: 16, padding: '10px 20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}

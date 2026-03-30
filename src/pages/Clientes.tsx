@@ -1,20 +1,20 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin } from 'lucide-react'
 import type { Cliente } from '../types'
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
-function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+import { uid, fmt, safeGetStorage, safeSetStorage, sanitizePhone } from '../lib/utils'
+import { useDebounce } from '../hooks/useDebounce'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
 
 export default function Clientes() {
-  const [lista, setLista] = useState<Cliente[]>(() => { try { return JSON.parse(localStorage.getItem('clientes') || '[]') } catch { return [] } })
+  const [lista, setLista] = useState<Cliente[]>(() => safeGetStorage<Cliente[]>('clientes', []))
   const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Cliente | null>(null)
   const [form, setForm] = useState(initForm())
 
-  const salvar = (l: Cliente[]) => { setLista(l); localStorage.setItem('clientes', JSON.stringify(l)) }
+  const salvar = (l: Cliente[]) => { setLista(l); safeSetStorage('clientes', l) }
 
   const adicionar = () => {
     if (!form.nome) return
@@ -33,21 +33,22 @@ export default function Clientes() {
   const remover = (id: string) => { salvar(lista.filter((c) => c.id !== id)); setDetalhe(null) }
 
   const enviarWhatsApp = (c: Cliente) => {
-    const tel = c.telefone?.replace(/\D/g, '')
-    window.open(`https://wa.me/${tel ? '55' + tel : ''}`, '_blank')
+    const tel = sanitizePhone(c.telefone || '')
+    if (!tel) return
+    window.open(`https://wa.me/${tel}`, '_blank')
   }
 
-  const filtradas = lista.filter((c) => {
-    const t = busca.toLowerCase()
+  const filtradas = useMemo(() => lista.filter((c) => {
+    const t = buscaDebounced.toLowerCase()
     return c.nome.toLowerCase().includes(t) || c.placa.toLowerCase().includes(t) || c.telefone.includes(t) || (c.cpf_cnpj || '').includes(t)
-  })
+  }), [lista, buscaDebounced])
 
-  const aniversariantes = lista.filter(c => {
+  const aniversariantes = useMemo(() => lista.filter(c => {
     if (!c.aniversario) return false
     const [, m, d] = c.aniversario.split('-')
     const now = new Date()
     return parseInt(m) === now.getMonth() + 1 && parseInt(d) === now.getDate()
-  })
+  }), [lista])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">

@@ -19,17 +19,20 @@
 
 @layer base {
   body {
-    @apply antialiased text-gray-900;
+    @apply antialiased text-gray-900 bg-[#f5f5f5];
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Prevenir zoom em iOS */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    /* Melhor scrolling em iOS */
     -webkit-overflow-scrolling: touch;
-    /* Prevenir pull-to-refresh */
     overscroll-behavior: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body,
+  html.dark body {
+    @apply bg-[#111118] text-gray-100;
   }
 
   html {
@@ -64,6 +67,9 @@
   /* Cards responsivos */
   .card-responsive {
     @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5;
+  }
+  .dark .card-responsive {
+    @apply bg-[#1a1a28] border-[#2a2a3d] shadow-none;
   }
 
   /* Botões mobile-friendly */
@@ -206,6 +212,83 @@
     border-radius: 0;
   }
 }
+
+/* === DARK MODE OVERRIDES === */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Backgrounds */
+.dark .bg-white { background-color: #1a1a28 !important; }
+.dark .bg-gray-50 { background-color: #15151f !important; }
+.dark .bg-\[\#f5f5f5\] { background-color: #111118 !important; }
+
+/* Text */
+.dark .text-gray-900 { color: #e5e5ef !important; }
+.dark .text-gray-800 { color: #d0d0de !important; }
+.dark .text-gray-700 { color: #b0b0c4 !important; }
+.dark .text-gray-600 { color: #9090a8 !important; }
+.dark .text-gray-500 { color: #7878a0 !important; }
+.dark .text-gray-400 { color: #606080 !important; }
+
+/* Borders */
+.dark .border-gray-100 { border-color: #2a2a3d !important; }
+.dark .border-gray-200 { border-color: #333348 !important; }
+.dark .border-gray-50 { border-color: #222235 !important; }
+
+/* Inputs */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #222235 !important;
+  border-color: #333348 !important;
+  color: #e5e5ef !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #555570 !important;
+}
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: var(--color-primary-500) !important;
+}
+
+/* Soft colored backgrounds */
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1) !important; }
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.1) !important; }
+.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.1) !important; }
+.dark .bg-primary-50 { background-color: rgba(207, 255, 4, 0.08) !important; }
+.dark .bg-primary-50\/30 { background-color: rgba(207, 255, 4, 0.04) !important; }
+
+/* Soft colored backgrounds - 100 level */
+.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
+.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.15) !important; }
+.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.dark .bg-violet-100 { background-color: rgba(139, 92, 246, 0.15) !important; }
+.dark .bg-gray-100 { background-color: #222235 !important; }
+.dark .bg-primary-100 { background-color: rgba(207, 255, 4, 0.12) !important; }
+
+/* Modals / overlays */
+.dark .bg-black\/40 { background-color: rgba(0, 0, 0, 0.6) !important; }
+
+/* Scrollbar dark */
+.dark ::-webkit-scrollbar { width: 6px; height: 6px; }
+.dark ::-webkit-scrollbar-track { background: #1a1a28; }
+.dark ::-webkit-scrollbar-thumb { background: #333348; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #444460; }
+
+/* Bottom nav dark */
+.dark nav.bg-white { background-color: #1a1a28 !important; }
+.dark nav .border-gray-100 { border-color: #2a2a3d !important; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover { background-color: #222235 !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #2a2a3d !important; }
 
 /* Fix para Android Chrome */
 @media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {

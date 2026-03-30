@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark } from 'lucide-react'
 import type { ContaFinanceira, FormaPagamento } from '../types'
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
-function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { useDebounce } from '../hooks/useDebounce'
 
 const CATEGORIAS_ENTRADA = ['Serviço', 'Venda', 'Comissão', 'Investimento', 'Outros']
 const CATEGORIAS_SAIDA = ['Material', 'Aluguel', 'Salário', 'Fornecedor', 'Água/Luz', 'Internet', 'Manutenção', 'Outros']
@@ -19,17 +18,18 @@ interface ContaBancaria { id: string; nome: string; banco: string; saldo: number
 const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '' })
 
 export default function Financeiro() {
-  const [contas, setContas] = useState<ContaFinanceira[]>(() => { try { return JSON.parse(localStorage.getItem('financeiro') || '[]') } catch { return [] } })
-  const [bancos, setBancos] = useState<ContaBancaria[]>(() => { try { return JSON.parse(localStorage.getItem('contas_bancarias') || '[]') } catch { return [] } })
+  const [contas, setContas] = useState<ContaFinanceira[]>(() => safeGetStorage<ContaFinanceira[]>('financeiro', []))
+  const [bancos, setBancos] = useState<ContaBancaria[]>(() => safeGetStorage<ContaBancaria[]>('contas_bancarias', []))
   const [busca, setBusca] = useState('')
+  const buscaDebounced = useDebounce(busca, 300)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos')
   const [modal, setModal] = useState<'entrada' | 'saida' | null>(null)
   const [modalBanco, setModalBanco] = useState(false)
   const [form, setForm] = useState(initForm())
   const [formBanco, setFormBanco] = useState({ nome: '', banco: '', tipo: 'corrente', saldo: '' })
 
-  const salvar = (lista: ContaFinanceira[]) => { setContas(lista); localStorage.setItem('financeiro', JSON.stringify(lista)) }
-  const salvarBancos = (lista: ContaBancaria[]) => { setBancos(lista); localStorage.setItem('contas_bancarias', JSON.stringify(lista)) }
+  const salvar = (lista: ContaFinanceira[]) => { setContas(lista); safeSetStorage('financeiro', lista) }
+  const salvarBancos = (lista: ContaBancaria[]) => { setBancos(lista); safeSetStorage('contas_bancarias', lista) }
 
   const adicionar = () => {
     if (!form.descricao || !form.valor || !modal) return
@@ -58,19 +58,20 @@ export default function Financeiro() {
   const removerBanco = (id: string) => salvarBancos(bancos.filter(b => b.id !== id))
   const togglePago = (id: string) => salvar(contas.map(c => c.id === id ? { ...c, pago: !c.pago } : c))
 
-  const mesAtual = new Date().getMonth()
-  const anoAtual = new Date().getFullYear()
-  const contasMes = contas.filter((c) => { const d = new Date(c.data); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual })
-  const entradas = contasMes.filter((c) => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
-  const saidas = contasMes.filter((c) => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
-  const saldo = entradas - saidas
-  const pendentes = contas.filter(c => !c.pago).length
+  const { entradas, saidas, saldo, pendentes } = useMemo(() => {
+    const mesAtual = new Date().getMonth()
+    const anoAtual = new Date().getFullYear()
+    const contasMes = contas.filter((c) => { const d = new Date(c.data); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual })
+    const ent = contasMes.filter((c) => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
+    const sai = contasMes.filter((c) => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
+    return { entradas: ent, saidas: sai, saldo: ent - sai, pendentes: contas.filter(c => !c.pago).length }
+  }, [contas])
 
-  const filtradas = contas.filter(c => {
-    const matchBusca = c.descricao.toLowerCase().includes(busca.toLowerCase()) || c.categoria.toLowerCase().includes(busca.toLowerCase())
+  const filtradas = useMemo(() => contas.filter(c => {
+    const matchBusca = c.descricao.toLowerCase().includes(buscaDebounced.toLowerCase()) || c.categoria.toLowerCase().includes(buscaDebounced.toLowerCase())
     const matchTipo = filtroTipo === 'todos' || c.tipo === filtroTipo
     return matchBusca && matchTipo
-  })
+  }), [contas, buscaDebounced, filtroTipo])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
