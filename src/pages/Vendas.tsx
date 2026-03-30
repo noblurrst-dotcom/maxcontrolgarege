@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, ArrowRight } from 'lucide-react'
-import type { Venda, FormaPagamento, PreVenda, PreVendaItem } from '../types'
+import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico } from '../types'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
 import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -18,11 +20,13 @@ const FORMAS: { value: FormaPagamento; label: string }[] = [
 
 const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], parcelas: '1', funcionario: '', observacoes: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
+  const { user } = useAuth()
   const [tab, setTab] = useState<'vendas' | 'prevenda'>('vendas')
+  const [servicos, setServicos] = useState<Servico[]>([])
   const [vendas, setVendas] = useState<Venda[]>(() => safeGetStorage<Venda[]>('vendas', []))
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
@@ -32,6 +36,18 @@ export default function Vendas() {
   const [editDetalhe, setEditDetalhe] = useState<{ valor: string; desconto: string; forma_pagamento: FormaPagamento; parcelas: string; descontoTipo: 'valor' | 'percentual' } | null>(null)
   const [form, setForm] = useState(initForm())
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
+
+  // Load services from Supabase
+  useEffect(() => {
+    if (user) {
+      (async () => {
+        try {
+          const { data, error } = await supabase.from('servicos').select('*').eq('user_id', user.id).order('nome')
+          if (!error) setServicos(data || [])
+        } catch (e) { console.error('Erro ao carregar serviços:', e) }
+      })()
+    }
+  }, [user])
 
   // Pré-Venda state
   const [preVendas, setPreVendas] = useState<PreVenda[]>(() => safeGetStorage<PreVenda[]>('pre_vendas', []))
@@ -276,8 +292,46 @@ export default function Vendas() {
                 onChange={(nome) => setForm({ ...form, nome_cliente: nome })}
               />
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Serviços / Descrição</label>
-                <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Polimento completo + Higienização" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Serviço</label>
+                <div className="relative">
+                  <select
+                    value={form.servicoSelecionado}
+                    onChange={(e) => {
+                      const sel = e.target.value
+                      if (sel && sel !== 'custom') {
+                        const srv = servicos.find(s => s.id === sel)
+                        if (srv) {
+                          setForm(prev => ({ ...prev, servicoSelecionado: sel, descricao: srv.nome, valor: srv.preco_padrao.toString() }))
+                          return
+                        }
+                      }
+                      if (sel === 'custom') {
+                        setForm(prev => ({ ...prev, servicoSelecionado: 'custom', descricao: '', valor: '' }))
+                        return
+                      }
+                      setForm(prev => ({ ...prev, servicoSelecionado: '' }))
+                    }}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">Selecione um serviço...</option>
+                    {servicos.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome} - {fmt(s.preco_padrao)}</option>
+                    ))}
+                    <option value="custom">Outro (digitar manualmente)</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
+                {(form.servicoSelecionado === 'custom' || form.servicoSelecionado === '') && (
+                  <input
+                    type="text"
+                    value={form.descricao}
+                    onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                    placeholder="Ex: Polimento completo + Higienização"
+                    className="w-full mt-2 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  />
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

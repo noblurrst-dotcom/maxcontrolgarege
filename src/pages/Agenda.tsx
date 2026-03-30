@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2 } from 'lucide-react'
-import { format } from 'date-fns'
+import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -29,7 +29,21 @@ export default function Agenda() {
   const [filtroStatus, setFiltroStatus] = useState<'todos' | Agendamento['status']>('todos')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(initForm())
+  const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
+
+  const inicioSemana = useMemo(() => {
+    const base = startOfWeek(new Date(), { weekStartsOn: 1 })
+    return addDays(base, semanaOffset * 7)
+  }, [semanaOffset])
+  const diasDaSemana = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i)), [inicioSemana])
+  const agendamentosDaSemana = useMemo(() => {
+    return lista.filter((a) => {
+      if (!a.data_hora) return false
+      const dt = new Date(a.data_hora)
+      return diasDaSemana.some(d => isSameDay(d, dt))
+    })
+  }, [lista, diasDaSemana])
 
   // Load services from Supabase
   useEffect(() => {
@@ -143,6 +157,122 @@ export default function Agenda() {
             <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>{item.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Calendário Semanal */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <CalendarDays size={20} className="text-primary-600" />
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Agenda semanal</h3>
+              <p className="text-[11px] text-gray-400">
+                {format(diasDaSemana[0], "d MMM", { locale: ptBR })} — {format(diasDaSemana[6], "d MMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSemanaOffset(s => s - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft size={18} className="text-gray-500" />
+            </button>
+            <button onClick={() => setSemanaOffset(0)} className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+              Hoje
+            </button>
+            <button onClick={() => setSemanaOffset(s => s + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronRight size={18} className="text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5">
+          <div className="min-w-[640px]">
+            {/* Header com dias da semana */}
+            <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
+              <div />
+              {diasDaSemana.map((dia) => {
+                const ehHoje = isToday(dia)
+                return (
+                  <div key={dia.toISOString()} className="text-center">
+                    <p className={`text-[10px] font-semibold uppercase tracking-wider ${ehHoje ? 'text-primary-600' : 'text-gray-400'}`}>
+                      {format(dia, 'EEE', { locale: ptBR })}
+                    </p>
+                    <p className={`text-lg font-bold mt-0.5 leading-none ${
+                      ehHoje ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center' : 'text-gray-700'
+                    }`}>
+                      {format(dia, 'd')}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Time slots */}
+            <div className="relative max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+              {Array.from({ length: 14 }, (_, i) => i + 7).map((hora) => {
+                const horaStr = `${String(hora).padStart(2, '0')}:00`
+                return (
+                  <div key={hora} className="grid grid-cols-[50px_repeat(7,1fr)] min-h-[48px] group">
+                    <div className="text-[10px] font-medium text-gray-400 pr-2 text-right pt-0.5 -mt-1.5 select-none">
+                      {horaStr}
+                    </div>
+                    {diasDaSemana.map((dia) => {
+                      const dStr = format(dia, 'yyyy-MM-dd')
+                      const agendsDaHora = agendamentosDaSemana.filter((a) => {
+                        const dt = new Date(a.data_hora)
+                        return (a.data_hora || '').startsWith(dStr) && dt.getHours() === hora
+                      })
+                      const ehHoje = isToday(dia)
+                      return (
+                        <div
+                          key={dia.toISOString() + hora}
+                          className={`border-t border-l border-gray-100 px-0.5 py-0.5 relative ${
+                            ehHoje ? 'bg-primary-50/30' : 'group-hover:bg-gray-50/50'
+                          }`}
+                        >
+                          {agendsDaHora.map((ag, idx) => {
+                            const statusColors: Record<string, string> = {
+                              pendente: 'bg-amber-100 border-amber-300 text-amber-800',
+                              confirmado: 'bg-blue-100 border-blue-300 text-blue-800',
+                              em_andamento: 'bg-primary-100 border-primary-300 text-primary-800',
+                              concluido: 'bg-emerald-100 border-emerald-300 text-emerald-800',
+                              cancelado: 'bg-red-100 border-red-300 text-red-700 line-through opacity-60',
+                            }
+                            const cor = statusColors[ag.status] || 'bg-gray-100 border-gray-300 text-gray-700'
+                            return (
+                              <div
+                                key={ag.id || idx}
+                                title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
+                                className={`text-[9px] leading-tight font-semibold px-1.5 py-1 rounded-md border-l-2 truncate cursor-default mb-0.5 ${cor}`}
+                              >
+                                {ag.nome_cliente || 'Agendamento'}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Legenda de status */}
+        <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
+          {[
+            { label: 'Pendente', color: 'bg-amber-300' },
+            { label: 'Confirmado', color: 'bg-blue-300' },
+            { label: 'Em andamento', color: 'bg-primary-400' },
+            { label: 'Concluído', color: 'bg-emerald-300' },
+            { label: 'Cancelado', color: 'bg-red-300' },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${s.color}`} />
+              <span className="text-[10px] text-gray-400">{s.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {filtradas.length === 0 ? (
