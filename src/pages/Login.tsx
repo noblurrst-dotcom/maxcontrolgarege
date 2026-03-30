@@ -70,19 +70,17 @@ export default function Login() {
   void _handleApple
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* === LADO ESQUERDO - Espaço para animação === */}
+    <div className="min-h-[100dvh] flex flex-col lg:flex-row overflow-hidden">
+      {/* === LADO ESQUERDO - Espaço para animação (desktop only) === */}
       <div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center"
         style={{ background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%)` }}
       >
-        {/* Placeholder para animação futura */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-white/20 blur-3xl animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-white/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-white/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
-
         <div className="relative z-10 text-center px-12 max-w-lg">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-white/10 backdrop-blur-sm rounded-3xl mb-8 border border-white/20">
             <Car className="w-12 h-12 text-white" />
@@ -100,68 +98,72 @@ export default function Login() {
         </div>
       </div>
 
-      {/* === LADO DIREITO - Formulário === */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50 min-h-screen lg:min-h-0">
-        <div className="w-full max-w-[420px]">
+      {/* === LADO DIREITO - Formulário (mobile: tela inteira) === */}
+      <div className="flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 bg-white lg:bg-gray-50">
 
-          {/* Logo mobile */}
-          <div className="lg:hidden text-center mb-8">
-            <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-              style={{ backgroundColor: BRAND }}
-            >
-              <Car className="w-8 h-8 text-white" />
+        {/* Header mobile com gradiente */}
+        <div
+          className="lg:hidden w-full pt-[env(safe-area-inset-top)] pb-6 px-6 flex flex-col items-center"
+          style={{ background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%)` }}
+        >
+          <div className="pt-8 pb-2 flex flex-col items-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/15 backdrop-blur-sm border border-white/20 mb-3">
+              <Car className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Max Control</h1>
-            <p className="text-gray-400 text-sm mt-1">Estética Automotiva</p>
+            <h1 className="text-xl font-bold text-white tracking-tight">Max Control</h1>
+            <p className="text-white/60 text-xs mt-0.5">Estética Automotiva</p>
           </div>
+        </div>
 
-          {/* Título */}
-          <div className="mb-8">
-            {view === 'forgot' && (
-              <button
-                type="button"
-                onClick={() => setView('login')}
-                className="flex items-center gap-1.5 text-sm font-medium mb-4 transition-colors hover:opacity-80"
-                style={{ color: BRAND }}
-              >
-                <ArrowLeft size={16} /> Voltar ao login
-              </button>
-            )}
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              {view === 'login' && 'Bem-vindo de volta'}
-              {view === 'register' && 'Crie sua conta'}
-              {view === 'forgot' && 'Recuperar senha'}
-            </h2>
-            <p className="text-gray-400 mt-2 text-sm">
-              {view === 'login' && 'Entre na sua conta para continuar'}
-              {view === 'register' && 'Preencha os dados para começar'}
-              {view === 'forgot' && 'Enviaremos um link de recuperação para seu email'}
-            </p>
-          </div>
+        {/* Form container */}
+        <div className="flex-1 flex items-start lg:items-center justify-center px-5 sm:px-8 lg:px-12 py-6 sm:py-8 overflow-y-auto">
+          <div className="w-full max-w-[400px]">
 
-          {/* Supabase warning */}
-          {!configured && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-amber-800">Supabase não configurado</p>
-                <p className="text-xs text-amber-600 mt-1">
-                  Configure o <code className="bg-amber-100 px-1 rounded">.env</code> com suas credenciais do Supabase.
-                </p>
+            {/* Título */}
+            <div className="mb-6">
+              {view === 'forgot' && (
+                <button
+                  type="button"
+                  onClick={() => setView('login')}
+                  className="flex items-center gap-1.5 text-sm font-medium mb-3 transition-colors hover:opacity-80"
+                  style={{ color: BRAND }}
+                >
+                  <ArrowLeft size={16} /> Voltar ao login
+                </button>
+              )}
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                {view === 'login' && 'Bem-vindo de volta'}
+                {view === 'register' && 'Crie sua conta'}
+                {view === 'forgot' && 'Recuperar senha'}
+              </h2>
+              <p className="text-gray-400 mt-1 text-sm">
+                {view === 'login' && 'Entre na sua conta para continuar'}
+                {view === 'register' && 'Preencha os dados para começar'}
+                {view === 'forgot' && 'Enviaremos um link de recuperação'}
+              </p>
+            </div>
+
+            {/* Supabase warning */}
+            {!configured && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 sm:p-4 mb-5 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Supabase não configurado</p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Configure o <code className="bg-amber-100 px-1 rounded">.env</code> com suas credenciais.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Social login (somente login e registro) */}
-          {view !== 'forgot' && (
-            <>
-              <div className="flex gap-3 mb-6">
+            {/* Social login */}
+            {view !== 'forgot' && (
+              <>
                 <button
                   type="button"
                   onClick={handleGoogle}
                   disabled={!!socialLoading}
-                  className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm mb-5 active:scale-[0.98]"
                 >
                   {socialLoading === 'google' ? (
                     <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -170,141 +172,126 @@ export default function Login() {
                   )}
                   Continuar com Google
                 </button>
-                {/* Apple login - descomentar quando configurar Apple Developer Account
-                <button
-                  type="button"
-                  onClick={handleApple}
-                  disabled={!!socialLoading}
-                  className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3 bg-black border border-black rounded-xl text-sm font-medium text-white hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                >
-                  {socialLoading === 'apple' ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
-                  )}
-                  Apple
-                </button>
-                */}
-              </div>
 
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
+                <div className="relative mb-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white lg:bg-gray-50 px-4 text-gray-400 font-medium">ou continue com email</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-gray-50 px-4 text-gray-400 font-medium">ou continue com email</span>
-                </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {view === 'register' && (
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {view === 'register' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome completo</label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Seu nome"
+                    className="w-full px-4 py-3 bg-gray-50 lg:bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all"
+                    style={{ '--tw-ring-color': BRAND } as React.CSSProperties}
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome completo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Seu nome"
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all shadow-sm"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 lg:bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all"
                   style={{ '--tw-ring-color': BRAND } as React.CSSProperties}
                 />
               </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                required
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all shadow-sm"
-                style={{ '--tw-ring-color': BRAND } as React.CSSProperties}
-              />
-            </div>
-
-            {view !== 'forgot' && (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-gray-700">Senha</label>
-                  {view === 'login' && (
+              {view !== 'forgot' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-gray-700">Senha</label>
+                    {view === 'login' && (
+                      <button
+                        type="button"
+                        onClick={() => setView('forgot')}
+                        className="text-xs font-medium hover:underline transition-colors"
+                        style={{ color: BRAND }}
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 bg-gray-50 lg:bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all pr-12"
+                      style={{ '--tw-ring-color': BRAND } as React.CSSProperties}
+                    />
                     <button
                       type="button"
-                      onClick={() => setView('forgot')}
-                      className="text-xs font-medium hover:underline transition-colors"
-                      style={{ color: BRAND }}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
                     >
-                      Esqueceu a senha?
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    required
-                    minLength={6}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:border-transparent outline-none transition-all pr-12 shadow-sm"
-                    style={{ '--tw-ring-color': BRAND } as React.CSSProperties}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
+              )}
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-[0.98] !mt-5"
+                style={{ backgroundColor: BRAND }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_DARK)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND)}
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : view === 'login' ? (
+                  <><LogIn size={18} /> Entrar</>
+                ) : view === 'register' ? (
+                  <><UserPlus size={18} /> Criar conta</>
+                ) : (
+                  <><Mail size={18} /> Enviar link de recuperação</>
+                )}
+              </button>
+            </form>
+
+            {/* Toggle login / register */}
+            {view !== 'forgot' && (
+              <p className="text-center mt-5 text-sm text-gray-500">
+                {view === 'login' ? 'Não tem conta? ' : 'Já tem conta? '}
+                <button
+                  type="button"
+                  onClick={() => setView(view === 'login' ? 'register' : 'login')}
+                  className="font-semibold hover:underline transition-colors"
+                  style={{ color: BRAND }}
+                >
+                  {view === 'login' ? 'Criar conta grátis' : 'Fazer login'}
+                </button>
+              </p>
             )}
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-[0.98] mt-2"
-              style={{ backgroundColor: BRAND }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_DARK)}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND)}
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : view === 'login' ? (
-                <><LogIn size={18} /> Entrar</>
-              ) : view === 'register' ? (
-                <><UserPlus size={18} /> Criar conta</>
-              ) : (
-                <><Mail size={18} /> Enviar link de recuperação</>
-              )}
-            </button>
-          </form>
-
-          {/* Toggle login / register */}
-          {view !== 'forgot' && (
-            <p className="text-center mt-6 text-sm text-gray-500">
-              {view === 'login' ? 'Não tem conta? ' : 'Já tem conta? '}
-              <button
-                type="button"
-                onClick={() => setView(view === 'login' ? 'register' : 'login')}
-                className="font-semibold hover:underline transition-colors"
-                style={{ color: BRAND }}
-              >
-                {view === 'login' ? 'Criar conta grátis' : 'Fazer login'}
-              </button>
+            {/* Resend badge */}
+            <p className="text-center mt-6 text-[11px] text-gray-300">
+              Emails enviados com <span className="font-medium">Resend</span>
             </p>
-          )}
 
-          {/* Resend badge - preparado para integração futura */}
-          <p className="text-center mt-8 text-[11px] text-gray-300">
-            Emails enviados com <span className="font-medium">Resend</span>
-          </p>
-
+          </div>
         </div>
       </div>
     </div>
