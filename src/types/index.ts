@@ -205,6 +205,25 @@ export interface ContaFinanceira {
   created_at: string;
 }
 
+export type KanbanEtapa = 'orcamento' | 'agendado' | 'na_oficina' | 'em_andamento' | 'finalizado' | 'entregue'
+
+export interface KanbanItem {
+  id: string;
+  user_id: string;
+  etapa: KanbanEtapa;
+  nome_cliente: string;
+  telefone_cliente: string;
+  placa: string;
+  veiculo: string;
+  servico: string;
+  valor: number;
+  observacoes: string;
+  origem_tipo: 'prevenda' | 'agendamento' | 'manual';
+  origem_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ContaBancaria {
   id: string;
   user_id: string;
