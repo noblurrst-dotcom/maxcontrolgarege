@@ -25,8 +25,7 @@ import {
 // IDs dos super administradores (adicione seu user_id do Supabase aqui)
 // ========================================================================
 const SUPER_ADMIN_IDS: string[] = [
-  // Exemplo: '12345678-abcd-1234-abcd-123456789012'
-  // Adicione aqui o(s) UUID(s) dos administradores
+  '22cf7ac8-0e64-481e-b0a6-c71b8fc11823',
 ]
 
 interface SupportSession {
