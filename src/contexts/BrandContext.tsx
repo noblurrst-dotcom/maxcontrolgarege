@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useLayoutEffect } from 
 import type { BrandConfig } from '../types'
 
 const DEFAULT_BRAND: BrandConfig = {
+  nome_usuario: '',
   nome_empresa: 'Estética Automotiva',
   slogan: '',
   cnpj: '',

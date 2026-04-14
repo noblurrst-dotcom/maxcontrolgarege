@@ -2,22 +2,31 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { fmt as formatCurrencyUtil, safeGetStorage } from '../lib/utils'
+import { fmt as formatCurrencyUtil, safeGetStorage, safeSetStorage } from '../lib/utils'
 import {
   ShoppingCart,
   CalendarPlus,
-    TrendingUp,
+  TrendingUp,
   TrendingDown,
   CreditCard,
   ChevronLeft,
   ChevronRight,
   Users,
-      Building2,
+  Building2,
   Trophy,
   ArrowRight,
+  Pencil,
+  Eye,
+  EyeOff,
+  GripVertical,
+  X,
+  Check,
+  RotateCcw,
 } from 'lucide-react'
 import type { Checklist } from '../types'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, startOfWeek, addDays, isSameDay } from 'date-fns'
+import { useBrand } from '../contexts/BrandContext'
+import { useSubUsuario } from '../contexts/SubUsuarioContext'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 function getSaudacao() {
@@ -342,6 +351,24 @@ function ResumoFinanceiro({ entradas, saidas, saldo }: { entradas: number; saida
 }
 
 
+type BlockId = 'calendario' | 'grafico_vendas' | 'resumo_financeiro' | 'agenda_semanal' | 'vendas_pagamento' | 'top_clientes' | 'sua_empresa'
+
+interface BlockConfig {
+  id: BlockId
+  label: string
+  visible: boolean
+}
+
+const DEFAULT_BLOCKS: BlockConfig[] = [
+  { id: 'calendario', label: 'Calendário', visible: true },
+  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true },
+  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true },
+  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true },
+  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true },
+  { id: 'top_clientes', label: 'Top Clientes', visible: true },
+  { id: 'sua_empresa', label: 'Sua Empresa', visible: true },
+]
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -349,7 +376,52 @@ export default function Dashboard() {
   const [, setLoading] = useState(true)
   const [mesAtual, setMesAtual] = useState(new Date())
 
-  const nomeUsuario = user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
+  // Block customization
+  const [blocks, setBlocks] = useState<BlockConfig[]>(() => {
+    const saved = safeGetStorage<BlockConfig[]>('dashboard_blocks', [])
+    if (saved.length === DEFAULT_BLOCKS.length) return saved
+    // Merge saved visibility with defaults (handles new blocks)
+    return DEFAULT_BLOCKS.map(d => {
+      const s = saved.find(b => b.id === d.id)
+      return s ? { ...d, visible: s.visible } : d
+    })
+  })
+  const [editMode, setEditMode] = useState(false)
+  const [dragBlock, setDragBlock] = useState<BlockId | null>(null)
+  const [dragOverBlock, setDragOverBlock] = useState<BlockId | null>(null)
+
+  const salvarBlocks = (b: BlockConfig[]) => { setBlocks(b); safeSetStorage('dashboard_blocks', b) }
+
+  const toggleVisible = (id: BlockId) => {
+    salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
+  }
+
+  const onBlockDragStart = (e: React.DragEvent, id: BlockId) => {
+    setDragBlock(id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const onBlockDragOver = (e: React.DragEvent, id: BlockId) => {
+    e.preventDefault()
+    setDragOverBlock(id)
+  }
+  const onBlockDrop = (e: React.DragEvent, targetId: BlockId) => {
+    e.preventDefault()
+    if (!dragBlock || dragBlock === targetId) { setDragBlock(null); setDragOverBlock(null); return }
+    const newBlocks = [...blocks]
+    const fromIdx = newBlocks.findIndex(b => b.id === dragBlock)
+    const toIdx = newBlocks.findIndex(b => b.id === targetId)
+    const [moved] = newBlocks.splice(fromIdx, 1)
+    newBlocks.splice(toIdx, 0, moved)
+    salvarBlocks(newBlocks)
+    setDragBlock(null)
+    setDragOverBlock(null)
+  }
+
+  const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
+
+  const { brand } = useBrand()
+  const { subUsuarioAtivo } = useSubUsuario()
+  const nomeUsuario = subUsuarioAtivo?.nome || brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
   const hoje = new Date()
   const diaSemana = format(hoje, "EEEE", { locale: ptBR })
   const dataFormatada = format(hoje, "d 'de' MMMM", { locale: ptBR })
@@ -412,10 +484,14 @@ export default function Dashboard() {
 
   // Agendamentos da semana para o calendário semanal
   const agendamentosDaSemana = useMemo(() => {
+    const semIni = diasDaSemana[0]
+    const semFim = addDays(diasDaSemana[6], 1)
     return agendamentos.filter((a: any) => {
       if (!a.data_hora) return false
-      const dataAgend = new Date(a.data_hora)
-      return diasDaSemana.some(d => isSameDay(d, dataAgend))
+      const inicio = new Date(a.data_hora)
+      const durMin = a.duracao_min || 60
+      const fim = a.data_hora_fim ? new Date(a.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+      return inicio < semFim && fim > semIni
     })
   }, [agendamentos, diasDaSemana])
 
@@ -440,49 +516,22 @@ export default function Dashboard() {
 
 
   
-  return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Saudação + Ações */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Olá {nomeUsuario}, {getSaudacao()}!
-          </h1>
-          <p className="text-sm text-gray-400 mt-0.5 capitalize">
-            Hoje é dia {dataFormatada}, {diaSemana}
-          </p>
-        </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
-          <button
-            onClick={() => navigate('/vendas')}
-            className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-95"
-          >
-            <ShoppingCart size={14} />
-            Nova Venda
-          </button>
-          <button
-            onClick={() => navigate('/agenda')}
-            className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
-          >
-            <CalendarPlus size={14} />
-            Agendamento
-          </button>
-        </div>
-      </div>
+  // Render a block by ID
+  const renderBlock = (id: BlockId) => {
+    switch (id) {
+      case 'calendario': return <Calendario mesAtual={mesAtual} setMesAtual={setMesAtual} agendamentosNoDia={agendamentosNoDia} />
+      case 'grafico_vendas': return <GraficoVendas vendasMes={vendasMes} />
+      case 'resumo_financeiro': return <ResumoFinanceiro entradas={vendasMes + entradasMes} saidas={saidasMes} saldo={saldoMes} />
+      case 'agenda_semanal': return renderAgendaSemanal()
+      case 'vendas_pagamento': return renderVendasPagamento()
+      case 'top_clientes': return renderTopClientes()
+      case 'sua_empresa': return renderEmpresa()
+      default: return null
+    }
+  }
 
-      {/* Grid principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-5">
-        <Calendario
-          mesAtual={mesAtual}
-          setMesAtual={setMesAtual}
-          agendamentosNoDia={agendamentosNoDia}
-        />
-        <GraficoVendas vendasMes={vendasMes} />
-        <ResumoFinanceiro entradas={vendasMes + entradasMes} saidas={saidasMes} saldo={saldoMes} />
-      </div>
-
-      {/* Calendário Semanal */}
-      <Card>
+  const renderAgendaSemanal = () => (
+    <Card>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <CalendarPlus size={20} className="text-primary-600" />
@@ -532,47 +581,84 @@ export default function Dashboard() {
               })}
             </div>
 
-            {/* Time slots */}
-            <div className="relative max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-              {Array.from({ length: 14 }, (_, i) => i + 7).map((hora) => {
-                const horaStr = `${String(hora).padStart(2, '0')}:00`
-                return (
-                  <div key={hora} className="grid grid-cols-[50px_repeat(7,1fr)] min-h-[48px] group">
-                    {/* Horário */}
-                    <div className="text-[10px] font-medium text-gray-400 pr-2 text-right pt-0.5 -mt-1.5 select-none">
-                      {horaStr}
+            {/* Time slots — Google Calendar style */}
+            {(() => {
+              const ROW_H = 48
+              const HORA_INICIO = 7
+              const TOTAL_HORAS = 14
+              const defaultEventColor = '#4285F4'
+              return (
+                <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
+                    {/* Coluna de horários */}
+                    <div className="relative">
+                      {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
+                        <div key={hora} className="text-[10px] font-medium text-gray-400 pr-2 text-right -mt-1.5 select-none" style={{ height: ROW_H, paddingTop: 2 }}>
+                          {`${String(hora).padStart(2, '0')}:00`}
+                        </div>
+                      ))}
                     </div>
                     {/* Colunas dos dias */}
                     {diasDaSemana.map((dia) => {
                       const dStr = format(dia, 'yyyy-MM-dd')
-                      const agendsDaHora = agendamentosDaSemana.filter((a: any) => {
-                        const dt = new Date(a.data_hora)
-                        return (a.data_hora || '').startsWith(dStr) && dt.getHours() === hora
-                      })
                       const ehHoje = isToday(dia)
+                      const diaStart = new Date(`${dStr}T00:00:00`)
+                      const diaEnd = new Date(diaStart.getTime() + 86400000)
+                      const BIZ_START = 8, BIZ_END = 18
+                      const eventsDia = agendamentosDaSemana.filter((a: any) => {
+                        const ini = new Date(a.data_hora)
+                        const durM = a.duracao_min || 60
+                        const fim = a.data_hora_fim ? new Date(a.data_hora_fim) : new Date(ini.getTime() + durM * 60000)
+                        return ini < diaEnd && fim > diaStart
+                      })
                       return (
-                        <div
-                          key={dia.toISOString() + hora}
-                          className={`border-t border-l border-gray-100 px-0.5 py-0.5 relative ${
-                            ehHoje ? 'bg-primary-50/30' : 'group-hover:bg-gray-50/50'
-                          }`}
-                        >
-                          {agendsDaHora.map((ag: any, idx: number) => {
-                            const statusColors: Record<string, string> = {
-                              pendente: 'bg-amber-100 border-amber-300 text-amber-800',
-                              confirmado: 'bg-blue-100 border-blue-300 text-blue-800',
-                              em_andamento: 'bg-primary-100 border-primary-300 text-primary-800',
-                              concluido: 'bg-emerald-100 border-emerald-300 text-emerald-800',
-                              cancelado: 'bg-red-100 border-red-300 text-red-700 line-through opacity-60',
+                        <div key={dia.toISOString()} className={`relative ${ehHoje ? 'bg-primary-50/30' : ''}`}>
+                          {/* Grid lines */}
+                          {Array.from({ length: TOTAL_HORAS }, (_, i) => (
+                            <div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />
+                          ))}
+                          {/* Events absolutely positioned */}
+                          {eventsDia.map((ag: any, idx: number) => {
+                            const inicio = new Date(ag.data_hora)
+                            const durMin = ag.duracao_min || 60
+                            const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+                            const isMultiDay = inicio.toDateString() !== fim.toDateString()
+                            const isFirstDay = inicio.toDateString() === diaStart.toDateString()
+                            const isLastDay = fim.toDateString() === diaStart.toDateString()
+                            let effStart: number, effEnd: number
+                            if (!isMultiDay) {
+                              effStart = inicio.getHours() + inicio.getMinutes() / 60
+                              effEnd = fim.getHours() + fim.getMinutes() / 60
+                            } else if (isFirstDay) {
+                              effStart = inicio.getHours() + inicio.getMinutes() / 60
+                              effEnd = BIZ_END
+                            } else if (isLastDay) {
+                              effStart = BIZ_START
+                              effEnd = fim.getHours() + fim.getMinutes() / 60
+                            } else {
+                              effStart = BIZ_START
+                              effEnd = BIZ_END
                             }
-                            const cor = statusColors[ag.status] || 'bg-gray-100 border-gray-300 text-gray-700'
+                            const top = Math.max((effStart - HORA_INICIO) * ROW_H, 0)
+                            const bottom = Math.min((effEnd - HORA_INICIO) * ROW_H, TOTAL_HORAS * ROW_H)
+                            const height = Math.max(bottom - top, ROW_H * 0.5)
+                            const eventColor = ag.cor || defaultEventColor
+                            const horaIni = format(inicio, 'HH:mm')
+                            const horaFim = format(fim, 'HH:mm')
                             return (
                               <div
                                 key={ag.id || idx}
                                 title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + formatCurrency(ag.valor) : ''}`}
-                                className={`text-[9px] leading-tight font-semibold px-1.5 py-1 rounded-md border-l-2 truncate cursor-default mb-0.5 ${cor}`}
+                                className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden cursor-default"
+                                style={{ top, height, zIndex: 10 + idx, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined }}
                               >
-                                {ag.nome_cliente || 'Agendamento'}
+                                <div className="px-1.5 py-1 text-white">
+                                  <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
+                                  <p className="text-[9px] opacity-80 leading-tight">{isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}</p>
+                                  {height > ROW_H && ag.servico && (
+                                    <p className="text-[9px] opacity-70 leading-tight truncate mt-0.5">{ag.servico}</p>
+                                  )}
+                                </div>
                               </div>
                             )
                           })}
@@ -580,9 +666,9 @@ export default function Dashboard() {
                       )
                     })}
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
 
@@ -601,85 +687,85 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-      </Card>
+    </Card>
+  )
 
-      {/* Vendas por forma de pagamento + Top clientes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
-        {/* Vendas por forma de pagamento */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle>Vendas por pagamento</CardTitle>
-            <span className="text-xs text-gray-400">Este mês</span>
-          </div>
-          {Object.keys(vendasPorForma).length > 0 ? (
-            <div className="space-y-2">
-              {[
-                { key: 'pix', label: 'Pix', color: 'bg-primary-500' },
-                { key: 'credito', label: 'Crédito', color: 'bg-blue-400' },
-                { key: 'debito', label: 'Débito', color: 'bg-violet-400' },
-                { key: 'dinheiro', label: 'Dinheiro', color: 'bg-emerald-400' },
-                { key: 'boleto', label: 'Boleto', color: 'bg-amber-400' },
-                { key: 'transferencia', label: 'Transferência', color: 'bg-rose-400' },
-              ].filter(f => vendasPorForma[f.key]).map(f => (
-                <div key={f.key} className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${f.color} shrink-0`} />
-                  <span className="text-xs text-gray-600 w-24">{f.label}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-2">
-                    <div className={`${f.color} h-2 rounded-full`} style={{ width: `${Math.max((vendasPorForma[f.key] / vendasMes) * 100, 4)}%` }} />
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 w-20 text-right">{formatCurrency(vendasPorForma[f.key])}</span>
+  const renderVendasPagamento = () => (
+    <Card>
+        <div className="flex items-center justify-between mb-4">
+          <CardTitle>Vendas por pagamento</CardTitle>
+          <span className="text-xs text-gray-400">Este mês</span>
+        </div>
+        {Object.keys(vendasPorForma).length > 0 ? (
+          <div className="space-y-2">
+            {[
+              { key: 'pix', label: 'Pix', color: 'bg-primary-500' },
+              { key: 'credito', label: 'Crédito', color: 'bg-blue-400' },
+              { key: 'debito', label: 'Débito', color: 'bg-violet-400' },
+              { key: 'dinheiro', label: 'Dinheiro', color: 'bg-emerald-400' },
+              { key: 'boleto', label: 'Boleto', color: 'bg-amber-400' },
+              { key: 'transferencia', label: 'Transferência', color: 'bg-rose-400' },
+            ].filter(f => vendasPorForma[f.key]).map(f => (
+              <div key={f.key} className="flex items-center gap-3">
+                <span className={`w-2.5 h-2.5 rounded-full ${f.color} shrink-0`} />
+                <span className="text-xs text-gray-600 w-24">{f.label}</span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className={`${f.color} h-2 rounded-full`} style={{ width: `${Math.max((vendasPorForma[f.key] / vendasMes) * 100, 4)}%` }} />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 py-4 text-center">Nenhuma venda registrada este mês.</p>
-          )}
-        </Card>
-
-        {/* Top 5 clientes */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                <Trophy size={20} className="text-amber-500" />
+                <span className="text-xs font-bold text-gray-700 w-20 text-right">{formatCurrency(vendasPorForma[f.key])}</span>
               </div>
-              <h4 className="text-sm font-bold text-gray-900">Top 5 clientes que mais gastaram</h4>
-            </div>
-            <span className="text-xs text-gray-400">Este mês</span>
+            ))}
           </div>
-          {topClientes.length > 0 ? (
-            <div className="space-y-3">
-              {topClientes.map((c, i) => (
-                <div key={c.nome} className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
-                    {c.nome.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
-                    <p className="text-[10px] text-gray-400">{c.count} transaç{c.count === 1 ? 'ão' : 'ões'} • {formatCurrency(c.total)}</p>
-                  </div>
-                  {i === 0 && <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Top 1</span>}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <Users size={36} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">Nenhuma venda registrada ainda</p>
-              <button
-                onClick={() => navigate('/vendas')}
-                className="mt-3 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-semibold transition-colors"
-              >
-                Registrar primeira venda
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
-        </Card>
-      </div>
+        ) : (
+          <p className="text-sm text-gray-400 py-4 text-center">Nenhuma venda registrada este mês.</p>
+        )}
+    </Card>
+  )
 
-      {/* Sua empresa */}
-      <Card>
+  const renderTopClientes = () => (
+    <Card>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Trophy size={20} className="text-amber-500" />
+            </div>
+            <h4 className="text-sm font-bold text-gray-900">Top 5 clientes que mais gastaram</h4>
+          </div>
+          <span className="text-xs text-gray-400">Este mês</span>
+        </div>
+        {topClientes.length > 0 ? (
+          <div className="space-y-3">
+            {topClientes.map((c, i) => (
+              <div key={c.nome} className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                  {c.nome.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
+                  <p className="text-[10px] text-gray-400">{c.count} transaç{c.count === 1 ? 'ão' : 'ões'} • {formatCurrency(c.total)}</p>
+                </div>
+                {i === 0 && <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Top 1</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <Users size={36} className="text-gray-200 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">Nenhuma venda registrada ainda</p>
+            <button
+              onClick={() => navigate('/vendas')}
+              className="mt-3 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-semibold transition-colors"
+            >
+              Registrar primeira venda
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
+    </Card>
+  )
+
+  const renderEmpresa = () => (
+    <Card>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
             <Building2 size={20} className="text-primary-600" />
@@ -689,7 +775,134 @@ export default function Dashboard() {
             <p className="text-xs text-gray-400">{clientes.length} clientes • {vendas.length} vendas • {agendamentos.length} agendamentos</p>
           </div>
         </div>
-      </Card>
+    </Card>
+  )
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-6">
+      {/* Saudação + Ações */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Olá {nomeUsuario}, {getSaudacao()}!
+          </h1>
+          <p className="text-sm text-gray-400 mt-0.5 capitalize">
+            Hoje é dia {dataFormatada}, {diaSemana}
+          </p>
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={`flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95 ${
+              editMode
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
+                : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'
+            }`}
+          >
+            {editMode ? <Check size={14} /> : <Pencil size={14} />}
+            {editMode ? 'Concluir' : 'Editar painel'}
+          </button>
+          {!editMode && (
+            <>
+              <button
+                onClick={() => navigate('/vendas')}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-95"
+              >
+                <ShoppingCart size={14} />
+                Nova Venda
+              </button>
+              <button
+                onClick={() => navigate('/agenda')}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+              >
+                <CalendarPlus size={14} />
+                Agendamento
+              </button>
+            </>
+          )}
+          {editMode && (
+            <button
+              onClick={resetBlocks}
+              className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+            >
+              <RotateCcw size={14} />
+              Resetar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Hidden blocks panel (edit mode) */}
+      {editMode && blocks.some(b => !b.visible) && (
+        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Blocos ocultos — clique para restaurar</p>
+          <div className="flex flex-wrap gap-2">
+            {blocks.filter(b => !b.visible).map(b => (
+              <button
+                key={b.id}
+                onClick={() => toggleVisible(b.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-colors"
+              >
+                <EyeOff size={12} /> {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic blocks */}
+      {blocks.map((block) => {
+        if (!block.visible && !editMode) return null
+        const content = renderBlock(block.id)
+        if (!content) return null
+
+        return (
+          <div
+            key={block.id}
+            draggable={editMode}
+            onDragStart={editMode ? (e) => onBlockDragStart(e, block.id) : undefined}
+            onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
+            onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
+            onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
+            className={`relative transition-all ${
+              editMode ? 'cursor-grab active:cursor-grabbing' : ''
+            } ${
+              editMode && !block.visible ? 'opacity-40' : ''
+            } ${
+              dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
+            } ${
+              dragOverBlock === block.id && dragBlock !== block.id ? 'ring-2 ring-primary-400 ring-offset-2 rounded-2xl' : ''
+            } ${
+              editMode ? 'animate-wiggle' : ''
+            }`}
+            style={editMode ? { animationDelay: `${Math.random() * 0.2}s` } : undefined}
+          >
+            {/* Edit overlay */}
+            {editMode && (
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <button
+                  onClick={() => toggleVisible(block.id)}
+                  className={`w-7 h-7 rounded-full shadow-lg flex items-center justify-center transition-colors ${
+                    block.visible
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  }`}
+                >
+                  {block.visible ? <X size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            )}
+            {editMode && (
+              <div className="absolute -top-2 left-3 z-10">
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-800 text-white text-[9px] font-bold rounded-full shadow">
+                  <GripVertical size={10} /> {block.label}
+                </div>
+              </div>
+            )}
+            {content}
+          </div>
+        )
+      })}
     </div>
   )
 }

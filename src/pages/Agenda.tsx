@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight } from 'lucide-react'
-import { format, startOfWeek, addDays, isSameDay, isToday } from 'date-fns'
+import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -17,7 +17,9 @@ const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; 
   cancelado: { label: 'Cancelado', color: 'text-red-500', bg: 'bg-red-100' },
 }
 
-const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '' })
+const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
+
+const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
 
 export default function Agenda() {
   const { user } = useAuth()
@@ -38,10 +40,14 @@ export default function Agenda() {
   }, [semanaOffset])
   const diasDaSemana = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i)), [inicioSemana])
   const agendamentosDaSemana = useMemo(() => {
+    const semIni = diasDaSemana[0]
+    const semFim = addDays(diasDaSemana[6], 1)
     return lista.filter((a) => {
       if (!a.data_hora) return false
-      const dt = new Date(a.data_hora)
-      return diasDaSemana.some(d => isSameDay(d, dt))
+      const inicio = new Date(a.data_hora)
+      const durMin = a.duracao_min || 60
+      const fim = a.data_hora_fim ? new Date(a.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+      return inicio < semFim && fim > semIni
     })
   }, [lista, diasDaSemana])
 
@@ -83,6 +89,7 @@ export default function Agenda() {
       data_hora: form.data_hora, data_hora_fim: form.data_hora_fim,
       duracao_min: 60, status: 'pendente',
       observacoes: form.observacoes, valor, desconto,
+      cor: form.cor || '#4285F4',
       created_at: new Date().toISOString(),
     }
     salvar([novo, ...lista])
@@ -206,45 +213,84 @@ export default function Agenda() {
               })}
             </div>
 
-            {/* Time slots */}
-            <div className="relative max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-              {Array.from({ length: 14 }, (_, i) => i + 7).map((hora) => {
-                const horaStr = `${String(hora).padStart(2, '0')}:00`
-                return (
-                  <div key={hora} className="grid grid-cols-[50px_repeat(7,1fr)] min-h-[48px] group">
-                    <div className="text-[10px] font-medium text-gray-400 pr-2 text-right pt-0.5 -mt-1.5 select-none">
-                      {horaStr}
+            {/* Time slots — Google Calendar style */}
+            {(() => {
+              const ROW_H = 48
+              const HORA_INICIO = 7
+              const TOTAL_HORAS = 14
+              const defaultEventColor = '#4285F4'
+              return (
+                <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
+                    {/* Coluna de horários */}
+                    <div className="relative">
+                      {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
+                        <div key={hora} className="text-[10px] font-medium text-gray-400 pr-2 text-right -mt-1.5 select-none" style={{ height: ROW_H, paddingTop: 2 }}>
+                          {`${String(hora).padStart(2, '0')}:00`}
+                        </div>
+                      ))}
                     </div>
+                    {/* Colunas dos dias */}
                     {diasDaSemana.map((dia) => {
                       const dStr = format(dia, 'yyyy-MM-dd')
-                      const agendsDaHora = agendamentosDaSemana.filter((a) => {
-                        const dt = new Date(a.data_hora)
-                        return (a.data_hora || '').startsWith(dStr) && dt.getHours() === hora
-                      })
                       const ehHoje = isToday(dia)
+                      const diaStart = new Date(`${dStr}T00:00:00`)
+                      const diaEnd = new Date(diaStart.getTime() + 86400000)
+                      const BIZ_START = 8, BIZ_END = 18
+                      const eventsDia = agendamentosDaSemana.filter((a) => {
+                        const ini = new Date(a.data_hora)
+                        const durM = a.duracao_min || 60
+                        const fim = a.data_hora_fim ? new Date(a.data_hora_fim) : new Date(ini.getTime() + durM * 60000)
+                        return ini < diaEnd && fim > diaStart
+                      })
                       return (
-                        <div
-                          key={dia.toISOString() + hora}
-                          className={`border-t border-l border-gray-100 px-0.5 py-0.5 relative ${
-                            ehHoje ? 'bg-primary-50/30' : 'group-hover:bg-gray-50/50'
-                          }`}
-                        >
-                          {agendsDaHora.map((ag, idx) => {
-                            const statusColors: Record<string, string> = {
-                              pendente: 'bg-amber-100 border-amber-300 text-amber-800',
-                              confirmado: 'bg-blue-100 border-blue-300 text-blue-800',
-                              em_andamento: 'bg-primary-100 border-primary-300 text-primary-800',
-                              concluido: 'bg-emerald-100 border-emerald-300 text-emerald-800',
-                              cancelado: 'bg-red-100 border-red-300 text-red-700 line-through opacity-60',
+                        <div key={dia.toISOString()} className={`relative ${ehHoje ? 'bg-primary-50/30' : ''}`}>
+                          {/* Grid lines */}
+                          {Array.from({ length: TOTAL_HORAS }, (_, i) => (
+                            <div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />
+                          ))}
+                          {/* Events absolutely positioned */}
+                          {eventsDia.map((ag, idx) => {
+                            const inicio = new Date(ag.data_hora)
+                            const durMin = ag.duracao_min || 60
+                            const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+                            const isMultiDay = inicio.toDateString() !== fim.toDateString()
+                            const isFirstDay = inicio.toDateString() === diaStart.toDateString()
+                            const isLastDay = fim.toDateString() === diaStart.toDateString()
+                            let effStart: number, effEnd: number
+                            if (!isMultiDay) {
+                              effStart = inicio.getHours() + inicio.getMinutes() / 60
+                              effEnd = fim.getHours() + fim.getMinutes() / 60
+                            } else if (isFirstDay) {
+                              effStart = inicio.getHours() + inicio.getMinutes() / 60
+                              effEnd = BIZ_END
+                            } else if (isLastDay) {
+                              effStart = BIZ_START
+                              effEnd = fim.getHours() + fim.getMinutes() / 60
+                            } else {
+                              effStart = BIZ_START
+                              effEnd = BIZ_END
                             }
-                            const cor = statusColors[ag.status] || 'bg-gray-100 border-gray-300 text-gray-700'
+                            const top = Math.max((effStart - HORA_INICIO) * ROW_H, 0)
+                            const bottom = Math.min((effEnd - HORA_INICIO) * ROW_H, TOTAL_HORAS * ROW_H)
+                            const height = Math.max(bottom - top, ROW_H * 0.5)
+                            const eventColor = ag.cor || defaultEventColor
+                            const horaIni = format(inicio, 'HH:mm')
+                            const horaFim = format(fim, 'HH:mm')
                             return (
                               <div
                                 key={ag.id || idx}
                                 title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
-                                className={`text-[9px] leading-tight font-semibold px-1.5 py-1 rounded-md border-l-2 truncate cursor-default mb-0.5 ${cor}`}
+                                className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden cursor-default"
+                                style={{ top, height, zIndex: 10 + idx, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined }}
                               >
-                                {ag.nome_cliente || 'Agendamento'}
+                                <div className="px-1.5 py-1 text-white">
+                                  <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
+                                  <p className="text-[9px] opacity-80 leading-tight">{isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}</p>
+                                  {height > ROW_H && ag.servico && (
+                                    <p className="text-[9px] opacity-70 leading-tight truncate mt-0.5">{ag.servico}</p>
+                                  )}
+                                </div>
                               </div>
                             )
                           })}
@@ -252,9 +298,9 @@ export default function Agenda() {
                       )
                     })}
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
 
@@ -464,6 +510,21 @@ export default function Agenda() {
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Descrição / Observações</label>
                 <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações do agendamento..." rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
+              </div>
+              {/* Cor do agendamento */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Cor na agenda</label>
+                <div className="flex flex-wrap gap-2">
+                  {CORES_AGENDA.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setForm({ ...form, cor: c })}
+                      className={`w-7 h-7 rounded-full transition-all ${form.cor === c ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               </div>
               {/* Resumo */}
               {form.valor && (

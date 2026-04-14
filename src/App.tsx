@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { SubUsuarioProvider } from './contexts/SubUsuarioContext'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -16,6 +17,7 @@ const VisualizarChecklist = lazy(() => import('./pages/VisualizarChecklist'))
 const Servicos = lazy(() => import('./pages/Servicos'))
 const Financeiro = lazy(() => import('./pages/Financeiro'))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
+const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Layout = lazy(() => import('./components/Layout'))
 
 function Loading() {
@@ -42,6 +44,7 @@ function App() {
       <ThemeProvider>
       <BrandProvider>
       <AuthProvider>
+      <SubUsuarioProvider>
         <Toaster
           position="top-center"
           toastOptions={{
@@ -73,10 +76,12 @@ function App() {
               <Route path="/servicos" element={<Servicos />} />
               <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/usuarios" element={<Usuarios />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+      </SubUsuarioProvider>
       </AuthProvider>
       </BrandProvider>
       </ThemeProvider>

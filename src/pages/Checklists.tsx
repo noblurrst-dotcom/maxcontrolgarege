@@ -21,8 +21,17 @@ function syncKanbanFromSources(kanban: KanbanItem[], preVendas: PreVenda[], agen
   const items = [...kanban]
   const origemIds = new Set(items.map(k => k.origem_id).filter(Boolean))
 
-  // Sync pré-vendas → Orçamento
+  // Sync pré-vendas → Orçamento (somente pendentes)
   for (const pv of preVendas) {
+    if (pv.status === 'aprovado' || pv.status === 'recusado') {
+      // Se já convertida/recusada, remover do kanban orçamento
+      const existIdx = items.findIndex(k => k.origem_id === pv.id && k.origem_tipo === 'prevenda' && k.etapa === 'orcamento')
+      if (existIdx !== -1) {
+        items.splice(existIdx, 1)
+        changed = true
+      }
+      continue
+    }
     if (origemIds.has(pv.id)) continue
     const descItens = pv.itens?.map(i => i.descricao).filter(Boolean).join(', ') || ''
     items.push({

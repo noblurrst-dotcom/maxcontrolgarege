@@ -290,6 +290,15 @@ html.dark {
 .dark .hover\:bg-gray-50:hover { background-color: #222235 !important; }
 .dark .hover\:bg-gray-100:hover { background-color: #2a2a3d !important; }
 
+/* Wiggle animation (iPhone-style edit mode) */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-0.5deg); }
+  50% { transform: rotate(0.5deg); }
+}
+.animate-wiggle {
+  animation: wiggle 0.3s ease-in-out infinite;
+}
+
 /* Fix para Android Chrome */
 @media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
   select {

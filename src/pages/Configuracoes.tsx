@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Settings, Upload, X, RotateCcw, Palette, FileText, Building2, Eye } from 'lucide-react'
+import { Settings, Upload, X, RotateCcw, Palette, FileText, Building2, Eye, UserCircle } from 'lucide-react'
 import { useBrand } from '../contexts/BrandContext'
 import toast from 'react-hot-toast'
 
@@ -50,6 +50,21 @@ export default function Configuracoes() {
         <button onClick={handleReset} className="flex items-center gap-1.5 px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full text-xs font-bold transition-colors">
           <RotateCcw size={14} /> Restaurar padrão
         </button>
+      </div>
+
+      {/* Meu Perfil */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><UserCircle size={16} className="text-blue-600" /></div>
+          <h2 className="text-sm font-bold text-gray-900">Meu Perfil</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Seu nome</label>
+            <input type="text" value={brand.nome_usuario} onChange={(e) => updateBrand({ nome_usuario: e.target.value })} placeholder="Como deseja ser chamado" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            <p className="text-[10px] text-gray-400 mt-1">Este nome aparecerá na saudação do painel e no menu do perfil.</p>
+          </div>
+        </div>
       </div>
 
       {/* Dados da Empresa */}

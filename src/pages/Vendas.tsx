@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, ArrowRight } from 'lucide-react'
-import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico } from '../types'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock } from 'lucide-react'
+import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
@@ -19,6 +19,8 @@ const FORMAS: { value: FormaPagamento; label: string }[] = [
 ]
 
 const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
 const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
@@ -56,6 +58,14 @@ export default function Vendas() {
   const [pvForm, setPvForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
   const [pvItens, setPvItens] = useState<PreVendaItem[]>([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
 
+  // Conversão com agendamento
+  const [convModal, setConvModal] = useState(false)
+  const [convPv, setConvPv] = useState<PreVenda | null>(null)
+  const [convData, setConvData] = useState('')
+  const [convHora, setConvHora] = useState('09:00')
+  const [convDuracao, setConvDuracao] = useState('60')
+  const [convCor, setConvCor] = useState('#4285F4')
+
   const salvar = (l: Venda[]) => { setVendas(l); safeSetStorage('vendas', l) }
   const salvarPv = (l: PreVenda[]) => { setPreVendas(l); safeSetStorage('pre_vendas', l) }
 
@@ -81,17 +91,63 @@ export default function Vendas() {
 
   const removerPv = (id: string) => { salvarPv(preVendas.filter(p => p.id !== id)); setPvDetalhe(null) }
 
-  const converterEmVenda = (pv: PreVenda) => {
+  const abrirConversao = (pv: PreVenda) => {
+    setConvPv(pv)
+    setConvData(new Date().toISOString().split('T')[0])
+    setConvHora('09:00')
+    setConvDuracao('60')
+    setConvCor('#4285F4')
+    setConvModal(true)
+  }
+
+  const confirmarConversao = () => {
+    if (!convPv || !convData) return
+    const pv = convPv
+    const descItens = pv.itens.map(i => i.descricao).join(', ')
+
+    // Criar venda
     const nova: Venda = {
       id: uid(), user_id: '', cliente_id: null, nome_cliente: pv.nome_cliente,
-      descricao: pv.itens.map(i => i.descricao).join(', '), valor: pv.valor_total,
+      descricao: descItens, valor: pv.valor_total,
       desconto: 0, valor_total: pv.valor_total, forma_pagamento: 'pix',
-      data_venda: new Date().toISOString().split('T')[0], status: 'fechada',
+      data_venda: convData, status: 'aberta',
       parcelas: 1, funcionario: '', observacoes: `Convertido de pré-venda. ${pv.observacoes}`,
       created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
     salvarPv(preVendas.map(p => p.id === pv.id ? { ...p, status: 'aprovado' as const } : p))
+
+    // Criar agendamento
+    const duracaoMin = parseInt(convDuracao) || 60
+    const dataHoraInicio = `${convData}T${convHora}:00`
+    const fim = new Date(dataHoraInicio)
+    fim.setMinutes(fim.getMinutes() + duracaoMin)
+    const dataHoraFim = fim.toISOString().slice(0, 19)
+
+    const agendamento: Agendamento = {
+      id: uid(),
+      user_id: '',
+      cliente_id: null,
+      venda_id: nova.id,
+      nome_cliente: pv.nome_cliente,
+      telefone_cliente: pv.telefone_cliente || '',
+      servico: descItens,
+      titulo: descItens,
+      data_hora: dataHoraInicio,
+      data_hora_fim: dataHoraFim,
+      duracao_min: duracaoMin,
+      status: 'pendente',
+      observacoes: pv.observacoes || '',
+      desconto: 0,
+      valor: pv.valor_total,
+      cor: convCor,
+      created_at: new Date().toISOString(),
+    }
+    const agendamentos = safeGetStorage<Agendamento[]>('agendamentos', [])
+    safeSetStorage('agendamentos', [agendamento, ...agendamentos])
+
+    setConvModal(false)
+    setConvPv(null)
     setPvDetalhe(null)
     setTab('vendas')
   }
@@ -668,8 +724,8 @@ export default function Vendas() {
               </div>
               <div className="flex gap-2">
                 {pvDetalhe.status === 'pendente' && (
-                  <button onClick={() => converterEmVenda(pvDetalhe)} className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
-                    <ArrowRight size={14} /> Converter em Venda
+                  <button onClick={() => abrirConversao(pvDetalhe)} className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                    <CalendarDays size={14} /> Agendar e Converter
                   </button>
                 )}
                 <button onClick={() => exportarPvPDF(pvDetalhe)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
@@ -683,6 +739,86 @@ export default function Vendas() {
               )}
               <button onClick={() => removerPv(pvDetalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Pré-Venda
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Conversão com Agendamento */}
+      {convModal && convPv && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setConvModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Agendar serviço</h2>
+              <button onClick={() => setConvModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+
+            {/* Resumo da pré-venda */}
+            <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
+              <p className="text-xs font-bold text-gray-700">{convPv.nome_cliente}</p>
+              <p className="text-[11px] text-gray-500">{convPv.itens.map(i => i.descricao).join(', ')}</p>
+              <p className="text-sm font-bold text-emerald-600">{fmt(convPv.valor_total)}</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Data */}
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                  <CalendarDays size={14} className="text-primary-600" /> Data do serviço *
+                </label>
+                <input type="date" value={convData} onChange={e => setConvData(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              </div>
+
+              {/* Hora + Duração */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                    <Clock size={14} className="text-primary-600" /> Horário
+                  </label>
+                  <input type="time" value={convHora} onChange={e => setConvHora(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Duração (min)</label>
+                  <select value={convDuracao} onChange={e => setConvDuracao(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white">
+                    <option value="30">30 min</option>
+                    <option value="60">1 hora</option>
+                    <option value="90">1h30</option>
+                    <option value="120">2 horas</option>
+                    <option value="180">3 horas</option>
+                    <option value="240">4 horas</option>
+                    <option value="480">8 horas (dia)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Cor do agendamento */}
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Cor na agenda</label>
+                <div className="flex flex-wrap gap-2">
+                  {CORES_AGENDA.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setConvCor(c)}
+                      className={`w-7 h-7 rounded-full transition-all ${convCor === c ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-400">
+                O serviço será agendado e aparecerá na Agenda e no Kanban como <strong>"Agendado"</strong>.
+              </p>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setConvModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={confirmarConversao} disabled={!convData} className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
+                <CalendarDays size={14} /> Confirmar
               </button>
             </div>
           </div>

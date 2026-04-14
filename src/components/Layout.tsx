@@ -17,16 +17,21 @@ import {
   Moon,
   Sun,
   UserCircle,
+  UsersRound,
+  Shield,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useRef, useEffect } from 'react'
 import { useBrand } from '../contexts/BrandContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useSubUsuario } from '../contexts/SubUsuarioContext'
+import type { ModuloId } from '../types'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
   const { brand } = useBrand()
   const { isDark, toggleTheme } = useTheme()
+  const { subUsuarioAtivo, podeVer, logoutSubUsuario } = useSubUsuario()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -51,30 +56,31 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const nomeUsuario = user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
+  const nomeUsuario = brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
 
-  const navItems = [
-    { path: '/', label: 'Painel', icon: LayoutDashboard },
-    { path: '/vendas', label: 'Vendas', icon: ShoppingCart },
-    { path: '/agenda', label: 'Agenda', icon: CalendarDays },
-    { path: '/clientes', label: 'Clientes', icon: Users },
-    { path: '/checklists', label: 'Checklists', icon: ClipboardCheck },
-    { path: '/financeiro', label: 'Financeiro', icon: DollarSign },
-    { path: '/servicos', label: 'Serviços', icon: Briefcase },
+  const allNavItems = [
+    { path: '/', label: 'Painel', icon: LayoutDashboard, modulo: 'dashboard' as ModuloId },
+    { path: '/vendas', label: 'Vendas', icon: ShoppingCart, modulo: 'vendas' as ModuloId },
+    { path: '/agenda', label: 'Agenda', icon: CalendarDays, modulo: 'agenda' as ModuloId },
+    { path: '/clientes', label: 'Clientes', icon: Users, modulo: 'clientes' as ModuloId },
+    { path: '/checklists', label: 'Checklists', icon: ClipboardCheck, modulo: 'checklists' as ModuloId },
+    { path: '/financeiro', label: 'Financeiro', icon: DollarSign, modulo: 'financeiro' as ModuloId },
+    { path: '/servicos', label: 'Serviços', icon: Briefcase, modulo: 'servicos' as ModuloId },
   ]
+  const navItems = allNavItems.filter(i => podeVer(i.modulo))
 
   const bottomNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Painel' },
-    { path: '/vendas', icon: ShoppingCart, label: 'Vendas' },
-    { path: '/agenda', icon: CalendarDays, label: 'Agenda' },
-    { path: '/clientes', icon: Users, label: 'Clientes' },
-  ]
+    { path: '/', icon: LayoutDashboard, label: 'Painel', modulo: 'dashboard' as ModuloId },
+    { path: '/vendas', icon: ShoppingCart, label: 'Vendas', modulo: 'vendas' as ModuloId },
+    { path: '/agenda', icon: CalendarDays, label: 'Agenda', modulo: 'agenda' as ModuloId },
+    { path: '/clientes', icon: Users, label: 'Clientes', modulo: 'clientes' as ModuloId },
+  ].filter(i => podeVer(i.modulo))
 
   const moreItems = [
-    { path: '/financeiro', icon: DollarSign, label: 'Financeiro' },
-    { path: '/checklists', icon: ClipboardCheck, label: 'Checklists' },
-    { path: '/servicos', icon: Briefcase, label: 'Serviços' },
-  ]
+    { path: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: 'financeiro' as ModuloId },
+    { path: '/checklists', icon: ClipboardCheck, label: 'Checklists', modulo: 'checklists' as ModuloId },
+    { path: '/servicos', icon: Briefcase, label: 'Serviços', modulo: 'servicos' as ModuloId },
+  ].filter(i => podeVer(i.modulo))
 
   const isMoreActive = moreItems.some(i => location.pathname === i.path)
 
@@ -142,9 +148,35 @@ export default function Layout() {
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                     {/* Nome do usuário */}
                     <div className="px-4 py-2.5 border-b border-gray-100">
-                      <p className="text-sm font-bold text-gray-900 truncate">{nomeUsuario}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{subUsuarioAtivo ? subUsuarioAtivo.nome : nomeUsuario}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{subUsuarioAtivo ? subUsuarioAtivo.email : user?.email}</p>
+                      {subUsuarioAtivo && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Shield size={10} className="text-primary-600" />
+                          <span className="text-[10px] font-bold text-primary-600">{subUsuarioAtivo.cargo || subUsuarioAtivo.role}</span>
+                        </div>
+                      )}
                     </div>
+                    {subUsuarioAtivo && (
+                      <button
+                        onClick={() => { logoutSubUsuario(); setProfileOpen(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
+                      >
+                        <UsersRound size={16} />
+                        Voltar ao proprietário
+                      </button>
+                    )}
+
+                    {/* Usuários */}
+                    {podeVer('usuarios') && (
+                      <button
+                        onClick={() => { navigate('/usuarios'); setProfileOpen(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <UsersRound size={16} className="text-gray-400" />
+                        Usuários
+                      </button>
+                    )}
 
                     {/* Configurações */}
                     <button

@@ -86,6 +86,7 @@ export interface NovoChecklistForm {
 // === Configuração de Identidade Visual ===
 
 export interface BrandConfig {
+  nome_usuario: string;
   nome_empresa: string;
   slogan: string;
   cnpj: string;
@@ -140,6 +141,7 @@ export interface Agendamento {
   observacoes: string;
   desconto: number;
   valor: number;
+  cor?: string;
   created_at: string;
 }
 
@@ -203,6 +205,49 @@ export interface ContaFinanceira {
   conta_bancaria: string;
   forma_pagamento: FormaPagamento | '';
   created_at: string;
+}
+
+// === Sub-Usuários e Permissões ===
+
+export type ModuloId = 'dashboard' | 'vendas' | 'agenda' | 'clientes' | 'checklists' | 'financeiro' | 'servicos' | 'configuracoes' | 'usuarios'
+
+export interface ModuloPermissao {
+  modulo: ModuloId
+  ver: boolean
+  editar: boolean
+}
+
+export interface SubUsuario {
+  id: string
+  owner_id: string
+  nome: string
+  email: string
+  senha: string
+  cargo: string
+  ativo: boolean
+  role: 'admin' | 'gerente' | 'operador' | 'visualizador'
+  permissoes: ModuloPermissao[]
+  created_at: string
+  updated_at: string
+}
+
+export const MODULOS_DISPONIVEIS: { id: ModuloId; label: string }[] = [
+  { id: 'dashboard', label: 'Painel' },
+  { id: 'vendas', label: 'Vendas' },
+  { id: 'agenda', label: 'Agenda' },
+  { id: 'clientes', label: 'Clientes' },
+  { id: 'checklists', label: 'Checklists' },
+  { id: 'financeiro', label: 'Financeiro' },
+  { id: 'servicos', label: 'Serviços' },
+  { id: 'configuracoes', label: 'Configurações' },
+  { id: 'usuarios', label: 'Usuários' },
+]
+
+export const ROLES_LABELS: Record<SubUsuario['role'], string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  operador: 'Operador',
+  visualizador: 'Visualizador',
 }
 
 export type KanbanEtapa = 'orcamento' | 'agendado' | 'na_oficina' | 'em_andamento' | 'finalizado' | 'entregue'
