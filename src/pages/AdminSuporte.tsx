@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Shield,
   Search,
@@ -24,7 +24,7 @@ import {
 // ========================================================================
 // IDs dos super administradores (adicione seu user_id do Supabase aqui)
 // ========================================================================
-const SUPER_ADMIN_IDS: string[] = [
+export const SUPER_ADMIN_IDS: string[] = [
   '22cf7ac8-0e64-481e-b0a6-c71b8fc11823',
 ]
 
@@ -48,7 +48,8 @@ interface UserData {
 export default function AdminSuporte() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [code, setCode] = useState('')
+  const [searchParams] = useSearchParams()
+  const [code, setCode] = useState(searchParams.get('code') || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [session, setSession] = useState<SupportSession | null>(null)
@@ -65,6 +66,18 @@ export default function AdminSuporte() {
       navigate('/login')
     }
   }, [navigate])
+
+  // Auto-validate code from URL param
+  useEffect(() => {
+    const urlCode = searchParams.get('code')
+    if (urlCode && isSuperAdmin && !session) {
+      setCode(urlCode.toUpperCase())
+      // Trigger validation after state is set
+      setTimeout(() => {
+        document.getElementById('btn-validate-code')?.click()
+      }, 300)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const validateCode = async () => {
     if (!code.trim() || code.trim().length < 6) {
@@ -246,6 +259,7 @@ export default function AdminSuporte() {
                 )}
 
                 <button
+                  id="btn-validate-code"
                   onClick={validateCode}
                   disabled={loading || code.trim().length < 6}
                   className="w-full py-3 bg-gray-900 hover:bg-gray-800 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"

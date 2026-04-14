@@ -31,6 +31,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import FloatingHelpButton from './FloatingHelpButton'
+import { SUPER_ADMIN_IDS } from '../pages/AdminSuporte'
 import type { ModuloId } from '../types'
 
 export default function Layout() {
@@ -47,6 +48,7 @@ export default function Layout() {
   const [supportCode, setSupportCode] = useState('')
   const [supportLoading, setSupportLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [adminCode, setAdminCode] = useState('')
   const profileRef = useRef<HTMLDivElement>(null)
 
   // Fechar dropdown ao clicar fora
@@ -67,6 +69,7 @@ export default function Layout() {
   }
 
   const nomeUsuario = brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
+  const isSuperAdmin = user && SUPER_ADMIN_IDS.includes(user.id)
 
   const generateSupportCode = useCallback(async () => {
     if (!user || !isSupabaseConfigured) {
@@ -245,14 +248,58 @@ export default function Layout() {
                       </span>
                     </button>
 
+                    {/* Super Admin — campo de código inline */}
+                    {isSuperAdmin && (
+                      <>
+                        <div className="border-t border-gray-100 my-1" />
+                        <div className="px-4 py-2">
+                          <p className="text-[10px] font-bold text-amber-600 uppercase mb-1.5 flex items-center gap-1"><Shield size={10} /> Suporte Admin</p>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={adminCode}
+                              onChange={(e) => setAdminCode(e.target.value.toUpperCase())}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && adminCode.trim().length >= 6) {
+                                  setProfileOpen(false)
+                                  navigate(`/admin/suporte?code=${adminCode.trim()}`)
+                                  setAdminCode('')
+                                }
+                              }}
+                              placeholder="Código"
+                              className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono font-bold text-center uppercase tracking-wider focus:ring-1 focus:ring-gray-900 outline-none"
+                              maxLength={8}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (adminCode.trim().length >= 6) {
+                                  setProfileOpen(false)
+                                  navigate(`/admin/suporte?code=${adminCode.trim()}`)
+                                  setAdminCode('')
+                                }
+                              }}
+                              disabled={adminCode.trim().length < 6}
+                              className="px-2.5 py-1.5 bg-gray-900 text-white rounded-lg text-[10px] font-bold disabled:opacity-30 hover:bg-gray-800 transition-colors"
+                            >
+                              Acessar
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     {/* Ajuda / Suporte */}
-                    <button
-                      onClick={() => { setProfileOpen(false); generateSupportCode() }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      {supportLoading ? <Loader2 size={16} className="text-gray-400 animate-spin" /> : <HelpCircle size={16} className="text-gray-400" />}
-                      Solicitar Ajuda
-                    </button>
+                    {!isSuperAdmin && (
+                      <button
+                        onClick={() => { setProfileOpen(false); generateSupportCode() }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        {supportLoading ? <Loader2 size={16} className="text-gray-400 animate-spin" /> : <HelpCircle size={16} className="text-gray-400" />}
+                        Solicitar Ajuda
+                      </button>
+                    )}
 
                     {/* Divider */}
                     <div className="border-t border-gray-100 my-1" />
