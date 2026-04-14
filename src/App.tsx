@@ -42,8 +42,8 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-      <BrandProvider>
       <AuthProvider>
+      <BrandProvider>
       <SubUsuarioProvider>
         <Toaster
           position="top-center"
@@ -82,8 +82,8 @@ function App() {
           </Routes>
         </Suspense>
       </SubUsuarioProvider>
-      </AuthProvider>
       </BrandProvider>
+      </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

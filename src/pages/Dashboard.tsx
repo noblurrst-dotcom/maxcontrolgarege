@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { fmt as formatCurrencyUtil, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { fmt as formatCurrencyUtil } from '../lib/utils'
+import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
 import {
   ShoppingCart,
   CalendarPlus,
@@ -377,20 +378,18 @@ export default function Dashboard() {
   const [mesAtual, setMesAtual] = useState(new Date())
 
   // Block customization
-  const [blocks, setBlocks] = useState<BlockConfig[]>(() => {
-    const saved = safeGetStorage<BlockConfig[]>('dashboard_blocks', [])
-    if (saved.length === DEFAULT_BLOCKS.length) return saved
-    // Merge saved visibility with defaults (handles new blocks)
-    return DEFAULT_BLOCKS.map(d => {
-      const s = saved.find(b => b.id === d.id)
-      return s ? { ...d, visible: s.visible } : d
-    })
-  })
+  const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
+  const blocks = useMemo(() => {
+    const saved = (blocksCloud as any) as BlockConfig[] | undefined
+    if (Array.isArray(saved) && saved.length === DEFAULT_BLOCKS.length) return saved
+    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = saved.find((b: BlockConfig) => b.id === d.id); return s ? { ...d, visible: s.visible } : d })
+    return DEFAULT_BLOCKS
+  }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
   const [dragBlock, setDragBlock] = useState<BlockId | null>(null)
   const [dragOverBlock, setDragOverBlock] = useState<BlockId | null>(null)
 
-  const salvarBlocks = (b: BlockConfig[]) => { setBlocks(b); safeSetStorage('dashboard_blocks', b) }
+  const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud(b as any) }
 
   const toggleVisible = (id: BlockId) => {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
@@ -449,11 +448,11 @@ export default function Dashboard() {
     }
   }
 
-  // Dados do localStorage
-  const vendas = useMemo(() => safeGetStorage<any[]>('vendas', []), [])
-  const agendamentos = useMemo(() => safeGetStorage<any[]>('agendamentos', []), [])
-  const clientes = useMemo(() => safeGetStorage<any[]>('clientes', []), [])
-  const financeiro = useMemo(() => safeGetStorage<any[]>('financeiro', []), [])
+  // Dados sincronizados via cloud
+  const { data: vendas } = useCloudSync<any>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: agendamentos } = useCloudSync<any>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: clientes } = useCloudSync<any>({ table: 'clientes', storageKey: 'clientes' })
+  const { data: financeiro } = useCloudSync<any>({ table: 'financeiro', storageKey: 'financeiro' })
   
   // Métricas financeiras do mês
   const isMes = (d: string) => { const dt = new Date(d); return dt.getMonth() === mesNum && dt.getFullYear() === anoNum }

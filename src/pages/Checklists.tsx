@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase'
 import ChecklistCard from '../components/ChecklistCard'
 import { Plus, Search, ClipboardList, Loader2, CalendarDays, CheckCircle2, Hash, Columns, GripVertical, Phone, Car, Wrench, Trash2, ChevronRight } from 'lucide-react'
 import type { Checklist, KanbanItem, KanbanEtapa, PreVenda, Agendamento } from '../types'
-import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { uid, fmt } from '../lib/utils'
+import { useCloudSync } from '../hooks/useCloudSync'
 
 const ETAPAS: { key: KanbanEtapa; label: string; color: string; bg: string; border: string }[] = [
   { key: 'orcamento', label: 'Orçamento', color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200' },
@@ -88,19 +89,17 @@ export default function Checklists() {
   const [busca, setBusca] = useState('')
 
   // Kanban state
-  const [kanban, setKanban] = useState<KanbanItem[]>(() => safeGetStorage<KanbanItem[]>('kanban_items', []))
+  const { data: kanban, save: salvarKanban } = useCloudSync<KanbanItem>({ table: 'kanban_items', storageKey: 'kanban_items' })
+  const { data: preVendasSync } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
+  const { data: agendamentosSync } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const [dragItem, setDragItem] = useState<string | null>(null)
   const [dragOverEtapa, setDragOverEtapa] = useState<KanbanEtapa | null>(null)
 
-  const salvarKanban = (items: KanbanItem[]) => { setKanban(items); safeSetStorage('kanban_items', items) }
-
   // Auto-sync from pré-vendas and agendamentos
   useEffect(() => {
-    const preVendas = safeGetStorage<PreVenda[]>('pre_vendas', [])
-    const agendamentos = safeGetStorage<Agendamento[]>('agendamentos', [])
-    const { items, changed } = syncKanbanFromSources(kanban, preVendas, agendamentos)
+    const { items, changed } = syncKanbanFromSources(kanban, preVendasSync, agendamentosSync)
     if (changed) salvarKanban(items)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preVendasSync, agendamentosSync]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user) carregarChecklists()

@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import type { BrandConfig } from '../types'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useAuth } from './AuthContext'
 
 const DEFAULT_BRAND: BrandConfig = {
   nome_usuario: '',
@@ -107,6 +109,7 @@ const BrandContext = createContext<BrandContextType>({
 })
 
 export function BrandProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [brand, setBrand] = useState<BrandConfig>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -116,9 +119,47 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     }
   })
 
+  // Load from Supabase on auth
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(brand))
-  }, [brand])
+    if (!user || !isSupabaseConfigured) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data: row, error } = await supabase.from('brand_config').select('*').eq('user_id', user.id).single()
+        if (cancelled) return
+        if (row && !error) {
+          const { user_id, updated_at, ...rest } = row
+          const cloudBrand = { ...DEFAULT_BRAND, ...rest } as BrandConfig
+          setBrand(cloudBrand)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudBrand))
+          applyBrandColors(cloudBrand.cor_primaria, cloudBrand.cor_secundaria)
+        } else {
+          // No cloud data — push local up
+          const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          if (local.nome_empresa) {
+            await supabase.from('brand_config').upsert({ ...local, user_id: user.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+          }
+        }
+      } catch (err) {
+        console.warn('[BrandSync] Erro:', err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user])
+
+  // Save to localStorage + Supabase
+  const syncToCloud = useCallback(async (b: BrandConfig) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(b))
+    if (user && isSupabaseConfigured) {
+      await supabase.from('brand_config').upsert({ ...b, user_id: user.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).then(({ error }) => {
+        if (error) console.warn('[BrandSync] Erro ao salvar:', error.message)
+      })
+    }
+  }, [user])
+
+  useEffect(() => {
+    syncToCloud(brand)
+  }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply colors synchronously before browser paint
   useLayoutEffect(() => {

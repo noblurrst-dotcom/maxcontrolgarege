@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark } from 'lucide-react'
 import type { ContaFinanceira, FormaPagamento } from '../types'
-import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
+import { useCloudSync } from '../hooks/useCloudSync'
 
 const CATEGORIAS_ENTRADA = ['Serviço', 'Venda', 'Comissão', 'Investimento', 'Outros']
 const CATEGORIAS_SAIDA = ['Material', 'Aluguel', 'Salário', 'Fornecedor', 'Água/Luz', 'Internet', 'Manutenção', 'Outros']
@@ -18,8 +19,8 @@ interface ContaBancaria { id: string; nome: string; banco: string; saldo: number
 const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '' })
 
 export default function Financeiro() {
-  const [contas, setContas] = useState<ContaFinanceira[]>(() => safeGetStorage<ContaFinanceira[]>('financeiro', []))
-  const [bancos, setBancos] = useState<ContaBancaria[]>(() => safeGetStorage<ContaBancaria[]>('contas_bancarias', []))
+  const { data: contas, save: salvar } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
+  const { data: bancos, save: salvarBancos } = useCloudSync<ContaBancaria>({ table: 'contas_bancarias', storageKey: 'contas_bancarias' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos')
@@ -27,9 +28,6 @@ export default function Financeiro() {
   const [modalBanco, setModalBanco] = useState(false)
   const [form, setForm] = useState(initForm())
   const [formBanco, setFormBanco] = useState({ nome: '', banco: '', tipo: 'corrente', saldo: '' })
-
-  const salvar = (lista: ContaFinanceira[]) => { setContas(lista); safeSetStorage('financeiro', lista) }
-  const salvarBancos = (lista: ContaBancaria[]) => { setBancos(lista); safeSetStorage('contas_bancarias', lista) }
 
   const adicionar = () => {
     if (!form.descricao || !form.valor || !modal) return

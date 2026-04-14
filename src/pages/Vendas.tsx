@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
 import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
+import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
@@ -29,7 +30,7 @@ export default function Vendas() {
   const { user } = useAuth()
   const [tab, setTab] = useState<'vendas' | 'prevenda'>('vendas')
   const [servicos, setServicos] = useState<Servico[]>([])
-  const [vendas, setVendas] = useState<Venda[]>(() => safeGetStorage<Venda[]>('vendas', []))
+  const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'aberta' | 'fechada'>('todas')
@@ -52,7 +53,7 @@ export default function Vendas() {
   }, [user])
 
   // Pré-Venda state
-  const [preVendas, setPreVendas] = useState<PreVenda[]>(() => safeGetStorage<PreVenda[]>('pre_vendas', []))
+  const { data: preVendas, save: salvarPreVendas } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
   const [pvModal, setPvModal] = useState(false)
   const [pvDetalhe, setPvDetalhe] = useState<PreVenda | null>(null)
   const [pvForm, setPvForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
@@ -66,8 +67,8 @@ export default function Vendas() {
   const [convDuracao, setConvDuracao] = useState('60')
   const [convCor, setConvCor] = useState('#4285F4')
 
-  const salvar = (l: Venda[]) => { setVendas(l); safeSetStorage('vendas', l) }
-  const salvarPv = (l: PreVenda[]) => { setPreVendas(l); safeSetStorage('pre_vendas', l) }
+  const salvar = (l: Venda[]) => { salvarVendas(l) }
+  const salvarPv = (l: PreVenda[]) => { salvarPreVendas(l) }
 
   // Pré-Venda helpers
   const pvSubtotal = pvItens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0)
@@ -144,7 +145,14 @@ export default function Vendas() {
       created_at: new Date().toISOString(),
     }
     const agendamentos = safeGetStorage<Agendamento[]>('agendamentos', [])
-    safeSetStorage('agendamentos', [agendamento, ...agendamentos])
+    const updated = [agendamento, ...agendamentos]
+    safeSetStorage('agendamentos', updated)
+    // Sync agendamento to Supabase
+    if (user) {
+      supabase.from('agendamentos').upsert({ ...agendamento, user_id: user.id }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('[CloudSync] Erro ao salvar agendamento:', error.message)
+      })
+    }
 
     setConvModal(false)
     setConvPv(null)

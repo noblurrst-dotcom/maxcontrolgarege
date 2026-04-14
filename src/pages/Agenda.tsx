@@ -5,8 +5,9 @@ import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import type { Agendamento, Servico, Venda } from '../types'
-import { uid, fmt, safeGetStorage, safeSetStorage, sanitizePhone } from '../lib/utils'
+import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
+import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 
 const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
@@ -23,9 +24,9 @@ const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', s
 
 export default function Agenda() {
   const { user } = useAuth()
-  const [lista, setLista] = useState<Agendamento[]>(() => safeGetStorage<Agendamento[]>('agendamentos', []))
+  const { data: lista, save: salvar } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const [servicos, setServicos] = useState<Servico[]>([])
-  const vendas = useMemo(() => safeGetStorage<Venda[]>('vendas', []), [])
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todos' | Agendamento['status']>('todos')
@@ -74,8 +75,6 @@ export default function Agenda() {
       setServicos([])
     }
   }
-
-  const salvar = (l: Agendamento[]) => { setLista(l); safeSetStorage('agendamentos', l) }
 
   const adicionar = () => {
     if (!form.nome_cliente || !form.data_hora) return

@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { UserPlus, Search, ChevronDown, X } from 'lucide-react'
 import type { Cliente } from '../types'
-import { uid, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { uid } from '../lib/utils'
+import { useCloudSync } from '../hooks/useCloudSync'
 
 interface Props {
   value: string
@@ -10,7 +11,7 @@ interface Props {
 }
 
 export default function ClientePicker({ value, onChange }: Props) {
-  const [clientes, setClientes] = useState<Cliente[]>(() => safeGetStorage<Cliente[]>('clientes', []))
+  const { data: clientes, save: salvarClientes } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const [aberto, setAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [novoCliente, setNovoCliente] = useState(false)
@@ -54,8 +55,7 @@ export default function ClientePicker({ value, onChange }: Props) {
       created_at: new Date().toISOString(),
     }
     const atualizada = [novo, ...clientes]
-    setClientes(atualizada)
-    safeSetStorage('clientes', atualizada)
+    salvarClientes(atualizada)
     onChange(novo.nome, novo.telefone)
     setNovoForm({ nome: '', telefone: '', veiculo: '', placa: '' })
     setNovoCliente(false)

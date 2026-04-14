@@ -1,20 +1,19 @@
 import { useState, useMemo } from 'react'
 import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin } from 'lucide-react'
 import type { Cliente } from '../types'
-import { uid, fmt, safeGetStorage, safeSetStorage, sanitizePhone } from '../lib/utils'
+import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
+import { useCloudSync } from '../hooks/useCloudSync'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
 
 export default function Clientes() {
-  const [lista, setLista] = useState<Cliente[]>(() => safeGetStorage<Cliente[]>('clientes', []))
+  const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Cliente | null>(null)
   const [form, setForm] = useState(initForm())
-
-  const salvar = (l: Cliente[]) => { setLista(l); safeSetStorage('clientes', l) }
 
   const adicionar = () => {
     if (!form.nome) return
