@@ -19,12 +19,18 @@ import {
   UserCircle,
   UsersRound,
   Shield,
+  HelpCircle,
+  Copy,
+  Loader2,
+  Check,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useBrand } from '../contexts/BrandContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import FloatingHelpButton from './FloatingHelpButton'
 import type { ModuloId } from '../types'
 
 export default function Layout() {
@@ -37,6 +43,10 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [supportModal, setSupportModal] = useState(false)
+  const [supportCode, setSupportCode] = useState('')
+  const [supportLoading, setSupportLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
   // Fechar dropdown ao clicar fora
@@ -57,6 +67,38 @@ export default function Layout() {
   }
 
   const nomeUsuario = brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
+
+  const generateSupportCode = useCallback(async () => {
+    if (!user || !isSupabaseConfigured) {
+      toast.error('Não foi possível gerar o código')
+      return
+    }
+    setSupportLoading(true)
+    try {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const { error } = await supabase.from('support_codes').insert({
+        user_id: user.id,
+        code,
+        user_email: user.email || '',
+        user_nome: nomeUsuario,
+      })
+      if (error) throw error
+      setSupportCode(code)
+      setSupportModal(true)
+    } catch (err: any) {
+      console.error('Erro ao gerar código de suporte:', err)
+      toast.error('Erro ao gerar código')
+    } finally {
+      setSupportLoading(false)
+    }
+  }, [user, nomeUsuario])
+
+  const copySupportCode = () => {
+    navigator.clipboard.writeText(supportCode)
+    setCopied(true)
+    toast.success('Código copiado!')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const allNavItems = [
     { path: '/', label: 'Painel', icon: LayoutDashboard, modulo: 'dashboard' as ModuloId },
@@ -203,6 +245,15 @@ export default function Layout() {
                       </span>
                     </button>
 
+                    {/* Ajuda / Suporte */}
+                    <button
+                      onClick={() => { setProfileOpen(false); generateSupportCode() }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {supportLoading ? <Loader2 size={16} className="text-gray-400 animate-spin" /> : <HelpCircle size={16} className="text-gray-400" />}
+                      Solicitar Ajuda
+                    </button>
+
                     {/* Divider */}
                     <div className="border-t border-gray-100 my-1" />
 
@@ -259,10 +310,52 @@ export default function Layout() {
         )}
       </header>
 
+      {/* Support Code Modal */}
+      {supportModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 pt-6 pb-4 text-center">
+              <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria + '20' }}>
+                <HelpCircle size={28} style={{ color: brand.cor_primaria }} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Código de Suporte</h3>
+              <p className="text-xs text-gray-500 mt-1">Envie este código para nossa equipe de suporte para que possamos acessar sua conta e ajudá-lo.</p>
+            </div>
+
+            <div className="px-6 pb-4">
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                <span className="flex-1 text-center text-2xl font-mono font-bold tracking-[0.3em] text-gray-900">{supportCode}</span>
+                <button
+                  onClick={copySupportCode}
+                  className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  title="Copiar"
+                >
+                  {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} className="text-gray-400" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 text-center mt-2">Válido por 30 minutos</p>
+            </div>
+
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => { setSupportModal(false); setSupportCode('') }}
+                className="w-full py-2.5 rounded-xl text-sm font-bold transition-colors"
+                style={{ backgroundColor: brand.cor_primaria, color: brand.cor_secundaria }}
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 container-responsive container-with-bottom-nav py-4 sm:py-6">
         <Outlet />
       </main>
+
+      {/* Floating Help Button */}
+      <FloatingHelpButton />
 
       {/* Bottom Navigation (mobile) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-bottom">

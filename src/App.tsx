@@ -19,6 +19,7 @@ const Financeiro = lazy(() => import('./pages/Financeiro'))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Layout = lazy(() => import('./components/Layout'))
+const AdminSuporte = lazy(() => import('./pages/AdminSuporte'))
 
 function Loading() {
   return (
@@ -59,6 +60,7 @@ function App() {
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/admin/suporte" element={<ProtectedRoute><AdminSuporte /></ProtectedRoute>} />
             <Route
               element={
                 <ProtectedRoute>

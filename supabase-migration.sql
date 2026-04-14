@@ -196,3 +196,31 @@ CREATE POLICY sub_usuarios_policy ON sub_usuarios FOR ALL USING (owner_id = auth
 -- Brand config e dashboard blocks: filtrar pela PK user_id
 CREATE POLICY brand_config_policy ON brand_config FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY dashboard_blocks_policy ON dashboard_blocks FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- ============================================================
+-- 11. Códigos de Suporte (para acesso remoto do admin)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS support_codes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  user_email TEXT NOT NULL DEFAULT '',
+  user_nome TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '30 minutes'),
+  used BOOLEAN NOT NULL DEFAULT false
+);
+
+ALTER TABLE support_codes ENABLE ROW LEVEL SECURITY;
+
+-- Qualquer usuário autenticado pode criar e ler seus próprios códigos
+CREATE POLICY support_codes_own ON support_codes
+  FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- Super admin pode ler qualquer código (necessário service_role key ou policy separada)
+-- Para o admin, usamos uma policy que permite SELECT em códigos válidos (não expirados)
+-- O admin valida o código e depois usa service_role para acessar dados do usuário
+CREATE POLICY support_codes_read_valid ON support_codes
+  FOR SELECT USING (
+    expires_at > now() AND used = false
+  );
