@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { SubUsuarioProvider } from './contexts/SubUsuarioContext'
+import { SupportViewProvider } from './contexts/SupportViewContext'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -44,6 +45,7 @@ function App() {
     <BrowserRouter>
       <ThemeProvider>
       <AuthProvider>
+      <SupportViewProvider>
       <BrandProvider>
       <SubUsuarioProvider>
         <Toaster
@@ -85,6 +87,7 @@ function App() {
         </Suspense>
       </SubUsuarioProvider>
       </BrandProvider>
+      </SupportViewProvider>
       </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

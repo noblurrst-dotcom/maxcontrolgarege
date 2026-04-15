@@ -32,6 +32,7 @@ import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import FloatingHelpButton from './FloatingHelpButton'
 import { SUPER_ADMIN_IDS } from '../pages/AdminSuporte'
+import { useSupportView } from '../contexts/SupportViewContext'
 import type { ModuloId } from '../types'
 
 export default function Layout() {
@@ -39,6 +40,7 @@ export default function Layout() {
   const { brand } = useBrand()
   const { isDark, toggleTheme } = useTheme()
   const { subUsuarioAtivo, podeVer, logoutSubUsuario } = useSubUsuario()
+  const { isSupport, supportInfo, endSupportView } = useSupportView()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -357,6 +359,25 @@ export default function Layout() {
         )}
       </header>
 
+      {/* Support Mode Banner */}
+      {isSupport && (
+        <div className="sticky top-14 sm:top-16 z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <Shield size={14} className="shrink-0" />
+            <p className="text-xs font-bold truncate">
+              Modo Suporte — Visualizando: <span className="font-extrabold">{supportInfo?.nome || supportInfo?.email || 'Usuário'}</span>
+            </p>
+          </div>
+          <button
+            onClick={() => { endSupportView(); navigate('/admin/suporte') }}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-amber-900/20 hover:bg-amber-900/30 rounded-lg text-[11px] font-bold transition-colors"
+          >
+            <LogOut size={12} />
+            Encerrar
+          </button>
+        </div>
+      )}
+
       {/* Support Code Modal */}
       {supportModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
@@ -401,8 +422,8 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {/* Floating Help Button */}
-      <FloatingHelpButton />
+      {/* Floating Help Button — hidden in support mode */}
+      {!isSupport && <FloatingHelpButton />}
 
       {/* Bottom Navigation (mobile) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-bottom">

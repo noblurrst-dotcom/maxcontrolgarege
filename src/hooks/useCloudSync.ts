@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { safeGetStorage, safeSetStorage } from '../lib/utils'
+import { useSupportView } from '../contexts/SupportViewContext'
 
 // =====================================================================
 // useCloudSync — Sincroniza arrays de dados com Supabase + localStorage
@@ -22,7 +23,14 @@ export function useCloudSync<T extends Record<string, any>>(
 ) {
   const { table, storageKey, userIdField = 'user_id', orderBy = 'created_at', orderAsc = false } = options
   const { user } = useAuth()
-  const [data, setData] = useState<T[]>(() => safeGetStorage<T[]>(storageKey, []))
+  const { isSupport, supportData } = useSupportView()
+  const [data, setData] = useState<T[]>(() => {
+    // In support mode, use pre-loaded data immediately
+    if (isSupport && supportData && (supportData as any)[table]) {
+      return (supportData as any)[table] as T[]
+    }
+    return safeGetStorage<T[]>(storageKey, [])
+  })
   const [loading, setLoading] = useState(true)
   const [synced, setSynced] = useState(false)
   const isMounted = useRef(true)
@@ -31,8 +39,18 @@ export function useCloudSync<T extends Record<string, any>>(
     return () => { isMounted.current = false }
   }, [])
 
+  // When entering/exiting support mode, update data accordingly
+  useEffect(() => {
+    if (isSupport && supportData && (supportData as any)[table]) {
+      setData((supportData as any)[table] as T[])
+      setLoading(false)
+      setSynced(true)
+    }
+  }, [isSupport, supportData, table])
+
   // Load from Supabase on mount / user change
   useEffect(() => {
+    if (isSupport) return // Skip Supabase load in support mode
     if (!user || !isSupabaseConfigured) {
       setLoading(false)
       return
@@ -88,8 +106,9 @@ export function useCloudSync<T extends Record<string, any>>(
     return () => { cancelled = true }
   }, [user, table]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Save function: writes to state + localStorage + Supabase
+  // Save function: read-only in support mode
   const save = useCallback(async (items: T[]) => {
+    if (isSupport) return // read-only in support mode
     setData(items)
     safeSetStorage(storageKey, items)
 

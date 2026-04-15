@@ -198,7 +198,43 @@ CREATE POLICY brand_config_policy ON brand_config FOR ALL USING (user_id = auth.
 CREATE POLICY dashboard_blocks_policy ON dashboard_blocks FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 -- ============================================================
--- 11. Códigos de Suporte (para acesso remoto do admin)
+-- 11. Super Admins (bypass RLS para visualização de suporte)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS super_admins (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE super_admins ENABLE ROW LEVEL SECURITY;
+
+-- Qualquer usuário autenticado pode checar se é super admin
+CREATE POLICY super_admins_select ON super_admins FOR SELECT USING (true);
+
+-- Inserir o(s) super admin(s) — substitua pelo UUID real
+INSERT INTO super_admins (user_id) VALUES ('22cf7ac8-0e64-481e-b0a6-c71b8fc11823') ON CONFLICT DO NOTHING;
+
+-- Políticas de leitura para super admin em todas as tabelas de dados
+-- (super admin só pode LER dados de outros usuários, nunca escrever)
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOR tbl IN SELECT unnest(ARRAY['vendas','pre_vendas','agendamentos','clientes','financeiro','contas_bancarias','kanban_items'])
+  LOOP
+    EXECUTE format(
+      'CREATE POLICY %I ON %I FOR SELECT USING (EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid()))',
+      tbl || '_superadmin_read', tbl
+    );
+  END LOOP;
+END $$;
+
+CREATE POLICY brand_config_superadmin_read ON brand_config FOR SELECT
+  USING (EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid()));
+
+CREATE POLICY sub_usuarios_superadmin_read ON sub_usuarios FOR SELECT
+  USING (EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid()));
+
+-- ============================================================
+-- 12. Códigos de Suporte (para acesso remoto do admin)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS support_codes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
