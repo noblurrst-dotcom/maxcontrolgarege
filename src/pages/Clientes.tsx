@@ -1,11 +1,66 @@
-import { useState, useMemo } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { Cliente } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
+
+function parseCSV(text: string): { headers: string[]; rows: string[][] } {
+  const clean = text.replace(/^\uFEFF/, '').trim()
+  const lines = clean.split(/\r?\n/)
+  if (!lines.length) return { headers: [], rows: [] }
+  const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ';' : ','
+  const parseLine = (line: string): string[] => {
+    const res: string[] = []; let cur = ''; let inQ = false
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      if (c === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++ } else { inQ = !inQ } }
+      else if (c === sep && !inQ) { res.push(cur.trim()); cur = '' }
+      else { cur += c }
+    }
+    res.push(cur.trim()); return res
+  }
+  const headers = parseLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim())
+  const rows = lines.slice(1).filter(l => l.trim()).map(parseLine)
+  return { headers, rows }
+}
+
+function autoMapCampo(header: string): string {
+  const h = header.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (/\b(nome|name|cliente|contato)\b/.test(h)) return 'nome'
+  if (/\b(tel|fone|celular|cell|phone|whatsapp|wpp)\b/.test(h) || h === 'telefone') return 'telefone'
+  if (/\b(email|e.mail|mail)\b/.test(h)) return 'email'
+  if (/\b(cpf|cnpj|documento|doc)\b/.test(h)) return 'cpf_cnpj'
+  if (/\b(veiculo|vehicle|carro|modelo|marca)\b/.test(h)) return 'veiculo'
+  if (/\b(placa|plate)\b/.test(h)) return 'placa'
+  if (/\b(endereco|address|rua|logradouro)\b/.test(h)) return 'endereco'
+  if (/\b(aniversario|birthday|nascimento|nasc)\b/.test(h)) return 'aniversario'
+  if (/\b(obs|observa|nota|note|comentario)\b/.test(h)) return 'observacoes'
+  return ''
+}
+
+function normalizarData(d: string): string {
+  if (!d) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  const m = d.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/)
+  if (m) { const ano = m[3].length === 2 ? '20' + m[3] : m[3]; return `${ano}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` }
+  return d
+}
+
+const CAMPOS_CSV: { value: string; label: string }[] = [
+  { value: '', label: '— Ignorar —' },
+  { value: 'nome', label: 'Nome' },
+  { value: 'telefone', label: 'Telefone' },
+  { value: 'email', label: 'Email' },
+  { value: 'cpf_cnpj', label: 'CPF / CNPJ' },
+  { value: 'veiculo', label: 'Veículo' },
+  { value: 'placa', label: 'Placa' },
+  { value: 'endereco', label: 'Endereço' },
+  { value: 'aniversario', label: 'Aniversário' },
+  { value: 'observacoes', label: 'Observações' },
+]
 
 export default function Clientes() {
   const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
@@ -14,6 +69,62 @@ export default function Clientes() {
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Cliente | null>(null)
   const [form, setForm] = useState(initForm())
+  const [csvModal, setCsvModal] = useState(false)
+  const [csvData, setCsvData] = useState<{ headers: string[]; rows: string[][] } | null>(null)
+  const [csvMapeamento, setCsvMapeamento] = useState<Record<number, string>>({})
+  const [csvImportados, setCsvImportados] = useState<number | null>(null)
+  const [csvDragover, setCsvDragover] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleCSVFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const parsed = parseCSV(text)
+      if (!parsed.headers.length) return
+      const map: Record<number, string> = {}
+      parsed.headers.forEach((h, i) => { map[i] = autoMapCampo(h) })
+      setCsvData(parsed); setCsvMapeamento(map); setCsvImportados(null)
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  const importarCSV = () => {
+    if (!csvData) return
+    const novos: Cliente[] = []
+    for (const row of csvData.rows) {
+      const obj: Record<string, string> = {}
+      Object.entries(csvMapeamento).forEach(([iStr, campo]) => {
+        const idx = parseInt(iStr)
+        if (campo && row[idx] !== undefined) obj[campo] = row[idx]
+      })
+      if (!obj.nome?.trim()) continue
+      novos.push({
+        id: uid(), user_id: '', nome: obj.nome.trim(),
+        telefone: obj.telefone?.trim() || '', email: obj.email?.trim() || '',
+        cpf_cnpj: obj.cpf_cnpj?.trim() || '', veiculo: obj.veiculo?.trim() || '',
+        placa: (obj.placa?.trim() || '').toUpperCase(),
+        endereco: obj.endereco?.trim() || '',
+        aniversario: normalizarData(obj.aniversario?.trim() || ''),
+        observacoes: obj.observacoes?.trim() || '',
+        total_gasto: 0, created_at: new Date().toISOString(),
+      })
+    }
+    const existKeys = new Set(lista.map(c => `${c.nome.toLowerCase()}|${c.telefone}`))
+    const unicos = novos.filter(c => !existKeys.has(`${c.nome.toLowerCase()}|${c.telefone}`))
+    salvar([...unicos, ...lista])
+    setCsvImportados(unicos.length)
+  }
+
+  const baixarModelo = () => {
+    const conteudo = 'nome,telefone,email,cpf_cnpj,veiculo,placa,endereco,aniversario,observacoes\nJoão Silva,11999999999,joao@email.com,123.456.789-00,Honda Civic 2020 Preto,ABC1234,"Rua das Flores, 100",1990-05-15,Cliente VIP'
+    const blob = new Blob(['\uFEFF' + conteudo], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'modelo_contatos.csv'; a.click(); URL.revokeObjectURL(url)
+  }
+
+  const fecharCsvModal = () => { setCsvModal(false); setCsvData(null); setCsvMapeamento({}); setCsvImportados(null) }
 
   const adicionar = () => {
     if (!form.nome) return
@@ -56,9 +167,14 @@ export default function Clientes() {
           <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
           <p className="text-sm text-gray-400 mt-0.5">{lista.length} cliente{lista.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
-          <Plus size={16} /> Novo Cliente
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setCsvModal(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
+            <Upload size={14} /> Importar CSV
+          </button>
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+            <Plus size={16} /> Novo Cliente
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -178,6 +294,135 @@ export default function Clientes() {
               <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
                 Cadastrar Cliente
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Importar CSV */}
+      {csvModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={fecharCsvModal}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Importar Contatos via CSV</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Importe múltiplos clientes de uma só vez</p>
+              </div>
+              <button onClick={fecharCsvModal} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {csvImportados !== null ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 size={32} className="text-emerald-500" />
+                  </div>
+                  <p className="text-lg font-bold text-gray-900">{csvImportados} contato{csvImportados !== 1 ? 's' : ''} importado{csvImportados !== 1 ? 's' : ''}!</p>
+                  <p className="text-sm text-gray-400 mt-1">Os contatos já aparecem na sua lista.</p>
+                  <button onClick={fecharCsvModal} className="mt-5 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
+                    Concluir
+                  </button>
+                </div>
+              ) : !csvData ? (
+                <>
+                  <div
+                    className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${csvDragover ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={e => { e.preventDefault(); setCsvDragover(true) }}
+                    onDragLeave={() => setCsvDragover(false)}
+                    onDrop={e => { e.preventDefault(); setCsvDragover(false); const f = e.dataTransfer.files[0]; if (f) handleCSVFile(f) }}
+                  >
+                    <Upload size={36} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-gray-700">Arraste o arquivo CSV ou clique para selecionar</p>
+                    <p className="text-xs text-gray-400 mt-1.5">Separadores suportados: vírgula (,) e ponto-e-vírgula (;)</p>
+                    <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleCSVFile(f) }} />
+                  </div>
+                  <button onClick={baixarModelo} className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                    <FileDown size={14} /> Baixar modelo de CSV
+                  </button>
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                    <p className="text-[11px] font-bold text-blue-700 mb-1.5 flex items-center gap-1"><AlertCircle size={12} /> Dicas para importar</p>
+                    <ul className="space-y-0.5">
+                      {['A primeira linha deve conter os cabeçalhos das colunas','A coluna nome é obrigatória','Datas de aniversário: AAAA-MM-DD ou DD/MM/AAAA','Contatos duplicados (mesmo nome + telefone) serão ignorados'].map((t, i) => (
+                        <li key={i} className="text-[11px] text-blue-600 flex items-start gap-1"><span className="mt-0.5 shrink-0">•</span>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                    <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                    <p className="text-xs font-semibold text-emerald-700">{csvData.rows.length} linha{csvData.rows.length !== 1 ? 's' : ''} encontrada{csvData.rows.length !== 1 ? 's' : ''} no arquivo</p>
+                    <button onClick={() => { setCsvData(null); setCsvMapeamento({}) }} className="ml-auto text-[10px] font-bold text-gray-400 hover:text-gray-600 underline">Trocar arquivo</button>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold text-gray-700 mb-2">Mapeamento de colunas</p>
+                    <div className="border border-gray-100 rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-2 bg-gray-50 px-3 py-2 border-b border-gray-100">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Coluna no CSV</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Campo do sistema</p>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                        {csvData.headers.map((header, i) => (
+                          <div key={i} className="grid grid-cols-2 items-center px-3 py-2 gap-2">
+                            <p className="text-xs text-gray-700 font-medium truncate" title={header}>{header}</p>
+                            <select value={csvMapeamento[i] || ''} onChange={e => setCsvMapeamento(m => ({ ...m, [i]: e.target.value }))} className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary-500 outline-none bg-white">
+                              {CAMPOS_CSV.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {csvData.rows.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-700 mb-2">Prévia ({Math.min(3, csvData.rows.length)} primeiras linhas)</p>
+                      <div className="overflow-x-auto border border-gray-100 rounded-xl">
+                        <table className="w-full text-[11px]">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>{csvData.headers.map((h, i) => <th key={i} className="px-2 py-1.5 text-left text-gray-400 font-semibold whitespace-nowrap">{h}</th>)}</tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {csvData.rows.slice(0, 3).map((row, ri) => (
+                              <tr key={ri}>{csvData.headers.map((_, ci) => <td key={ci} className="px-2 py-1.5 text-gray-600 whitespace-nowrap max-w-[100px] truncate">{row[ci] || '—'}</td>)}</tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {(() => {
+                    const nomeIdx = parseInt(Object.entries(csvMapeamento).find(([, v]) => v === 'nome')?.[0] ?? '-1')
+                    const comNome = nomeIdx >= 0 ? csvData.rows.filter(r => r[nomeIdx]?.trim()).length : 0
+                    const semNome = csvData.rows.length - comNome
+                    return (
+                      <>
+                        {nomeIdx < 0 ? (
+                          <div className="flex items-center gap-2 text-amber-700 text-xs font-semibold bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                            <AlertCircle size={14} className="shrink-0" /> Mapeie a coluna Nome para continuar
+                          </div>
+                        ) : (
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+                            <p className="text-[11px] font-bold text-emerald-700">{comNome} contato{comNome !== 1 ? 's' : ''} válido{comNome !== 1 ? 's' : ''} para importar</p>
+                            {semNome > 0 && <p className="text-[10px] text-amber-600 mt-0.5">{semNome} linha{semNome !== 1 ? 's' : ''} sem nome serão ignoradas</p>}
+                          </div>
+                        )}
+                        <button
+                          onClick={importarCSV}
+                          disabled={nomeIdx < 0 || comNome === 0}
+                          className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+                        >
+                          Importar {comNome > 0 ? `${comNome} contato${comNome !== 1 ? 's' : ''}` : ''}
+                        </button>
+                      </>
+                    )
+                  })()}
+                </>
+              )}
             </div>
           </div>
         </div>
