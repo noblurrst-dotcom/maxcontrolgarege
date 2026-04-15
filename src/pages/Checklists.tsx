@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ChecklistCard from '../components/ChecklistCard'
-import { Plus, Search, ClipboardList, Loader2, CalendarDays, CheckCircle2, Hash } from 'lucide-react'
+import { Plus, Search, ClipboardList, Loader2, CalendarDays, CheckCircle2, Hash, Filter } from 'lucide-react'
 import type { Checklist } from '../types'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 
 
 export default function Checklists() {
@@ -13,6 +15,7 @@ export default function Checklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange } = useDateRange()
 
   useEffect(() => {
     if (user) carregarChecklists()
@@ -37,11 +40,10 @@ export default function Checklists() {
 
   const checklistsFiltrados = checklists.filter((c) => {
     const termo = busca.toLowerCase()
-    return (
-      c.placa.toLowerCase().includes(termo) ||
+    const matchBusca = c.placa.toLowerCase().includes(termo) ||
       c.nome_cliente.toLowerCase().includes(termo) ||
       c.servico.toLowerCase().includes(termo)
-    )
+    return matchBusca && isInRange(c.created_at)
   })
 
   const totalHoje = checklists.filter((c) => {
@@ -49,7 +51,7 @@ export default function Checklists() {
     return c.created_at.startsWith(hoje)
   }).length
 
-  const totalConcluidos = checklists.filter((c) => c.status === 'concluido').length
+  const totalConcluidos = checklists.filter((c) => c.status === 'concluido' && isInRange(c.created_at)).length
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -68,6 +70,22 @@ export default function Checklists() {
         </button>
       </div>
 
+      {/* Filtro de período */}
+      <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={12} className="text-gray-400" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período</span>
+        </div>
+        <DateRangeFilter
+          preset={preset}
+          onChange={setPreset}
+          customInicio={customInicio}
+          customFim={customFim}
+          onCustomInicioChange={setCustomInicio}
+          onCustomFimChange={setCustomFim}
+        />
+      </div>
+
       <>
 
           {/* Stats */}
@@ -75,7 +93,7 @@ export default function Checklists() {
             {[
               { label: 'Hoje', value: totalHoje, Icon: CalendarDays, color: 'text-primary-600', iconBg: 'bg-primary-100' },
               { label: 'Concluídos', value: totalConcluidos, Icon: CheckCircle2, color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
-              { label: 'Total', value: checklists.length, Icon: Hash, color: 'text-violet-600', iconBg: 'bg-violet-100' },
+              { label: 'No período', value: checklistsFiltrados.length, Icon: Hash, color: 'text-violet-600', iconBg: 'bg-violet-100' },
             ].map((item) => (
               <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <div className="flex items-center gap-3 mb-3">

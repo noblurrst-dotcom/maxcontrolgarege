@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock } from 'lucide-react'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter } from 'lucide-react'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -41,6 +43,7 @@ export default function Vendas() {
   const [editDetalhe, setEditDetalhe] = useState<{ valor: string; desconto: string; forma_pagamento: FormaPagamento; parcelas: string; descontoTipo: 'valor' | 'percentual' } | null>(null)
   const [form, setForm] = useState(initForm())
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   // Load services from Supabase
   useEffect(() => {
@@ -267,19 +270,17 @@ export default function Vendas() {
     const t = buscaDebounced.toLowerCase()
     const matchBusca = v.nome_cliente.toLowerCase().includes(t) || v.descricao.toLowerCase().includes(t)
     const matchStatus = filtroStatus === 'todas' || v.status === filtroStatus
-    return matchBusca && matchStatus
-  }), [vendas, buscaDebounced, filtroStatus])
+    return matchBusca && matchStatus && isInRange(v.data_venda)
+  }), [vendas, buscaDebounced, filtroStatus, isInRange])
 
-  const { totalHoje, totalMes, abertas } = useMemo(() => {
+  const { totalHoje, totalPeriodo, abertas } = useMemo(() => {
     const hoje = new Date().toISOString().split('T')[0]
-    const mesAtual = new Date().getMonth()
-    const anoAtual = new Date().getFullYear()
     return {
       totalHoje: vendas.filter((v) => v.data_venda === hoje).reduce((a, v) => a + (v.valor_total || v.valor), 0),
-      totalMes: vendas.filter((v) => { const d = new Date(v.data_venda); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual }).reduce((a, v) => a + (v.valor_total || v.valor), 0),
+      totalPeriodo: vendas.filter((v) => isInRange(v.data_venda)).reduce((a, v) => a + (v.valor_total || v.valor), 0),
       abertas: vendas.filter(v => v.status === 'aberta').length,
     }
-  }, [vendas])
+  }, [vendas, isInRange])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -296,6 +297,22 @@ export default function Vendas() {
             <Plus size={16} /> Nova Venda
           </button>
         </div>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={12} className="text-gray-400" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período</span>
+        </div>
+        <DateRangeFilter
+          preset={preset}
+          onChange={setPreset}
+          customInicio={customInicio}
+          customFim={customFim}
+          onCustomInicioChange={setCustomInicio}
+          onCustomFimChange={setCustomFim}
+        />
       </div>
 
       {/* Tabs */}
@@ -324,8 +341,8 @@ export default function Vendas() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Total hoje', value: fmt(totalHoje), color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
-          { label: 'Total mês', value: fmt(totalMes), color: 'text-primary-600', iconBg: 'bg-primary-100' },
-          { label: 'Qtd vendas', value: vendas.length, color: 'text-violet-600', iconBg: 'bg-violet-100' },
+          { label: periodoLabel, value: fmt(totalPeriodo), color: 'text-primary-600', iconBg: 'bg-primary-100' },
+          { label: 'No período', value: filtradas.length, color: 'text-violet-600', iconBg: 'bg-violet-100' },
           { label: 'Abertas', value: abertas, color: 'text-amber-600', iconBg: 'bg-amber-100' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">

@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
-import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark } from 'lucide-react'
+import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter } from 'lucide-react'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 import type { ContaFinanceira, FormaPagamento } from '../types'
 import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -28,6 +30,7 @@ export default function Financeiro() {
   const [modalBanco, setModalBanco] = useState(false)
   const [form, setForm] = useState(initForm())
   const [formBanco, setFormBanco] = useState({ nome: '', banco: '', tipo: 'corrente', saldo: '' })
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   const adicionar = () => {
     if (!form.descricao || !form.valor || !modal) return
@@ -57,26 +60,24 @@ export default function Financeiro() {
   const togglePago = (id: string) => salvar(contas.map(c => c.id === id ? { ...c, pago: !c.pago } : c))
 
   const { entradas, saidas, saldo, pendentes } = useMemo(() => {
-    const mesAtual = new Date().getMonth()
-    const anoAtual = new Date().getFullYear()
-    const contasMes = contas.filter((c) => { const d = new Date(c.data); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual })
-    const ent = contasMes.filter((c) => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
-    const sai = contasMes.filter((c) => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
+    const contasPeriodo = contas.filter(c => isInRange(c.data))
+    const ent = contasPeriodo.filter(c => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
+    const sai = contasPeriodo.filter(c => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
     return { entradas: ent, saidas: sai, saldo: ent - sai, pendentes: contas.filter(c => !c.pago).length }
-  }, [contas])
+  }, [contas, isInRange])
 
   const filtradas = useMemo(() => contas.filter(c => {
     const matchBusca = c.descricao.toLowerCase().includes(buscaDebounced.toLowerCase()) || c.categoria.toLowerCase().includes(buscaDebounced.toLowerCase())
     const matchTipo = filtroTipo === 'todos' || c.tipo === filtroTipo
-    return matchBusca && matchTipo
-  }), [contas, buscaDebounced, filtroTipo])
+    return matchBusca && matchTipo && isInRange(c.data)
+  }), [contas, buscaDebounced, filtroTipo, isInRange])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{contas.length} lançamento{contas.length !== 1 ? 's' : ''}{pendentes > 0 ? ` · ${pendentes} pendente${pendentes !== 1 ? 's' : ''}` : ''}</p>
+          <p className="text-sm text-gray-400 mt-0.5">{filtradas.length} lançamento{filtradas.length !== 1 ? 's' : ''}{pendentes > 0 ? ` · ${pendentes} pendente${pendentes !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setModal('entrada')} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-xs font-bold transition-colors">
@@ -86,6 +87,22 @@ export default function Financeiro() {
             <Plus size={14} /> Saída
           </button>
         </div>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={12} className="text-gray-400" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período — {periodoLabel}</span>
+        </div>
+        <DateRangeFilter
+          preset={preset}
+          onChange={setPreset}
+          customInicio={customInicio}
+          customFim={customFim}
+          onCustomInicioChange={setCustomInicio}
+          onCustomFimChange={setCustomFim}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">

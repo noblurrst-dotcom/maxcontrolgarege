@@ -29,6 +29,8 @@ import { useBrand } from '../contexts/BrandContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 
 function getSaudacao() {
   const hora = new Date().getHours()
@@ -424,8 +426,8 @@ export default function Dashboard() {
   const hoje = new Date()
   const diaSemana = format(hoje, "EEEE", { locale: ptBR })
   const dataFormatada = format(hoje, "d 'de' MMMM", { locale: ptBR })
-  const mesNum = hoje.getMonth()
-  const anoNum = hoje.getFullYear()
+
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   useEffect(() => {
     if (user) carregarChecklists()
@@ -454,24 +456,23 @@ export default function Dashboard() {
   const { data: clientes } = useCloudSync<any>({ table: 'clientes', storageKey: 'clientes' })
   const { data: financeiro } = useCloudSync<any>({ table: 'financeiro', storageKey: 'financeiro' })
   
-  // Métricas financeiras do mês
-  const isMes = (d: string) => { const dt = new Date(d); return dt.getMonth() === mesNum && dt.getFullYear() === anoNum }
-  const vendasMes = useMemo(() => vendas.filter((v: any) => isMes(v.data_venda)).reduce((a: number, v: any) => a + (v.valor || 0), 0), [vendas])
-  const entradasMes = useMemo(() => financeiro.filter((f: any) => f.tipo === 'entrada' && isMes(f.data)).reduce((a: number, f: any) => a + (f.valor || 0), 0), [financeiro])
-  const saidasMes = useMemo(() => financeiro.filter((f: any) => f.tipo === 'saida' && isMes(f.data)).reduce((a: number, f: any) => a + (f.valor || 0), 0), [financeiro])
+  // Métricas financeiras do período
+  const vendasMes = useMemo(() => vendas.filter((v: any) => isInRange(v.data_venda)).reduce((a: number, v: any) => a + (v.valor || 0), 0), [vendas, isInRange])
+  const entradasMes = useMemo(() => financeiro.filter((f: any) => f.tipo === 'entrada' && isInRange(f.data)).reduce((a: number, f: any) => a + (f.valor || 0), 0), [financeiro, isInRange])
+  const saidasMes = useMemo(() => financeiro.filter((f: any) => f.tipo === 'saida' && isInRange(f.data)).reduce((a: number, f: any) => a + (f.valor || 0), 0), [financeiro, isInRange])
   const saldoMes = vendasMes + entradasMes - saidasMes
 
-  // Top 5 clientes por gasto em vendas
+  // Top 5 clientes por gasto no período
   const topClientes = useMemo(() => {
     const map: Record<string, { nome: string; total: number; count: number }> = {}
-    vendas.forEach((v: any) => {
+    vendas.filter((v: any) => isInRange(v.data_venda)).forEach((v: any) => {
       const key = v.nome_cliente || 'Sem nome'
       if (!map[key]) map[key] = { nome: key, total: 0, count: 0 }
       map[key].total += v.valor || 0
       map[key].count += 1
     })
     return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 5)
-  }, [vendas])
+  }, [vendas, isInRange])
 
   // Semana atual para calendário semanal
   const [semanaOffset, setSemanaOffset] = useState(0)
@@ -498,12 +499,12 @@ export default function Dashboard() {
   // Vendas por forma de pagamento
   const vendasPorForma = useMemo(() => {
     const map: Record<string, number> = {}
-    vendas.filter((v: any) => isMes(v.data_venda)).forEach((v: any) => {
+    vendas.filter((v: any) => isInRange(v.data_venda)).forEach((v: any) => {
       const fp = v.forma_pagamento || 'outro'
       map[fp] = (map[fp] || 0) + (v.valor || 0)
     })
     return map
-  }, [vendas])
+  }, [vendas, isInRange])
 
   // Agendamentos no dia (para calendário)
   const agendamentosNoDia = (dia: Date) => {
@@ -693,7 +694,7 @@ export default function Dashboard() {
     <Card>
         <div className="flex items-center justify-between mb-4">
           <CardTitle>Vendas por pagamento</CardTitle>
-          <span className="text-xs text-gray-400">Este mês</span>
+          <span className="text-xs text-gray-400">{periodoLabel}</span>
         </div>
         {Object.keys(vendasPorForma).length > 0 ? (
           <div className="space-y-2">
@@ -730,7 +731,7 @@ export default function Dashboard() {
             </div>
             <h4 className="text-sm font-bold text-gray-900">Top 5 clientes que mais gastaram</h4>
           </div>
-          <span className="text-xs text-gray-400">Este mês</span>
+          <span className="text-xs text-gray-400">{periodoLabel}</span>
         </div>
         {topClientes.length > 0 ? (
           <div className="space-y-3">
@@ -830,6 +831,20 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Filtro de período */}
+      {!editMode && (
+        <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+          <DateRangeFilter
+            preset={preset}
+            onChange={setPreset}
+            customInicio={customInicio}
+            customFim={customFim}
+            onCustomInicioChange={setCustomInicio}
+            onCustomFimChange={setCustomFim}
+          />
+        </div>
+      )}
 
       {/* Hidden blocks panel (edit mode) */}
       {editMode && blocks.some(b => !b.visible) && (
