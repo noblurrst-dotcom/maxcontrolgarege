@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, Columns, GripVertical, Phone, Car, Wrench } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, Columns, GripVertical, Phone, Car, Wrench, Filter } from 'lucide-react'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
@@ -75,6 +77,7 @@ export default function Agenda() {
   const hoje = new Date()
   const [dragItem, setDragItem] = useState<string | null>(null)
   const [dragOverEtapa, setDragOverEtapa] = useState<KanbanEtapa | null>(null)
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   const inicioSemana = useMemo(() => {
     const base = startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -175,16 +178,17 @@ export default function Agenda() {
     const t = buscaDebounced.toLowerCase()
     const matchBusca = a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
     const matchStatus = filtroStatus === 'todos' || a.status === filtroStatus
-    return matchBusca && matchStatus
-  }), [lista, buscaDebounced, filtroStatus])
+    const matchData = isInRange((a.data_hora || '').slice(0, 10))
+    return matchBusca && matchStatus && matchData
+  }), [lista, buscaDebounced, filtroStatus, isInRange])
 
   const hojeStr = format(hoje, 'yyyy-MM-dd')
   const { agendHoje, pendentes } = useMemo(() => ({
     agendHoje: lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length,
-    pendentes: lista.filter((a) => a.status === 'pendente').length,
-  }), [lista, hojeStr])
-  const confirmados = lista.filter((a) => a.status === 'confirmado' || a.status === 'em_andamento').length
-  const concluidos = lista.filter((a) => a.status === 'concluido').length
+    pendentes: lista.filter((a) => a.status === 'pendente' && isInRange((a.data_hora || '').slice(0, 10))).length,
+  }), [lista, hojeStr, isInRange])
+  const confirmados = useMemo(() => lista.filter((a) => (a.status === 'confirmado' || a.status === 'em_andamento') && isInRange((a.data_hora || '').slice(0, 10))).length, [lista, isInRange])
+  const concluidos = useMemo(() => lista.filter((a) => a.status === 'concluido' && isInRange((a.data_hora || '').slice(0, 10))).length, [lista, isInRange])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -267,6 +271,22 @@ export default function Agenda() {
           </div>
         </div>
       ) : (<>
+
+      {/* Filtro de período */}
+      <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={12} className="text-gray-400" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período — {periodoLabel}</span>
+        </div>
+        <DateRangeFilter
+          preset={preset}
+          onChange={setPreset}
+          customInicio={customInicio}
+          customFim={customFim}
+          onCustomInicioChange={setCustomInicio}
+          onCustomFimChange={setCustomFim}
+        />
+      </div>
 
       <div className="flex gap-3">
         <div className="relative flex-1">
