@@ -23,7 +23,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
@@ -31,6 +31,8 @@ export default function Vendas() {
   const [tab, setTab] = useState<'vendas' | 'prevenda'>('vendas')
   const [servicos, setServicos] = useState<Servico[]>([])
   const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: agendamentos, save: salvarAgendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: kanbanItems, save: salvarKanban } = useCloudSync<any>({ table: 'kanban_items', storageKey: 'kanban_items' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'aberta' | 'fechada'>('todas')
@@ -209,15 +211,46 @@ export default function Vendas() {
     const descRaw = parseFloat(form.desconto || '0')
     const desconto = descontoTipo === 'percentual' ? valor * (descRaw / 100) : descRaw
     const valorTotal = Math.max(valor - desconto, 0)
+    const vendaId = uid()
     const nova: Venda = {
-      id: uid(), user_id: '', cliente_id: null, nome_cliente: form.nome_cliente,
+      id: vendaId, user_id: '', cliente_id: null, nome_cliente: form.nome_cliente,
       descricao: form.descricao, valor, desconto, valor_total: valorTotal,
       forma_pagamento: form.forma_pagamento, data_venda: form.data_venda,
+      data_agendamento: form.data_agendamento || undefined,
+      hora_agendamento: form.data_agendamento ? form.hora_agendamento : undefined,
       status: 'fechada', parcelas: parseInt(form.parcelas),
       funcionario: form.funcionario, observacoes: form.observacoes,
       created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
+
+    // Se data de agendamento preenchida → criar agendamento automaticamente
+    if (form.data_agendamento) {
+      const dataHoraInicio = `${form.data_agendamento}T${form.hora_agendamento || '09:00'}:00`
+      const fim = new Date(dataHoraInicio)
+      fim.setMinutes(fim.getMinutes() + 60)
+      const novoAg: Agendamento = {
+        id: uid(), user_id: '', cliente_id: null, venda_id: vendaId,
+        nome_cliente: form.nome_cliente, telefone_cliente: '',
+        servico: form.descricao, titulo: form.descricao,
+        data_hora: dataHoraInicio,
+        data_hora_fim: fim.toISOString().slice(0, 19),
+        duracao_min: 60, status: 'pendente',
+        observacoes: form.observacoes, desconto, valor: valorTotal,
+        cor: '#4285F4', created_at: new Date().toISOString(),
+      }
+      salvarAgendamentos([novoAg, ...agendamentos])
+      // Criar item no kanban na etapa Agendado
+      const novoKanban = {
+        id: uid(), user_id: '', etapa: 'agendado',
+        nome_cliente: form.nome_cliente, telefone_cliente: '', placa: '', veiculo: '',
+        servico: form.descricao, valor: valorTotal, observacoes: form.observacoes,
+        origem_tipo: 'agendamento', origem_id: novoAg.id,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }
+      salvarKanban([novoKanban, ...kanbanItems])
+    }
+
     setModal(false)
     setForm(initForm())
   }
@@ -429,12 +462,29 @@ export default function Vendas() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Data *</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Data de Pagamento *</label>
                   <input type="date" value={form.data_venda} onChange={(e) => setForm({ ...form, data_venda: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Funcionário</label>
                   <input type="text" value={form.funcionario} onChange={(e) => setForm({ ...form, funcionario: e.target.value })} placeholder="Opcional" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                </div>
+              </div>
+              {/* Agendamento automático */}
+              <div className="border border-blue-100 bg-blue-50 rounded-xl p-3 space-y-3">
+                <p className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                  <CalendarDays size={13} /> Agendamento (opcional)
+                </p>
+                <p className="text-[11px] text-blue-500 -mt-1">Se preenchido, cria um agendamento automático e move o serviço para <strong>Agendado</strong> no Kanban.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Data do Serviço</label>
+                    <input type="date" value={form.data_agendamento} onChange={(e) => setForm({ ...form, data_agendamento: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Hora</label>
+                    <input type="time" value={form.hora_agendamento} onChange={(e) => setForm({ ...form, hora_agendamento: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none" disabled={!form.data_agendamento} />
+                  </div>
                 </div>
               </div>
               <div>

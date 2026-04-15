@@ -118,6 +118,8 @@ export interface Venda {
   forma_pagamento: FormaPagamento;
   descricao: string;
   data_venda: string;
+  data_agendamento?: string;
+  hora_agendamento?: string;
   status: 'aberta' | 'fechada';
   parcelas: number;
   funcionario: string;
