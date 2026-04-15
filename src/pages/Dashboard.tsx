@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -21,6 +21,7 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  GripVertical,
   Check,
   RotateCcw,
 } from 'lucide-react'
@@ -360,17 +361,17 @@ interface BlockConfig {
   id: BlockId
   label: string
   visible: boolean
-  size: 1 | 2
+  span: 1 | 2 | 3 | 4
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
-  { id: 'calendario', label: 'Calendário', visible: true, size: 2 },
-  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, size: 2 },
-  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, size: 2 },
-  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, size: 2 },
-  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, size: 2 },
-  { id: 'top_clientes', label: 'Top Clientes', visible: true, size: 2 },
-  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, size: 2 },
+  { id: 'calendario', label: 'Calendário', visible: true, span: 4 },
+  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, span: 4 },
+  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, span: 4 },
+  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, span: 4 },
+  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, span: 4 },
+  { id: 'top_clientes', label: 'Top Clientes', visible: true, span: 4 },
+  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, span: 4 },
 ]
 
 export default function Dashboard() {
@@ -384,7 +385,7 @@ export default function Dashboard() {
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
   const blocks = useMemo(() => {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = saved.find((b: BlockConfig) => b.id === d.id); return s ? { ...d, ...s } : d })
+    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span } as BlockConfig })
     return DEFAULT_BLOCKS
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
@@ -421,7 +422,9 @@ export default function Dashboard() {
   const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
   const moveBlockUp = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === 0) return; const nb = [...blocks];[nb[idx - 1], nb[idx]] = [nb[idx], nb[idx - 1]]; salvarBlocks(nb) }
   const moveBlockDown = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === blocks.length - 1) return; const nb = [...blocks];[nb[idx], nb[idx + 1]] = [nb[idx + 1], nb[idx]]; salvarBlocks(nb) }
-  const resizeBlock = (id: BlockId) => salvarBlocks(blocks.map(b => b.id === id ? { ...b, size: (b.size ?? 2) === 2 ? 1 : 2 } : b))
+  const gridRef = useRef<HTMLDivElement>(null)
+  const resizeDataRef = useRef<{ id: BlockId; startX: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4 } | null>(null)
+  const [liveSpans, setLiveSpans] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -868,13 +871,15 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
           if (!content) return null
           const isFirst = idx === 0
           const isLast = idx === blocks.length - 1
+          const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
+          const spanClass = span === 1 ? 'md:col-span-1' : span === 2 ? 'md:col-span-2' : span === 3 ? 'md:col-span-3' : 'md:col-span-4'
           return (
             <div
               key={block.id}
@@ -883,7 +888,7 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              className={`relative col-span-1 ${(block.size ?? 2) === 2 ? 'sm:col-span-2' : ''} transition-all ${
+              className={`relative col-span-1 ${spanClass} transition-all ${
                 editMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
                 dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
@@ -896,12 +901,44 @@ export default function Dashboard() {
                   <button title="Mover para cima" onClick={() => moveBlockUp(block.id)} disabled={isFirst} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronUp size={12} /></button>
                   <button title="Mover para baixo" onClick={() => moveBlockDown(block.id)} disabled={isLast} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronDown size={12} /></button>
                   <span className="w-px h-3 bg-white/20" />
-                  <button title={(block.size ?? 2) === 2 ? 'Reduzir (½ largura)' : 'Expandir (largura inteira)'} onClick={() => resizeBlock(block.id)} className="px-1.5 py-0.5 text-white/70 hover:text-white text-[10px] font-bold rounded-full transition-colors active:scale-90">{(block.size ?? 2) === 2 ? '½' : '⬜'}</button>
+                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{span}/4</span>
                   <span className="w-px h-3 bg-white/20" />
                   <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
               )}
               {content}
+              {editMode && (
+                <div
+                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-ew-resize z-30 select-none"
+                  style={{ touchAction: 'none' }}
+                  title="Arrastar para redimensionar"
+                  onPointerDown={(e) => {
+                    e.preventDefault(); e.stopPropagation()
+                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                    resizeDataRef.current = { id: block.id, startX: e.clientX, startSpan: span, currentSpan: span }
+                  }}
+                  onPointerMove={(e) => {
+                    if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
+                    const grid = gridRef.current; if (!grid) return
+                    const gap = parseInt(window.getComputedStyle(grid).columnGap) || 24
+                    const colWidth = (grid.clientWidth - gap * 3) / 4
+                    const newSpan = Math.max(1, Math.min(4, resizeDataRef.current.startSpan + Math.round((e.clientX - resizeDataRef.current.startX) / colWidth))) as 1|2|3|4
+                    resizeDataRef.current.currentSpan = newSpan
+                    setLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
+                  }}
+                  onPointerUp={(e) => {
+                    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                    const rdata = resizeDataRef.current
+                    if (rdata && rdata.id === block.id) {
+                      salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, span: rdata.currentSpan } : b))
+                      setLiveSpans(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
+                      resizeDataRef.current = null
+                    }
+                  }}
+                >
+                  <GripVertical size={12} className="text-white/70 -rotate-90" />
+                </div>
+              )}
             </div>
           )
         })}

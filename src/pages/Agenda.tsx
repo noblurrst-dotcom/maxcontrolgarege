@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, GripVertical, Phone, Car, Wrench, Filter, Eye, EyeOff, Pencil, Check } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
@@ -32,13 +32,13 @@ const ETAPAS: { key: KanbanEtapa; label: string; color: string; bg: string; bord
 ]
 
 type AgendaBlockId = 'filtro' | 'stats' | 'calendario' | 'lista' | 'kanban'
-interface AgendaBlock { id: AgendaBlockId; label: string; visible: boolean; size: 1 | 2 }
+interface AgendaBlock { id: AgendaBlockId; label: string; visible: boolean; span: 1 | 2 | 3 | 4 }
 const DEFAULT_AGENDA_BLOCKS: AgendaBlock[] = [
-  { id: 'filtro', label: 'Filtro de Período', visible: true, size: 2 },
-  { id: 'stats', label: 'Estatísticas', visible: true, size: 2 },
-  { id: 'calendario', label: 'Calendário Semanal', visible: true, size: 2 },
-  { id: 'lista', label: 'Lista de Agendamentos', visible: true, size: 2 },
-  { id: 'kanban', label: 'Kanban de Serviços', visible: true, size: 2 },
+  { id: 'filtro', label: 'Filtro de Período', visible: true, span: 4 },
+  { id: 'stats', label: 'Estatísticas', visible: true, span: 4 },
+  { id: 'calendario', label: 'Calendário Semanal', visible: true, span: 4 },
+  { id: 'lista', label: 'Lista de Agendamentos', visible: true, span: 4 },
+  { id: 'kanban', label: 'Kanban de Serviços', visible: true, span: 4 },
 ]
 
 function syncKanbanFromSources(kanban: KanbanItem[], preVendas: PreVenda[], agendamentos: Agendamento[]): { items: KanbanItem[]; changed: boolean } {
@@ -91,7 +91,7 @@ export default function Agenda() {
   const [agendaBlocks, setAgendaBlocks] = useState<AgendaBlock[]>(() => {
     try {
       const s = localStorage.getItem('agenda_blocks_v1')
-      if (s) { const p = JSON.parse(s) as AgendaBlock[]; if (Array.isArray(p)) return DEFAULT_AGENDA_BLOCKS.map(d => ({ ...d, ...(p.find(b => b.id === d.id) ?? {}) })) }
+      if (s) { const p = JSON.parse(s) as any[]; if (Array.isArray(p)) return DEFAULT_AGENDA_BLOCKS.map(d => { const f = p.find(b => b.id === d.id); if (!f) return d; const span = (f.span ?? (f.size === 1 ? 2 : 4)) as 1|2|3|4; return { ...d, ...f, span } }) }
     } catch {}
     return DEFAULT_AGENDA_BLOCKS
   })
@@ -100,7 +100,9 @@ export default function Agenda() {
   const salvarAgendaBlocks = (b: AgendaBlock[]) => { setAgendaBlocks(b); localStorage.setItem('agenda_blocks_v1', JSON.stringify(b)) }
   const moveAgUp = (id: AgendaBlockId) => { const i = agendaBlocks.findIndex(b => b.id === id); if (i === 0) return; const nb = [...agendaBlocks];[nb[i-1],nb[i]]=[nb[i],nb[i-1]]; salvarAgendaBlocks(nb) }
   const moveAgDown = (id: AgendaBlockId) => { const i = agendaBlocks.findIndex(b => b.id === id); if (i === agendaBlocks.length-1) return; const nb = [...agendaBlocks];[nb[i],nb[i+1]]=[nb[i+1],nb[i]]; salvarAgendaBlocks(nb) }
-  const resizeAg = (id: AgendaBlockId) => salvarAgendaBlocks(agendaBlocks.map(b => b.id === id ? { ...b, size: b.size === 1 ? 2 : 1 } : b))
+  const agendaGridRef = useRef<HTMLDivElement>(null)
+  const agendaResizeDataRef = useRef<{ id: AgendaBlockId; startX: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4 } | null>(null)
+  const [agendaLiveSpans, setAgendaLiveSpans] = useState<Partial<Record<AgendaBlockId, 1|2|3|4>>>({})
   const toggleAgBlock = (id: AgendaBlockId) => salvarAgendaBlocks(agendaBlocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
 
   const inicioSemana = useMemo(() => {
@@ -240,11 +242,13 @@ export default function Agenda() {
       )}
 
       {/* Grid de blocos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div ref={agendaGridRef} className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {agendaBlocks.map((block, idx) => {
           if (!block.visible && !agendaEditMode) return null
           const isFirst = idx === 0
           const isLast = idx === agendaBlocks.length - 1
+          const agSpan = (agendaLiveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
+          const agSpanClass = agSpan === 1 ? 'md:col-span-1' : agSpan === 2 ? 'md:col-span-2' : agSpan === 3 ? 'md:col-span-3' : 'md:col-span-4'
           let content: React.ReactNode = null
 
           if (block.id === 'filtro') {
@@ -487,7 +491,7 @@ export default function Agenda() {
                 setDragAgBlock(null); setDragOverAgBlock(null)
               } : undefined}
               onDragEnd={() => { setDragAgBlock(null); setDragOverAgBlock(null) }}
-              className={`relative col-span-1 ${block.size === 2 ? 'sm:col-span-2' : ''} transition-all ${
+              className={`relative col-span-1 ${agSpanClass} transition-all ${
                 agendaEditMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
               } ${agendaEditMode && !block.visible ? 'opacity-40' : ''} ${
                 dragAgBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
@@ -500,12 +504,44 @@ export default function Agenda() {
                   <button title="Mover para cima" onClick={() => moveAgUp(block.id)} disabled={isFirst} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full active:scale-90"><ChevronUp size={12} /></button>
                   <button title="Mover para baixo" onClick={() => moveAgDown(block.id)} disabled={isLast} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full active:scale-90"><ChevronDown size={12} /></button>
                   <span className="w-px h-3 bg-white/20" />
-                  <button title={block.size === 2 ? 'Reduzir (½)' : 'Expandir'} onClick={() => resizeAg(block.id)} className="px-1.5 py-0.5 text-white/70 hover:text-white text-[10px] font-bold rounded-full active:scale-90">{block.size === 2 ? '½' : '⬛'}</button>
+                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{agSpan}/4</span>
                   <span className="w-px h-3 bg-white/20" />
                   <button title={block.visible ? 'Ocultar' : 'Mostrar'} onClick={() => toggleAgBlock(block.id)} className="p-1 text-white/70 hover:text-white rounded-full active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
               )}
               {content}
+              {agendaEditMode && (
+                <div
+                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-ew-resize z-30 select-none"
+                  style={{ touchAction: 'none' }}
+                  title="Arrastar para redimensionar"
+                  onPointerDown={(e) => {
+                    e.preventDefault(); e.stopPropagation()
+                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                    agendaResizeDataRef.current = { id: block.id, startX: e.clientX, startSpan: agSpan, currentSpan: agSpan }
+                  }}
+                  onPointerMove={(e) => {
+                    if (!agendaResizeDataRef.current || agendaResizeDataRef.current.id !== block.id) return
+                    const grid = agendaGridRef.current; if (!grid) return
+                    const gap = parseInt(window.getComputedStyle(grid).columnGap) || 24
+                    const colWidth = (grid.clientWidth - gap * 3) / 4
+                    const newSpan = Math.max(1, Math.min(4, agendaResizeDataRef.current.startSpan + Math.round((e.clientX - agendaResizeDataRef.current.startX) / colWidth))) as 1|2|3|4
+                    agendaResizeDataRef.current.currentSpan = newSpan
+                    setAgendaLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
+                  }}
+                  onPointerUp={(e) => {
+                    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                    if (agendaResizeDataRef.current?.id === block.id) {
+                      const finalSpan = agendaResizeDataRef.current.currentSpan
+                      salvarAgendaBlocks(agendaBlocks.map(b => b.id === block.id ? { ...b, span: finalSpan } : b))
+                      setAgendaLiveSpans(prev => { const n = { ...prev }; delete n[block.id]; return n })
+                      agendaResizeDataRef.current = null
+                    }
+                  }}
+                >
+                  <GripVertical size={12} className="text-white/70 -rotate-90" />
+                </div>
+              )}
             </div>
           )
         })}
