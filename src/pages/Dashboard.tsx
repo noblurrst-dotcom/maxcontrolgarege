@@ -12,6 +12,8 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Users,
   Building2,
   Trophy,
@@ -19,8 +21,6 @@ import {
   Pencil,
   Eye,
   EyeOff,
-  GripVertical,
-  X,
   Check,
   RotateCcw,
 } from 'lucide-react'
@@ -360,16 +360,17 @@ interface BlockConfig {
   id: BlockId
   label: string
   visible: boolean
+  size: 1 | 2
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
-  { id: 'calendario', label: 'Calendário', visible: true },
-  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true },
-  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true },
-  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true },
-  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true },
-  { id: 'top_clientes', label: 'Top Clientes', visible: true },
-  { id: 'sua_empresa', label: 'Sua Empresa', visible: true },
+  { id: 'calendario', label: 'Calendário', visible: true, size: 2 },
+  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, size: 2 },
+  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, size: 2 },
+  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, size: 2 },
+  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, size: 2 },
+  { id: 'top_clientes', label: 'Top Clientes', visible: true, size: 2 },
+  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, size: 2 },
 ]
 
 export default function Dashboard() {
@@ -383,8 +384,7 @@ export default function Dashboard() {
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
   const blocks = useMemo(() => {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    if (Array.isArray(saved) && saved.length === DEFAULT_BLOCKS.length) return saved
-    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = saved.find((b: BlockConfig) => b.id === d.id); return s ? { ...d, visible: s.visible } : d })
+    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = saved.find((b: BlockConfig) => b.id === d.id); return s ? { ...d, ...s } : d })
     return DEFAULT_BLOCKS
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
@@ -419,6 +419,9 @@ export default function Dashboard() {
   }
 
   const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
+  const moveBlockUp = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === 0) return; const nb = [...blocks];[nb[idx - 1], nb[idx]] = [nb[idx], nb[idx - 1]]; salvarBlocks(nb) }
+  const moveBlockDown = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === blocks.length - 1) return; const nb = [...blocks];[nb[idx], nb[idx + 1]] = [nb[idx + 1], nb[idx]]; salvarBlocks(nb) }
+  const resizeBlock = (id: BlockId) => salvarBlocks(blocks.map(b => b.id === id ? { ...b, size: (b.size ?? 2) === 2 ? 1 : 2 } : b))
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -865,58 +868,44 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      {blocks.map((block) => {
-        if (!block.visible && !editMode) return null
-        const content = renderBlock(block.id)
-        if (!content) return null
-
-        return (
-          <div
-            key={block.id}
-            draggable={editMode}
-            onDragStart={editMode ? (e) => onBlockDragStart(e, block.id) : undefined}
-            onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
-            onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
-            onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-            className={`relative transition-all ${
-              editMode ? 'cursor-grab active:cursor-grabbing' : ''
-            } ${
-              editMode && !block.visible ? 'opacity-40' : ''
-            } ${
-              dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
-            } ${
-              dragOverBlock === block.id && dragBlock !== block.id ? 'ring-2 ring-primary-400 ring-offset-2 rounded-2xl' : ''
-            } ${
-              editMode ? 'animate-wiggle' : ''
-            }`}
-            style={editMode ? { animationDelay: `${Math.random() * 0.2}s` } : undefined}
-          >
-            {/* Edit overlay */}
-            {editMode && (
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <button
-                  onClick={() => toggleVisible(block.id)}
-                  className={`w-7 h-7 rounded-full shadow-lg flex items-center justify-center transition-colors ${
-                    block.visible
-                      ? 'bg-red-500 hover:bg-red-600 text-white'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                  }`}
-                >
-                  {block.visible ? <X size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            )}
-            {editMode && (
-              <div className="absolute -top-2 left-3 z-10">
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-800 text-white text-[9px] font-bold rounded-full shadow">
-                  <GripVertical size={10} /> {block.label}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {blocks.map((block, idx) => {
+          if (!block.visible && !editMode) return null
+          const content = renderBlock(block.id)
+          if (!content) return null
+          const isFirst = idx === 0
+          const isLast = idx === blocks.length - 1
+          return (
+            <div
+              key={block.id}
+              draggable={editMode}
+              onDragStart={editMode ? (e) => onBlockDragStart(e, block.id) : undefined}
+              onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
+              onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
+              onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
+              className={`relative col-span-1 ${(block.size ?? 2) === 2 ? 'sm:col-span-2' : ''} transition-all ${
+                editMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
+              } ${editMode && !block.visible ? 'opacity-40' : ''} ${
+                dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
+              } ${dragOverBlock === block.id && dragBlock !== block.id ? 'ring-2 ring-primary-400 ring-offset-2 rounded-2xl' : ''}`}
+            >
+              {editMode && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap">
+                  <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
+                  <span className="w-px h-3 bg-white/20" />
+                  <button title="Mover para cima" onClick={() => moveBlockUp(block.id)} disabled={isFirst} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronUp size={12} /></button>
+                  <button title="Mover para baixo" onClick={() => moveBlockDown(block.id)} disabled={isLast} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronDown size={12} /></button>
+                  <span className="w-px h-3 bg-white/20" />
+                  <button title={(block.size ?? 2) === 2 ? 'Reduzir (½ largura)' : 'Expandir (largura inteira)'} onClick={() => resizeBlock(block.id)} className="px-1.5 py-0.5 text-white/70 hover:text-white text-[10px] font-bold rounded-full transition-colors active:scale-90">{(block.size ?? 2) === 2 ? '½' : '⬜'}</button>
+                  <span className="w-px h-3 bg-white/20" />
+                  <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
-              </div>
-            )}
-            {content}
-          </div>
-        )
-      })}
+              )}
+              {content}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
