@@ -362,16 +362,17 @@ interface BlockConfig {
   label: string
   visible: boolean
   span: 1 | 2 | 3 | 4
+  rows: 1 | 2 | 3 | 4
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
-  { id: 'calendario', label: 'Calendário', visible: true, span: 4 },
-  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, span: 4 },
-  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, span: 4 },
-  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, span: 4 },
-  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, span: 4 },
-  { id: 'top_clientes', label: 'Top Clientes', visible: true, span: 4 },
-  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, span: 4 },
+  { id: 'calendario', label: 'Calendário', visible: true, span: 4, rows: 1 },
+  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, span: 4, rows: 1 },
+  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, span: 4, rows: 1 },
+  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, span: 4, rows: 1 },
+  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, span: 4, rows: 1 },
+  { id: 'top_clientes', label: 'Top Clientes', visible: true, span: 4, rows: 1 },
+  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, span: 4, rows: 1 },
 ]
 
 export default function Dashboard() {
@@ -385,7 +386,7 @@ export default function Dashboard() {
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
   const blocks = useMemo(() => {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span } as BlockConfig })
+    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; const rows = (s.rows ?? 1) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span, rows } as BlockConfig })
     return DEFAULT_BLOCKS
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
@@ -423,8 +424,9 @@ export default function Dashboard() {
   const moveBlockUp = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === 0) return; const nb = [...blocks];[nb[idx - 1], nb[idx]] = [nb[idx], nb[idx - 1]]; salvarBlocks(nb) }
   const moveBlockDown = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === blocks.length - 1) return; const nb = [...blocks];[nb[idx], nb[idx + 1]] = [nb[idx + 1], nb[idx]]; salvarBlocks(nb) }
   const gridRef = useRef<HTMLDivElement>(null)
-  const resizeDataRef = useRef<{ id: BlockId; startX: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4 } | null>(null)
+  const resizeDataRef = useRef<{ id: BlockId; startX: number; startY: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4; startRows: 1|2|3|4; currentRows: 1|2|3|4 } | null>(null)
   const [liveSpans, setLiveSpans] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
+  const [liveRows, setLiveRows] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -880,6 +882,8 @@ export default function Dashboard() {
           const isLast = idx === blocks.length - 1
           const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
           const spanClass = span === 1 ? 'md:col-span-1' : span === 2 ? 'md:col-span-2' : span === 3 ? 'md:col-span-3' : 'md:col-span-4'
+          const rows = (liveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
+          const minH = rows > 1 ? (rows - 1) * 280 : 0
           return (
             <div
               key={block.id}
@@ -888,6 +892,7 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
+              style={minH > 0 ? { minHeight: minH } : undefined}
               className={`relative col-span-1 ${spanClass} transition-all ${
                 editMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
@@ -901,7 +906,7 @@ export default function Dashboard() {
                   <button title="Mover para cima" onClick={() => moveBlockUp(block.id)} disabled={isFirst} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronUp size={12} /></button>
                   <button title="Mover para baixo" onClick={() => moveBlockDown(block.id)} disabled={isLast} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronDown size={12} /></button>
                   <span className="w-px h-3 bg-white/20" />
-                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{span}/4</span>
+                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{span}×{rows}</span>
                   <span className="w-px h-3 bg-white/20" />
                   <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
@@ -909,13 +914,13 @@ export default function Dashboard() {
               {content}
               {editMode && (
                 <div
-                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-ew-resize z-30 select-none"
+                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
                   style={{ touchAction: 'none' }}
                   title="Arrastar para redimensionar"
                   onPointerDown={(e) => {
                     e.preventDefault(); e.stopPropagation()
                     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                    resizeDataRef.current = { id: block.id, startX: e.clientX, startSpan: span, currentSpan: span }
+                    resizeDataRef.current = { id: block.id, startX: e.clientX, startY: e.clientY, startSpan: span, currentSpan: span, startRows: rows, currentRows: rows }
                   }}
                   onPointerMove={(e) => {
                     if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
@@ -923,15 +928,19 @@ export default function Dashboard() {
                     const gap = parseInt(window.getComputedStyle(grid).columnGap) || 24
                     const colWidth = (grid.clientWidth - gap * 3) / 4
                     const newSpan = Math.max(1, Math.min(4, resizeDataRef.current.startSpan + Math.round((e.clientX - resizeDataRef.current.startX) / colWidth))) as 1|2|3|4
+                    const newRows = Math.max(1, Math.min(4, resizeDataRef.current.startRows + Math.round((e.clientY - resizeDataRef.current.startY) / 280))) as 1|2|3|4
                     resizeDataRef.current.currentSpan = newSpan
+                    resizeDataRef.current.currentRows = newRows
                     setLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
+                    setLiveRows(prev => ({ ...prev, [block.id]: newRows }))
                   }}
                   onPointerUp={(e) => {
                     ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
                     const rdata = resizeDataRef.current
                     if (rdata && rdata.id === block.id) {
-                      salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, span: rdata.currentSpan } : b))
+                      salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, span: rdata.currentSpan, rows: rdata.currentRows } : b))
                       setLiveSpans(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
+                      setLiveRows(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
                       resizeDataRef.current = null
                     }
                   }}
