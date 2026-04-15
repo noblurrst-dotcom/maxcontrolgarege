@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { CalendarDays, Plus, Search, Clock, CheckCircle2, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, Columns, GripVertical, Phone, Car, Wrench, Filter } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Phone, Car, Wrench, Filter } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
@@ -66,11 +66,9 @@ export default function Agenda() {
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: preVendasSync } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
   const { data: kanban, save: salvarKanban } = useCloudSync<KanbanItem>({ table: 'kanban_items', storageKey: 'kanban_items' })
-  const [tab, setTab] = useState<'agenda' | 'kanban'>('agenda')
   const [servicos, setServicos] = useState<Servico[]>([])
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
-  const [filtroStatus, setFiltroStatus] = useState<'todos' | Agendamento['status']>('todos')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(initForm())
   const [semanaOffset, setSemanaOffset] = useState(0)
@@ -164,7 +162,6 @@ export default function Agenda() {
     setForm(initForm())
   }
 
-  const mudarStatus = (id: string, status: Agendamento['status']) => salvar(lista.map((a) => a.id === id ? { ...a, status } : a))
   const remover = (id: string) => salvar(lista.filter((a) => a.id !== id))
 
   const enviarWhatsApp = (a: Agendamento) => {
@@ -177,18 +174,12 @@ export default function Agenda() {
   const filtradas = useMemo(() => lista.filter((a) => {
     const t = buscaDebounced.toLowerCase()
     const matchBusca = a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
-    const matchStatus = filtroStatus === 'todos' || a.status === filtroStatus
     const matchData = isInRange((a.data_hora || '').slice(0, 10))
-    return matchBusca && matchStatus && matchData
-  }), [lista, buscaDebounced, filtroStatus, isInRange])
+    return matchBusca && matchData
+  }), [lista, buscaDebounced, isInRange])
 
   const hojeStr = format(hoje, 'yyyy-MM-dd')
-  const { agendHoje, pendentes } = useMemo(() => ({
-    agendHoje: lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length,
-    pendentes: lista.filter((a) => a.status === 'pendente' && isInRange((a.data_hora || '').slice(0, 10))).length,
-  }), [lista, hojeStr, isInRange])
-  const confirmados = useMemo(() => lista.filter((a) => (a.status === 'confirmado' || a.status === 'em_andamento') && isInRange((a.data_hora || '').slice(0, 10))).length, [lista, isInRange])
-  const concluidos = useMemo(() => lista.filter((a) => a.status === 'concluido' && isInRange((a.data_hora || '').slice(0, 10))).length, [lista, isInRange])
+  const agendHoje = useMemo(() => lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length, [lista, hojeStr])
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -197,80 +188,11 @@ export default function Agenda() {
           <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
           <p className="text-sm text-gray-400 mt-0.5 capitalize">{format(hoje, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
         </div>
-        {tab === 'agenda' && (
-          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
-            <Plus size={16} /> Novo Agendamento
-          </button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        <button onClick={() => setTab('agenda')} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${tab === 'agenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <CalendarDays size={14} /> Agenda
-        </button>
-        <button onClick={() => setTab('kanban')} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${tab === 'kanban' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <Columns size={14} /> Kanban
+        <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+          <Plus size={16} /> Novo Agendamento
         </button>
       </div>
 
-      {tab === 'kanban' ? (
-        <div className="overflow-x-auto -mx-3 sm:-mx-0 px-3 sm:px-0 pb-4">
-          <div className="flex gap-3 min-w-[1100px]">
-            {ETAPAS.map((etapa) => {
-              const items = kanbanPorEtapa[etapa.key]
-              const isDragOver = dragOverEtapa === etapa.key
-              return (
-                <div key={etapa.key} onDragOver={(e) => onDragOver(e, etapa.key)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, etapa.key)}
-                  className={`flex-1 min-w-[180px] rounded-2xl border-2 transition-colors ${isDragOver ? 'border-primary-400 bg-primary-50/40' : `${etapa.border} bg-white/60`}`}
-                >
-                  <div className={`px-3 py-3 rounded-t-2xl ${etapa.bg}`}>
-                    <div className="flex items-center justify-between">
-                      <h3 className={`text-xs font-bold ${etapa.color} uppercase tracking-wider`}>{etapa.label}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${etapa.bg} ${etapa.color} border ${etapa.border}`}>{items.length}</span>
-                    </div>
-                  </div>
-                  <div className="p-2 space-y-2 min-h-[120px]">
-                    {items.length === 0 && <div className="text-center py-6"><p className="text-[10px] text-gray-300 font-medium">Nenhum veículo</p></div>}
-                    {items.map((item) => {
-                      const prox = proximaEtapa(item.etapa)
-                      return (
-                        <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                          className={`bg-white rounded-xl border border-gray-100 shadow-sm p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${dragItem === item.id ? 'opacity-50' : ''}`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <GripVertical size={14} className="text-gray-300 mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-900 truncate">{item.nome_cliente}</p>
-                              {item.servico && <p className="text-[10px] text-gray-500 truncate flex items-center gap-1 mt-0.5"><Wrench size={9} className="shrink-0" /> {item.servico}</p>}
-                              {item.placa && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Car size={9} className="shrink-0" /> {item.placa}{item.veiculo ? ` • ${item.veiculo}` : ''}</p>}
-                              {item.telefone_cliente && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Phone size={9} className="shrink-0" /> {item.telefone_cliente}</p>}
-                              {item.valor > 0 && <p className="text-[10px] font-bold text-emerald-600 mt-1">{fmt(item.valor)}</p>}
-                              {item.origem_tipo !== 'manual' && (
-                                <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full mt-1 ${item.origem_tipo === 'prevenda' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}`}>
-                                  {item.origem_tipo === 'prevenda' ? 'Pré-venda' : 'Agenda'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-50">
-                            {prox && (
-                              <button onClick={() => moverEtapa(item.id, prox)} className="flex items-center gap-1 text-[10px] font-bold text-primary-600 hover:text-primary-700 px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors">
-                                <ChevronRight size={12} /> {ETAPAS.find(e => e.key === prox)?.label}
-                              </button>
-                            )}
-                            <button onClick={() => removerKanban(item.id)} className="ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ) : (<>
 
       {/* Filtro de período */}
       <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
@@ -288,27 +210,15 @@ export default function Agenda() {
         />
       </div>
 
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente, serviço ou título..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
-        </div>
-        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-          <option value="todos">Todos</option>
-          <option value="pendente">Pendentes</option>
-          <option value="confirmado">Confirmados</option>
-          <option value="em_andamento">Em andamento</option>
-          <option value="concluido">Concluídos</option>
-          <option value="cancelado">Cancelados</option>
-        </select>
+      <div className="relative">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente, serviço ou título..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {[
           { label: 'Hoje', value: agendHoje, Icon: CalendarDays, color: 'text-primary-600', iconBg: 'bg-primary-100' },
-          { label: 'Pendentes', value: pendentes, Icon: Clock, color: 'text-amber-600', iconBg: 'bg-amber-100' },
-          { label: 'Em curso', value: confirmados, Icon: CheckCircle2, color: 'text-blue-600', iconBg: 'bg-blue-100' },
-          { label: 'Concluídos', value: concluidos, Icon: CheckCircle2, color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
+          { label: 'No período', value: filtradas.length, Icon: Clock, color: 'text-violet-600', iconBg: 'bg-violet-100' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
@@ -507,19 +417,76 @@ export default function Agenda() {
                   </div>
                 </div>
                 {a.observacoes && <p className="text-[10px] text-gray-400 mt-1 pl-[42px] sm:pl-11 truncate">Obs: {a.observacoes}</p>}
-                {a.status !== 'cancelado' && a.status !== 'concluido' && (
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3 pl-[42px] sm:pl-11">
-                    {a.status === 'pendente' && <button onClick={() => mudarStatus(a.id, 'confirmado')} className="text-[10px] font-bold px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">Confirmar</button>}
-                    {(a.status === 'pendente' || a.status === 'confirmado') && <button onClick={() => mudarStatus(a.id, 'em_andamento')} className="text-[10px] font-bold px-3 py-1 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">Iniciar</button>}
-                    {a.status === 'em_andamento' && <button onClick={() => mudarStatus(a.id, 'concluido')} className="text-[10px] font-bold px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100">Concluir</button>}
-                    <button onClick={() => mudarStatus(a.id, 'cancelado')} className="text-[10px] font-bold px-3 py-1 bg-red-50 text-red-500 rounded-lg hover:bg-red-100">Cancelar</button>
-                  </div>
-                )}
               </div>
             )
           })}
         </div>
       )}
+
+      {/* Kanban de Serviços */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Kanban de Serviços</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Arraste os cards para mover entre etapas</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto -mx-3 sm:-mx-0 px-3 sm:px-0 pb-4">
+          <div className="flex gap-3 min-w-[1100px]">
+            {ETAPAS.map((etapa) => {
+              const items = kanbanPorEtapa[etapa.key]
+              const isDragOver = dragOverEtapa === etapa.key
+              return (
+                <div key={etapa.key} onDragOver={(e) => onDragOver(e, etapa.key)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, etapa.key)}
+                  className={`flex-1 min-w-[180px] rounded-2xl border-2 transition-colors ${isDragOver ? 'border-primary-400 bg-primary-50/40' : `${etapa.border} bg-white/60`}`}
+                >
+                  <div className={`px-3 py-3 rounded-t-2xl ${etapa.bg}`}>
+                    <div className="flex items-center justify-between">
+                      <h3 className={`text-xs font-bold ${etapa.color} uppercase tracking-wider`}>{etapa.label}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${etapa.bg} ${etapa.color} border ${etapa.border}`}>{items.length}</span>
+                    </div>
+                  </div>
+                  <div className="p-2 space-y-2 min-h-[120px]">
+                    {items.length === 0 && <div className="text-center py-6"><p className="text-[10px] text-gray-300 font-medium">Nenhum veículo</p></div>}
+                    {items.map((item) => {
+                      const prox = proximaEtapa(item.etapa)
+                      return (
+                        <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
+                          className={`bg-white rounded-xl border border-gray-100 shadow-sm p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${dragItem === item.id ? 'opacity-50' : ''}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <GripVertical size={14} className="text-gray-300 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-gray-900 truncate">{item.nome_cliente}</p>
+                              {item.servico && <p className="text-[10px] text-gray-500 truncate flex items-center gap-1 mt-0.5"><Wrench size={9} className="shrink-0" /> {item.servico}</p>}
+                              {item.placa && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Car size={9} className="shrink-0" /> {item.placa}{item.veiculo ? ` • ${item.veiculo}` : ''}</p>}
+                              {item.telefone_cliente && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Phone size={9} className="shrink-0" /> {item.telefone_cliente}</p>}
+                              {item.valor > 0 && <p className="text-[10px] font-bold text-emerald-600 mt-1">{fmt(item.valor)}</p>}
+                              {item.origem_tipo !== 'manual' && (
+                                <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full mt-1 ${item.origem_tipo === 'prevenda' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}`}>
+                                  {item.origem_tipo === 'prevenda' ? 'Pré-venda' : 'Agenda'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-50">
+                            {prox && (
+                              <button onClick={() => moverEtapa(item.id, prox)} className="flex items-center gap-1 text-[10px] font-bold text-primary-600 hover:text-primary-700 px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors">
+                                <ChevronRight size={12} /> {ETAPAS.find(e => e.key === prox)?.label}
+                              </button>
+                            )}
+                            <button onClick={() => removerKanban(item.id)} className="ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
 
       {modal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(false)}>
@@ -699,7 +666,6 @@ export default function Agenda() {
           </div>
         </div>
       )}
-      </>)}
     </div>
   )
 }
