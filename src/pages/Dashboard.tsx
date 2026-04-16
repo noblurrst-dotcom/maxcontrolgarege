@@ -375,6 +375,33 @@ const DEFAULT_BLOCKS: BlockConfig[] = [
   { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,    y: 1110, w: 1190, h: 160 },
 ]
 
+const SNAP_THRESHOLD = 8
+const GRID_SIZE = 20
+
+function snapValue(value: number, candidates: number[], threshold = SNAP_THRESHOLD): number {
+  let best = value
+  let bestDist = threshold
+  for (const c of candidates) {
+    const dist = Math.abs(value - c)
+    if (dist < bestDist) { bestDist = dist; best = c }
+  }
+  return best
+}
+
+function getSnapCandidates(activeId: BlockId, blocks: BlockConfig[], containerWidth: number): { x: number[]; y: number[] } {
+  const xs = new Set<number>()
+  const ys = new Set<number>()
+  for (let i = 0; i <= containerWidth; i += GRID_SIZE) xs.add(i)
+  for (let i = 0; i <= 3000; i += GRID_SIZE) ys.add(i)
+  for (const b of blocks) {
+    if (b.id === activeId || !b.visible) continue
+    xs.add(b.x); xs.add(b.x + b.w); xs.add(b.x + b.w + 8)
+    ys.add(b.y); ys.add(b.y + b.h); ys.add(b.y + b.h + 8)
+  }
+  xs.add(containerWidth)
+  return { x: Array.from(xs), y: Array.from(ys) }
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -416,6 +443,7 @@ export default function Dashboard() {
   const [liveH, setLiveH] = useState<Partial<Record<BlockId, number>>>({})
   const [livePos, setLivePos] = useState<Partial<Record<BlockId, { x: number; y: number }>>>({})
   const [isResizing, setIsResizing] = useState(false)
+  const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }>({})
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -883,6 +911,20 @@ export default function Dashboard() {
                   </div>
                 )}
                 {content}
+                {editMode && (
+                  <div style={{ display: 'flex', gap: 6, padding: '4px 8px', marginTop: 4 }}>
+                    {(['P', 'M', 'G', 'XG'] as const).map((label, i) => {
+                      const heights = [200, 340, 480, 620]
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, h: heights[i] } : b))}
+                          style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: '1px solid rgba(207,255,4,0.4)', background: 'transparent', color: 'rgba(207,255,4,0.8)', cursor: 'pointer' }}
+                        >{label}</button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -893,6 +935,12 @@ export default function Dashboard() {
           className="relative w-full"
           style={{ height: (() => { const vis = blocks.filter(b => b.visible || editMode); if (!vis.length) return 400; return Math.max(...vis.map(b => (livePos[b.id]?.y ?? b.y) + (liveH[b.id] ?? b.h))) + 32 })() }}
         >
+          {editMode && snapLines.x !== undefined && (
+            <div style={{ position: 'absolute', left: snapLines.x, top: 0, bottom: 0, width: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
+          )}
+          {editMode && snapLines.y !== undefined && (
+            <div style={{ position: 'absolute', top: snapLines.y, left: 0, right: 0, height: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
+          )}
           {blocks.map((block) => {
             if (!block.visible && !editMode) return null
             const content = renderBlock(block.id)
@@ -919,11 +967,16 @@ export default function Dashboard() {
                     }}
                     onPointerMove={(e) => {
                       if (!dragDataRef.current || dragDataRef.current.id !== block.id) return
-                      const newX = Math.max(0, e.clientX - dragDataRef.current.offsetX)
-                      const newY = Math.max(0, e.clientY - dragDataRef.current.offsetY)
-                      dragDataRef.current.curX = newX
-                      dragDataRef.current.curY = newY
-                      setLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
+                      const rawX = Math.max(0, e.clientX - dragDataRef.current.offsetX)
+                      const rawY = Math.max(0, e.clientY - dragDataRef.current.offsetY)
+                      const containerW = gridRef.current?.clientWidth ?? 1200
+                      const cands = getSnapCandidates(block.id, blocks, containerW)
+                      const snappedX = snapValue(rawX, cands.x)
+                      const snappedY = snapValue(rawY, cands.y)
+                      dragDataRef.current.curX = snappedX
+                      dragDataRef.current.curY = snappedY
+                      setLivePos(prev => ({ ...prev, [block.id]: { x: snappedX, y: snappedY } }))
+                      setSnapLines({ x: snappedX !== rawX ? snappedX : undefined, y: snappedY !== rawY ? snappedY : undefined })
                     }}
                     onPointerUp={(e) => {
                       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
@@ -931,6 +984,7 @@ export default function Dashboard() {
                       if (ddata && ddata.id === block.id) {
                         salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, x: ddata.curX, y: ddata.curY } : b))
                         setLivePos(prev => { const n = { ...prev }; delete n[ddata.id]; return n })
+                        setSnapLines({})
                         dragDataRef.current = null
                       }
                     }}
@@ -956,18 +1010,28 @@ export default function Dashboard() {
                     }}
                     onPointerMove={(e) => {
                       if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
-                      const newW = Math.max(200, resizeDataRef.current.startW + (e.clientX - resizeDataRef.current.startClientX))
-                      const newH = Math.max(120, resizeDataRef.current.startH + (e.clientY - resizeDataRef.current.startClientY))
-                      resizeDataRef.current.curW = newW
-                      resizeDataRef.current.curH = newH
+                      const rawW = Math.max(200, resizeDataRef.current.startW + (e.clientX - resizeDataRef.current.startClientX))
+                      const rawH = Math.max(120, resizeDataRef.current.startH + (e.clientY - resizeDataRef.current.startClientY))
+                      const containerW = gridRef.current?.clientWidth ?? 1200
+                      const cands = getSnapCandidates(block.id, blocks, containerW)
+                      const rightEdge = block.x + rawW
+                      const snappedRight = snapValue(rightEdge, cands.x)
+                      const snappedW = Math.max(200, snappedRight - block.x)
+                      const bottomEdge = block.y + rawH
+                      const snappedBottom = snapValue(bottomEdge, cands.y)
+                      const snappedH = Math.max(120, snappedBottom - block.y)
+                      resizeDataRef.current.curW = snappedW
+                      resizeDataRef.current.curH = snappedH
+                      setSnapLines({ x: snappedRight !== rightEdge ? snappedRight : undefined, y: snappedBottom !== bottomEdge ? snappedBottom : undefined })
                       requestAnimationFrame(() => {
-                        setLiveW(prev => ({ ...prev, [block.id]: newW }))
-                        setLiveH(prev => ({ ...prev, [block.id]: newH }))
+                        setLiveW(prev => ({ ...prev, [block.id]: snappedW }))
+                        setLiveH(prev => ({ ...prev, [block.id]: snappedH }))
                       })
                     }}
                     onPointerUp={(e) => {
                       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
                       setIsResizing(false)
+                      setSnapLines({})
                       const rdata = resizeDataRef.current
                       if (rdata && rdata.id === block.id) {
                         salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, w: rdata.curW, h: rdata.curH } : b))
