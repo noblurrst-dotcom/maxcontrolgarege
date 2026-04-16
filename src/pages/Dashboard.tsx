@@ -433,6 +433,12 @@ export default function Dashboard() {
   const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
   const moveBlockUp = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === 0) return; const nb = [...blocks];[nb[idx - 1], nb[idx]] = [nb[idx], nb[idx - 1]]; salvarBlocks(nb) }
   const moveBlockDown = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === blocks.length - 1) return; const nb = [...blocks];[nb[idx], nb[idx + 1]] = [nb[idx + 1], nb[idx]]; salvarBlocks(nb) }
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
   const gridRef = useRef<HTMLDivElement>(null)
   const resizeDataRef = useRef<{ id: BlockId; startX: number; startY: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4; startRows: 1|2|3|4; currentRows: 1|2|3|4 } | null>(null)
   const [liveSpans, setLiveSpans] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
@@ -884,7 +890,7 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense' }}>
+      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense' }}>
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
@@ -901,7 +907,7 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={{ gridColumn: window.innerWidth < 768 ? 'span 4 / span 4' : `span ${span} / span ${span}`, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
+              style={{ gridColumn: isMobile ? 'span 4 / span 4' : `span ${span} / span ${span}`, width: '100%', minWidth: 0, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
               className={`relative flex flex-col transition-all ${
                 editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
