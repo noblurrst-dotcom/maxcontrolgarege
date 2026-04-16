@@ -45,7 +45,7 @@ const formatCurrency = formatCurrencyUtil
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`card-responsive ${className}`}>
+    <div className={`card-responsive flex flex-col ${className}`} style={{ flex: 1 }}>
       {children}
     </div>
   )
@@ -890,7 +890,7 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense' }}>
+      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense', gridAutoRows: '1fr' }}>
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
@@ -907,7 +907,7 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={{ gridColumn: isMobile ? 'span 4 / span 4' : `span ${span} / span ${span}`, width: '100%', minWidth: 0, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
+              style={{ gridColumn: isMobile ? 'span 4 / span 4' : `span ${span} / span ${span}`, gridRow: `span ${rows} / span ${rows}`, width: '100%', minWidth: 0 }}
               className={`relative flex flex-col transition-all ${
                 editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${

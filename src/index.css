@@ -68,6 +68,7 @@
   .card-responsive {
     @apply w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5;
     box-sizing: border-box;
+    height: 100%;
   }
   .dark .card-responsive {
     @apply bg-[#1a1a28] border-[#2a2a3d] shadow-none;
