@@ -880,7 +880,7 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-4 gap-6 [grid-auto-flow:dense]">
+      <div ref={gridRef} className="grid grid-cols-4 gap-6 [grid-auto-flow:dense]">
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
@@ -888,7 +888,6 @@ export default function Dashboard() {
           const isFirst = idx === 0
           const isLast = idx === blocks.length - 1
           const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
-          const spanClass = span === 1 ? 'md:col-span-1' : span === 2 ? 'md:col-span-2' : span === 3 ? 'md:col-span-3' : 'md:col-span-4'
           const rows = (liveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
           return (
             <div
@@ -898,8 +897,8 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={rows > 1 ? { minHeight: (rows - 1) * 280 } : undefined}
-              className={`relative flex flex-col col-span-1 ${spanClass} transition-all ${
+              style={{ gridColumn: window.innerWidth < 768 ? 'span 4' : `span ${span}`, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
+              className={`relative flex flex-col transition-all ${
                 editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
                 dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
