@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps } from '../utils/dashboardLayout'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -22,6 +23,8 @@ import {
   GripVertical,
   Check,
   RotateCcw,
+  LayoutGrid,
+  X,
 } from 'lucide-react'
 import type { Checklist } from '../types'
 import { useBrand } from '../contexts/BrandContext'
@@ -43,7 +46,7 @@ const formatCurrency = formatCurrencyUtil
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`card-responsive flex flex-col ${className}`} style={{ flex: 1 }}>
+    <div className={`card-responsive ${className}`}>
       {children}
     </div>
   )
@@ -280,10 +283,10 @@ function GraficoVendas({ vendasMes }: { vendasMes: number }) {
         ))}
       </div>
 
-      <div className="flex items-end gap-3 h-36">
+      <div className="flex items-end gap-3 flex-1 min-h-0">
         {diasSemana.map((dia, i) => (
-          <div key={dia} className="flex-1 flex flex-col items-center gap-1.5">
-            <div className="w-full flex flex-col justify-end h-28">
+          <div key={dia} className="flex-1 flex flex-col items-center gap-1.5 h-full">
+            <div className="w-full flex flex-col justify-end flex-1 min-h-0">
               <div
                 className={`w-full rounded-t-lg transition-all ${
                   valores[i] > 0 ? 'bg-primary-500' : 'bg-gray-100'
@@ -291,7 +294,7 @@ function GraficoVendas({ vendasMes }: { vendasMes: number }) {
                 style={{ height: `${Math.max((valores[i] / max) * 100, 6)}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">{dia}</span>
+            <span className="text-[10px] text-gray-400 font-medium shrink-0">{dia}</span>
           </div>
         ))}
       </div>
@@ -365,42 +368,20 @@ interface BlockConfig {
   h: number
 }
 
-const DEFAULT_BLOCKS: BlockConfig[] = [
-  { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,    y: 0,    w: 380,  h: 480 },
-  { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: 390,  y: 0,    w: 800,  h: 480 },
-  { id: 'resumo_financeiro', label: 'Resumo Financeiro',    visible: true, x: 0,    y: 490,  w: 380,  h: 320 },
-  { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: 390,  y: 490,  w: 800,  h: 320 },
-  { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,    y: 820,  w: 580,  h: 280 },
-  { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: 590,  y: 820,  w: 600,  h: 280 },
-  { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,    y: 1110, w: 1190, h: 160 },
-]
-
-const SNAP_THRESHOLD = 8
-const GRID_SIZE = 20
-
-function snapValue(value: number, candidates: number[], threshold = SNAP_THRESHOLD): number {
-  let best = value
-  let bestDist = threshold
-  for (const c of candidates) {
-    const dist = Math.abs(value - c)
-    if (dist < bestDist) { bestDist = dist; best = c }
-  }
-  return best
+function getDefaultBlocks(cw: number): BlockConfig[] {
+  const half = Math.floor((cw - 8) / 2)
+  const full = cw
+  return [
+    { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,        y: 0,    w: half, h: 480 },
+    { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: half + 8, y: 0,    w: half, h: 480 },
+    { id: 'resumo_financeiro', label: 'Resumo Financeiro',    visible: true, x: 0,        y: 488,  w: half, h: 320 },
+    { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: half + 8, y: 488,  w: half, h: 320 },
+    { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,        y: 816,  w: half, h: 280 },
+    { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: half + 8, y: 816,  w: half, h: 280 },
+    { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,        y: 1104, w: full, h: 160 },
+  ]
 }
-
-function getSnapCandidates(activeId: BlockId, blocks: BlockConfig[], containerWidth: number): { x: number[]; y: number[] } {
-  const xs = new Set<number>()
-  const ys = new Set<number>()
-  for (let i = 0; i <= containerWidth; i += GRID_SIZE) xs.add(i)
-  for (let i = 0; i <= 3000; i += GRID_SIZE) ys.add(i)
-  for (const b of blocks) {
-    if (b.id === activeId || !b.visible) continue
-    xs.add(b.x); xs.add(b.x + b.w); xs.add(b.x + b.w + 8)
-    ys.add(b.y); ys.add(b.y + b.h); ys.add(b.y + b.h + 8)
-  }
-  xs.add(containerWidth)
-  return { x: Array.from(xs), y: Array.from(ys) }
-}
+const DEFAULT_BLOCKS = getDefaultBlocks(1200)
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -415,12 +396,13 @@ export default function Dashboard() {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
     const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
       ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
-      : [...DEFAULT_BLOCKS]
+      : [...getDefaultBlocks(gridRef.current?.clientWidth || window.innerWidth)]
     // Deduplica por id — previne duplicatas vindas de dados corrompidos
     const seen = new Set<string>()
     return raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true })
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
+  const [showCardManager, setShowCardManager] = useState(false)
 
   const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud(b as any) }
 
@@ -428,7 +410,7 @@ export default function Dashboard() {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
-  const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
+  const resetBlocks = () => salvarBlocks([...getDefaultBlocks(getContainerWidth() || window.innerWidth)])
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -442,8 +424,10 @@ export default function Dashboard() {
   const [liveW, setLiveW] = useState<Partial<Record<BlockId, number>>>({})
   const [liveH, setLiveH] = useState<Partial<Record<BlockId, number>>>({})
   const [livePos, setLivePos] = useState<Partial<Record<BlockId, { x: number; y: number }>>>({})
-  const [isResizing, setIsResizing] = useState(false)
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }>({})
+  const [dragActiveId, setDragActiveId] = useState<BlockId | null>(null)
+  const [resizeActiveId, setResizeActiveId] = useState<BlockId | null>(null)
+  const getContainerWidth = () => gridRef.current?.clientWidth ?? 0
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -613,7 +597,7 @@ export default function Dashboard() {
               const TOTAL_HORAS = 14
               const defaultEventColor = '#4285F4'
               return (
-                <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                   <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
                     {/* Coluna de horários */}
                     <div className="relative">
@@ -817,15 +801,22 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
           <button
+            onClick={() => setShowCardManager(!showCardManager)}
+            title="Gerenciar cards"
+            className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
+          >
+            <LayoutGrid size={16} />
+          </button>
+          <button
             onClick={() => setEditMode(!editMode)}
-            className={`flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95 ${
+            title={editMode ? 'Concluir edição' : 'Editar painel'}
+            className={`p-2 rounded-xl transition-colors ${
               editMode
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
-                : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
             }`}
           >
-            {editMode ? <Check size={14} /> : <Pencil size={14} />}
-            {editMode ? 'Concluir' : 'Editar painel'}
+            {editMode ? <Check size={16} /> : <Pencil size={16} />}
           </button>
           {!editMode && (
             <>
@@ -871,18 +862,28 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Hidden blocks panel (edit mode) */}
-      {editMode && blocks.some(b => !b.visible) && (
-        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Blocos ocultos — clique para restaurar</p>
+      {/* Card manager panel */}
+      {showCardManager && (
+        <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-gray-700">Cards do painel</p>
+            <button onClick={() => setShowCardManager(false)} className="text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {blocks.filter(b => !b.visible).map(b => (
+            {blocks.map(b => (
               <button
                 key={b.id}
                 onClick={() => toggleVisible(b.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                  b.visible
+                    ? 'bg-primary-50 border-primary-200 text-primary-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-400'
+                }`}
               >
-                <EyeOff size={12} /> {b.label}
+                {b.visible ? <Eye size={11} /> : <EyeOff size={11} />}
+                {b.label}
               </button>
             ))}
           </div>
@@ -933,7 +934,7 @@ export default function Dashboard() {
         <div
           ref={gridRef}
           className="relative w-full"
-          style={{ height: (() => { const vis = blocks.filter(b => b.visible || editMode); if (!vis.length) return 400; return Math.max(...vis.map(b => (livePos[b.id]?.y ?? b.y) + (liveH[b.id] ?? b.h))) + 32 })() }}
+          style={{ height: calcularAlturaTotal(blocks.filter(b => b.visible || editMode), livePos, liveH) }}
         >
           {editMode && snapLines.x !== undefined && (
             <div style={{ position: 'absolute', left: snapLines.x, top: 0, bottom: 0, width: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
@@ -949,11 +950,10 @@ export default function Dashboard() {
             const by = livePos[block.id]?.y ?? block.y
             const bw = liveW[block.id] ?? block.w
             const bh = liveH[block.id] ?? block.h
-            const isDragging = !!livePos[block.id]
             return (
               <div
                 key={block.id}
-                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, zIndex: isDragging ? 50 : isResizing ? 40 : 1 }}
+                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease' }}
                 className={`flex flex-col ${editMode ? 'pt-5' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
               >
                 {editMode && (
@@ -963,27 +963,46 @@ export default function Dashboard() {
                     onPointerDown={(e) => {
                       e.preventDefault(); e.stopPropagation()
                       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                      setDragActiveId(block.id)
                       dragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
                     }}
                     onPointerMove={(e) => {
                       if (!dragDataRef.current || dragDataRef.current.id !== block.id) return
-                      const rawX = Math.max(0, e.clientX - dragDataRef.current.offsetX)
-                      const rawY = Math.max(0, e.clientY - dragDataRef.current.offsetY)
-                      const containerW = gridRef.current?.clientWidth ?? 1200
-                      const cands = getSnapCandidates(block.id, blocks, containerW)
-                      const snappedX = snapValue(rawX, cands.x)
-                      const snappedY = snapValue(rawY, cands.y)
-                      dragDataRef.current.curX = snappedX
-                      dragDataRef.current.curY = snappedY
-                      setLivePos(prev => ({ ...prev, [block.id]: { x: snappedX, y: snappedY } }))
-                      setSnapLines({ x: snappedX !== rawX ? snappedX : undefined, y: snappedY !== rawY ? snappedY : undefined })
+                      const cw = getContainerWidth()
+                      if (cw === 0) return
+                      const cands = getSnapCandidates(block.id, blocks, cw)
+                      let newX = snapValue(Math.max(0, e.clientX - dragDataRef.current.offsetX), cands.x)
+                      let newY = snapValue(Math.max(0, e.clientY - dragDataRef.current.offsetY), cands.y)
+                      newX = Math.max(0, Math.min(newX, cw - (liveW[block.id] ?? block.w)))
+                      newY = Math.max(0, newY)
+                      const curW = liveW[block.id] ?? block.w
+                      const curH = liveH[block.id] ?? block.h
+                      const prevX = livePos[block.id]?.x ?? block.x
+                      const prevY = livePos[block.id]?.y ?? block.y
+                      const others = blocks.filter(o => o.id !== block.id && o.visible)
+                      const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
+                      if (others.some(o => overlaps(testXY, o))) {
+                        const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
+                        const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
+                        if (others.some(o => overlaps(testXOnly, o))) newX = prevX
+                        if (others.some(o => overlaps(testYOnly, o))) newY = prevY
+                      }
+                      dragDataRef.current.curX = newX
+                      dragDataRef.current.curY = newY
+                      setLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
+                      setSnapLines({ x: newX !== (e.clientX - dragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - dragDataRef.current.offsetY) ? newY : undefined })
                     }}
                     onPointerUp={(e) => {
                       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                      setDragActiveId(null)
                       const ddata = dragDataRef.current
                       if (ddata && ddata.id === block.id) {
-                        salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, x: ddata.curX, y: ddata.curY } : b))
-                        setLivePos(prev => { const n = { ...prev }; delete n[ddata.id]; return n })
+                        const cw2 = getContainerWidth() || 9999
+                        const finalBlocks = blocks.map(b => clampBlock({ ...b, x: livePos[b.id]?.x ?? b.x, y: livePos[b.id]?.y ?? b.y, w: liveW[b.id] ?? b.w, h: liveH[b.id] ?? b.h }, cw2))
+                        salvarBlocks(finalBlocks)
+                        setLivePos({})
+                        setLiveW({})
+                        setLiveH({})
                         setSnapLines({})
                         dragDataRef.current = null
                       }
@@ -1005,38 +1024,46 @@ export default function Dashboard() {
                     onPointerDown={(e) => {
                       e.preventDefault(); e.stopPropagation()
                       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                      setIsResizing(true)
+                      setResizeActiveId(block.id)
                       resizeDataRef.current = { id: block.id, startClientX: e.clientX, startClientY: e.clientY, startW: bw, startH: bh, curW: bw, curH: bh }
                     }}
                     onPointerMove={(e) => {
                       if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
+                      const cw = getContainerWidth()
+                      if (cw === 0) return
                       const rawW = Math.max(200, resizeDataRef.current.startW + (e.clientX - resizeDataRef.current.startClientX))
                       const rawH = Math.max(120, resizeDataRef.current.startH + (e.clientY - resizeDataRef.current.startClientY))
-                      const containerW = gridRef.current?.clientWidth ?? 1200
-                      const cands = getSnapCandidates(block.id, blocks, containerW)
-                      const rightEdge = block.x + rawW
-                      const snappedRight = snapValue(rightEdge, cands.x)
-                      const snappedW = Math.max(200, snappedRight - block.x)
-                      const bottomEdge = block.y + rawH
-                      const snappedBottom = snapValue(bottomEdge, cands.y)
-                      const snappedH = Math.max(120, snappedBottom - block.y)
-                      resizeDataRef.current.curW = snappedW
-                      resizeDataRef.current.curH = snappedH
-                      setSnapLines({ x: snappedRight !== rightEdge ? snappedRight : undefined, y: snappedBottom !== bottomEdge ? snappedBottom : undefined })
-                      requestAnimationFrame(() => {
-                        setLiveW(prev => ({ ...prev, [block.id]: snappedW }))
-                        setLiveH(prev => ({ ...prev, [block.id]: snappedH }))
-                      })
+                      const cands = getSnapCandidates(block.id, blocks, cw)
+                      let newW = Math.max(200, snapValue(block.x + rawW, cands.x) - block.x)
+                      let newH = Math.max(120, snapValue(block.y + rawH, cands.y) - block.y)
+                      newW = Math.min(newW, cw - block.x)
+                      const prevW = liveW[block.id] ?? block.w
+                      const prevH = liveH[block.id] ?? block.h
+                      const others = blocks.filter(o => o.id !== block.id && o.visible)
+                      const testWH = { ...block, w: newW, h: newH }
+                      if (others.some(o => overlaps(testWH, o))) {
+                        const testWOnly = { ...block, w: newW, h: prevH }
+                        const testHOnly = { ...block, w: prevW, h: newH }
+                        if (others.some(o => overlaps(testWOnly, o))) newW = prevW
+                        if (others.some(o => overlaps(testHOnly, o))) newH = prevH
+                      }
+                      resizeDataRef.current.curW = newW
+                      resizeDataRef.current.curH = newH
+                      setLiveW(prev => ({ ...prev, [block.id]: newW }))
+                      setLiveH(prev => ({ ...prev, [block.id]: newH }))
                     }}
                     onPointerUp={(e) => {
                       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                      setIsResizing(false)
+                      setResizeActiveId(null)
                       setSnapLines({})
                       const rdata = resizeDataRef.current
                       if (rdata && rdata.id === block.id) {
-                        salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, w: rdata.curW, h: rdata.curH } : b))
-                        setLiveW(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
-                        setLiveH(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
+                        const cw2 = getContainerWidth() || 9999
+                        const finalBlocks = blocks.map(b => clampBlock({ ...b, x: livePos[b.id]?.x ?? b.x, y: livePos[b.id]?.y ?? b.y, w: liveW[b.id] ?? b.w, h: liveH[b.id] ?? b.h }, cw2))
+                        salvarBlocks(finalBlocks)
+                        setLivePos({})
+                        setLiveW({})
+                        setLiveH({})
                         resizeDataRef.current = null
                       }
                     }}
