@@ -12,8 +12,6 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
   Users,
   Building2,
   Trophy,
@@ -361,18 +359,20 @@ interface BlockConfig {
   id: BlockId
   label: string
   visible: boolean
-  span: 1 | 2 | 3 | 4
-  rows: 1 | 2 | 3 | 4
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
-  { id: 'calendario', label: 'Calendário', visible: true, span: 4, rows: 1 },
-  { id: 'grafico_vendas', label: 'Gráfico de Vendas', visible: true, span: 4, rows: 1 },
-  { id: 'resumo_financeiro', label: 'Resumo Financeiro', visible: true, span: 4, rows: 1 },
-  { id: 'agenda_semanal', label: 'Agenda Semanal', visible: true, span: 4, rows: 1 },
-  { id: 'vendas_pagamento', label: 'Vendas por Pagamento', visible: true, span: 4, rows: 1 },
-  { id: 'top_clientes', label: 'Top Clientes', visible: true, span: 4, rows: 1 },
-  { id: 'sua_empresa', label: 'Sua Empresa', visible: true, span: 4, rows: 1 },
+  { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,    y: 0,    w: 380,  h: 480 },
+  { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: 390,  y: 0,    w: 800,  h: 480 },
+  { id: 'resumo_financeiro', label: 'Resumo Financeiro',    visible: true, x: 0,    y: 490,  w: 380,  h: 320 },
+  { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: 390,  y: 490,  w: 800,  h: 320 },
+  { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,    y: 820,  w: 580,  h: 280 },
+  { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: 590,  y: 820,  w: 600,  h: 280 },
+  { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,    y: 1110, w: 1190, h: 160 },
 ]
 
 export default function Dashboard() {
@@ -387,15 +387,13 @@ export default function Dashboard() {
   const blocks = useMemo(() => {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
     const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
-      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; const rows = (s.rows ?? 1) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span, rows } as BlockConfig })
+      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
       : [...DEFAULT_BLOCKS]
     // Deduplica por id — previne duplicatas vindas de dados corrompidos
     const seen = new Set<string>()
     return raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true })
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
-  const [dragBlock, setDragBlock] = useState<BlockId | null>(null)
-  const [dragOverBlock, setDragOverBlock] = useState<BlockId | null>(null)
 
   const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud(b as any) }
 
@@ -403,36 +401,8 @@ export default function Dashboard() {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
-  const onBlockDragStart = (e: React.DragEvent, id: BlockId, label: string) => {
-    setDragBlock(id)
-    e.dataTransfer.effectAllowed = 'move'
-    const ghost = document.createElement('div')
-    ghost.style.cssText = 'width:120px;height:36px;background:#1a1a1a;color:white;font-size:11px;font-weight:600;border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:0.9;position:fixed;top:-100px;'
-    ghost.textContent = label
-    document.body.appendChild(ghost)
-    e.dataTransfer.setDragImage(ghost, 60, 18)
-    requestAnimationFrame(() => document.body.removeChild(ghost))
-  }
-  const onBlockDragOver = (e: React.DragEvent, id: BlockId) => {
-    e.preventDefault()
-    setDragOverBlock(id)
-  }
-  const onBlockDrop = (e: React.DragEvent, targetId: BlockId) => {
-    e.preventDefault()
-    if (!dragBlock || dragBlock === targetId) { setDragBlock(null); setDragOverBlock(null); return }
-    const newBlocks = [...blocks]
-    const fromIdx = newBlocks.findIndex(b => b.id === dragBlock)
-    const toIdx = newBlocks.findIndex(b => b.id === targetId)
-    const [moved] = newBlocks.splice(fromIdx, 1)
-    newBlocks.splice(toIdx, 0, moved)
-    salvarBlocks(newBlocks)
-    setDragBlock(null)
-    setDragOverBlock(null)
-  }
-
   const resetBlocks = () => salvarBlocks([...DEFAULT_BLOCKS])
-  const moveBlockUp = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === 0) return; const nb = [...blocks];[nb[idx - 1], nb[idx]] = [nb[idx], nb[idx - 1]]; salvarBlocks(nb) }
-  const moveBlockDown = (id: BlockId) => { const idx = blocks.findIndex(b => b.id === id); if (idx === blocks.length - 1) return; const nb = [...blocks];[nb[idx], nb[idx + 1]] = [nb[idx + 1], nb[idx]]; salvarBlocks(nb) }
+
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768)
@@ -440,9 +410,11 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', fn)
   }, [])
   const gridRef = useRef<HTMLDivElement>(null)
-  const resizeDataRef = useRef<{ id: BlockId; startX: number; startY: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4; startRows: 1|2|3|4; currentRows: 1|2|3|4 } | null>(null)
-  const [liveSpans, setLiveSpans] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
-  const [liveRows, setLiveRows] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
+  const resizeDataRef = useRef<{ id: BlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
+  const dragDataRef = useRef<{ id: BlockId; offsetX: number; offsetY: number; curX: number; curY: number } | null>(null)
+  const [liveW, setLiveW] = useState<Partial<Record<BlockId, number>>>({})
+  const [liveH, setLiveH] = useState<Partial<Record<BlockId, number>>>({})
+  const [livePos, setLivePos] = useState<Partial<Record<BlockId, { x: number; y: number }>>>({})
   const [isResizing, setIsResizing] = useState(false)
 
   const { brand } = useBrand()
@@ -890,89 +862,129 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense', gridAutoRows: '1fr' }}>
-        {blocks.map((block, idx) => {
-          if (!block.visible && !editMode) return null
-          const content = renderBlock(block.id)
-          if (!content) return null
-          const isFirst = idx === 0
-          const isLast = idx === blocks.length - 1
-          const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
-          const rows = (liveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
-          return (
-            <div
-              key={block.id}
-              draggable={editMode}
-              onDragStart={editMode ? (e) => onBlockDragStart(e, block.id, block.label) : undefined}
-              onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
-              onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
-              onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={{ gridColumn: isMobile ? 'span 4 / span 4' : `span ${span} / span ${span}`, gridRow: `span ${rows} / span ${rows}`, width: '100%', minWidth: 0 }}
-              className={`relative flex flex-col transition-all ${
-                editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
-              } ${editMode && !block.visible ? 'opacity-40' : ''} ${
-                dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
-              } ${dragOverBlock === block.id && dragBlock !== block.id ? 'ring-2 ring-primary-400 ring-offset-2 rounded-2xl' : ''}`}
-            >
-              {editMode && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap">
-                  <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
-                  <span className="w-px h-3 bg-white/20" />
-                  <button title="Mover para cima" onClick={() => moveBlockUp(block.id)} disabled={isFirst} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronUp size={12} /></button>
-                  <button title="Mover para baixo" onClick={() => moveBlockDown(block.id)} disabled={isLast} className="p-1 text-white/70 hover:text-white disabled:opacity-30 rounded-full transition-colors active:scale-90"><ChevronDown size={12} /></button>
-                  <span className="w-px h-3 bg-white/20" />
-                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{span}×{rows}</span>
-                  <span className="w-px h-3 bg-white/20" />
-                  <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
-                </div>
-              )}
-              {content}
-              {editMode && (
-                <div
-                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
-                  style={{ touchAction: 'none' }}
-                  title="Arrastar para redimensionar"
-                  onPointerDown={(e) => {
-                    e.preventDefault(); e.stopPropagation()
-                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                    setIsResizing(true)
-                    resizeDataRef.current = { id: block.id, startX: e.clientX, startY: e.clientY, startSpan: span, currentSpan: span, startRows: rows, currentRows: rows }
-                  }}
-                  onPointerMove={(e) => {
-                    if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
-                    const grid = gridRef.current; if (!grid) return
-                    const gap = parseInt(window.getComputedStyle(grid).columnGap) || 24
-                    const rect = grid.getBoundingClientRect()
-                    const colWidth = (rect.width - gap * 3) / 4
-                    const deltaX = e.clientX - resizeDataRef.current.startX
-                    const newSpan = Math.max(1, Math.min(4, resizeDataRef.current.startSpan + Math.round((deltaX + colWidth * 0.1) / colWidth))) as 1|2|3|4
-                    const newRows = Math.max(1, Math.min(4, resizeDataRef.current.startRows + Math.round((e.clientY - resizeDataRef.current.startY) / 280))) as 1|2|3|4
-                    resizeDataRef.current.currentSpan = newSpan
-                    resizeDataRef.current.currentRows = newRows
-                    requestAnimationFrame(() => {
-                      setLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
-                      setLiveRows(prev => ({ ...prev, [block.id]: newRows }))
-                    })
-                  }}
-                  onPointerUp={(e) => {
-                    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                    setIsResizing(false)
-                    const rdata = resizeDataRef.current
-                    if (rdata && rdata.id === block.id) {
-                      salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, span: rdata.currentSpan, rows: rdata.currentRows } : b))
-                      setLiveSpans(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
-                      setLiveRows(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
-                      resizeDataRef.current = null
-                    }
-                  }}
-                >
-                  <GripVertical size={12} className="text-white/70 -rotate-90" />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      {isMobile ? (
+        <div className="flex flex-col gap-6">
+          {blocks.map((block) => {
+            if (!block.visible && !editMode) return null
+            const content = renderBlock(block.id)
+            if (!content) return null
+            const bh = liveH[block.id] ?? block.h
+            return (
+              <div
+                key={block.id}
+                style={{ height: bh }}
+                className={`relative flex flex-col ${editMode ? 'pt-5' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+              >
+                {editMode && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap">
+                    <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
+                    <span className="w-px h-3 bg-white/20" />
+                    <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
+                  </div>
+                )}
+                {content}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div
+          ref={gridRef}
+          className="relative w-full"
+          style={{ height: (() => { const vis = blocks.filter(b => b.visible || editMode); if (!vis.length) return 400; return Math.max(...vis.map(b => (livePos[b.id]?.y ?? b.y) + (liveH[b.id] ?? b.h))) + 32 })() }}
+        >
+          {blocks.map((block) => {
+            if (!block.visible && !editMode) return null
+            const content = renderBlock(block.id)
+            if (!content) return null
+            const bx = livePos[block.id]?.x ?? block.x
+            const by = livePos[block.id]?.y ?? block.y
+            const bw = liveW[block.id] ?? block.w
+            const bh = liveH[block.id] ?? block.h
+            const isDragging = !!livePos[block.id]
+            return (
+              <div
+                key={block.id}
+                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, zIndex: isDragging ? 50 : isResizing ? 40 : 1 }}
+                className={`flex flex-col ${editMode ? 'pt-5' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+              >
+                {editMode && (
+                  <div
+                    className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
+                    style={{ touchAction: 'none' }}
+                    onPointerDown={(e) => {
+                      e.preventDefault(); e.stopPropagation()
+                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                      dragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
+                    }}
+                    onPointerMove={(e) => {
+                      if (!dragDataRef.current || dragDataRef.current.id !== block.id) return
+                      const newX = Math.max(0, e.clientX - dragDataRef.current.offsetX)
+                      const newY = Math.max(0, e.clientY - dragDataRef.current.offsetY)
+                      dragDataRef.current.curX = newX
+                      dragDataRef.current.curY = newY
+                      setLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
+                    }}
+                    onPointerUp={(e) => {
+                      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                      const ddata = dragDataRef.current
+                      if (ddata && ddata.id === block.id) {
+                        salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, x: ddata.curX, y: ddata.curY } : b))
+                        setLivePos(prev => { const n = { ...prev }; delete n[ddata.id]; return n })
+                        dragDataRef.current = null
+                      }
+                    }}
+                  >
+                    <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
+                    <span className="w-px h-3 bg-white/20" />
+                    <span className="text-[9px] text-white/40 px-1 tabular-nums">{Math.round(bw)}×{Math.round(bh)}px</span>
+                    <span className="w-px h-3 bg-white/20" />
+                    <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={(e) => { e.stopPropagation(); toggleVisible(block.id) }} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
+                  </div>
+                )}
+                {content}
+                {editMode && (
+                  <div
+                    className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
+                    style={{ touchAction: 'none' }}
+                    title="Arrastar para redimensionar"
+                    onPointerDown={(e) => {
+                      e.preventDefault(); e.stopPropagation()
+                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                      setIsResizing(true)
+                      resizeDataRef.current = { id: block.id, startClientX: e.clientX, startClientY: e.clientY, startW: bw, startH: bh, curW: bw, curH: bh }
+                    }}
+                    onPointerMove={(e) => {
+                      if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
+                      const newW = Math.max(200, resizeDataRef.current.startW + (e.clientX - resizeDataRef.current.startClientX))
+                      const newH = Math.max(120, resizeDataRef.current.startH + (e.clientY - resizeDataRef.current.startClientY))
+                      resizeDataRef.current.curW = newW
+                      resizeDataRef.current.curH = newH
+                      requestAnimationFrame(() => {
+                        setLiveW(prev => ({ ...prev, [block.id]: newW }))
+                        setLiveH(prev => ({ ...prev, [block.id]: newH }))
+                      })
+                    }}
+                    onPointerUp={(e) => {
+                      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                      setIsResizing(false)
+                      const rdata = resizeDataRef.current
+                      if (rdata && rdata.id === block.id) {
+                        salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, w: rdata.curW, h: rdata.curH } : b))
+                        setLiveW(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
+                        setLiveH(prev => { const n = { ...prev }; delete n[rdata.id]; return n })
+                        resizeDataRef.current = null
+                      }
+                    }}
+                  >
+                    <GripVertical size={12} className="text-white/70 -rotate-90" />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
