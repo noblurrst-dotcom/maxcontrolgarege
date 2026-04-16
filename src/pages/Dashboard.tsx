@@ -880,7 +880,7 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid grid-cols-4 gap-6 [grid-auto-flow:dense]">
+      <div ref={gridRef} className="grid gap-6" style={{ gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(4, minmax(0, 1fr))', gridAutoFlow: 'dense' }}>
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
@@ -897,7 +897,7 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={{ gridColumn: window.innerWidth < 768 ? 'span 4' : `span ${span}`, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
+              style={{ gridColumn: window.innerWidth < 768 ? 'span 4 / span 4' : `span ${span} / span ${span}`, ...(rows > 1 ? { minHeight: (rows - 1) * 280 } : {}) }}
               className={`relative flex flex-col transition-all ${
                 editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
