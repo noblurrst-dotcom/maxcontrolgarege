@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Phone, Car, Wrench, Filter, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Phone, Car, Wrench, Filter, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
@@ -11,7 +11,7 @@ import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
-import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps } from '../utils/dashboardLayout'
+import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps, autoArranjarBlocks } from '../utils/dashboardLayout'
 
 const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
   pendente: { label: 'Pendente', color: 'text-amber-600', bg: 'bg-amber-100' },
@@ -95,6 +95,8 @@ export default function Agenda() {
 
   const [agendaEditMode, setAgendaEditMode] = useState(false)
   const [showAgendaCardManager, setShowAgendaCardManager] = useState(false)
+  const agendaGridRef = useRef<HTMLDivElement>(null)
+  const getAgendaContainerWidth = () => agendaGridRef.current?.clientWidth ?? 0
   const { data: agendaBlocksCloud, save: salvarAgendaBlocksCloud } = useCloudSyncSingle<{ blocks: AgendaBlock[] }>({ table: 'agenda_blocks', storageKey: 'agenda_blocks', defaultValue: { blocks: DEFAULT_AGENDA_BLOCKS }, dataField: 'blocks' })
   const agendaBlocks = useMemo(() => {
     const saved = (agendaBlocksCloud as any) as AgendaBlock[] | undefined
@@ -113,7 +115,6 @@ export default function Agenda() {
     window.addEventListener('resize', fn)
     return () => window.removeEventListener('resize', fn)
   }, [])
-  const agendaGridRef = useRef<HTMLDivElement>(null)
   const agendaResizeDataRef = useRef<{ id: AgendaBlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
   const agendaDragDataRef = useRef<{ id: AgendaBlockId; offsetX: number; offsetY: number; curX: number; curY: number } | null>(null)
   const [agendaLiveW, setAgendaLiveW] = useState<Partial<Record<AgendaBlockId, number>>>({})
@@ -122,7 +123,6 @@ export default function Agenda() {
   const [agendaSnapLines, setAgendaSnapLines] = useState<{ x?: number; y?: number }>({})
   const [agendaDragActiveId, setAgendaDragActiveId] = useState<AgendaBlockId | null>(null)
   const [agendaResizeActiveId, setAgendaResizeActiveId] = useState<AgendaBlockId | null>(null)
-  const getAgendaContainerWidth = () => agendaGridRef.current?.clientWidth ?? 0
 
   const inicioSemana = useMemo(() => {
     const base = startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -251,9 +251,22 @@ export default function Agenda() {
             {agendaEditMode ? <Check size={16} /> : <Pencil size={16} />}
           </button>
           {agendaEditMode && (
-            <button onClick={resetAgendaBlocks} title="Resetar layout" className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200">
-              <RotateCcw size={16} />
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  const cw = getAgendaContainerWidth()
+                  if (cw === 0) return
+                  salvarAgendaBlocks(autoArranjarBlocks(agendaBlocks, cw))
+                }}
+                title="Organizar cards"
+                className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
+              >
+                <Wand2 size={16} />
+              </button>
+              <button onClick={resetAgendaBlocks} title="Resetar layout" className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200">
+                <RotateCcw size={16} />
+              </button>
+            </>
           )}
           <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
             <Plus size={16} /> Novo Agendamento
@@ -539,65 +552,53 @@ export default function Agenda() {
           return (
             <div
               key={block.id}
-              style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 50 : 1, transition: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease' }}
-              className={`flex flex-col ${agendaEditMode ? 'pt-5' : ''} ${agendaEditMode && !block.visible ? 'opacity-40' : ''}`}
+              style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 50 : 1, transition: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(agendaEditMode ? { touchAction: 'none' } : {}) }}
+              className={`flex flex-col ${agendaEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''} ${agendaEditMode && !block.visible ? 'opacity-40' : ''}`}
+              onPointerDown={agendaEditMode ? (e) => {
+                e.preventDefault()
+                ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                setAgendaDragActiveId(block.id)
+                agendaDragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
+              } : undefined}
+              onPointerMove={agendaEditMode ? (e) => {
+                if (!agendaDragDataRef.current || agendaDragDataRef.current.id !== block.id) return
+                const cw = getAgendaContainerWidth()
+                if (cw === 0) return
+                const cands = getSnapCandidates(block.id, agendaBlocks, cw)
+                let newX = snapValue(Math.max(0, e.clientX - agendaDragDataRef.current.offsetX), cands.x)
+                let newY = snapValue(Math.max(0, e.clientY - agendaDragDataRef.current.offsetY), cands.y)
+                newX = Math.max(0, Math.min(newX, cw - (agendaLiveW[block.id] ?? block.w)))
+                newY = Math.max(0, newY)
+                const curW = agendaLiveW[block.id] ?? block.w
+                const curH = agendaLiveH[block.id] ?? block.h
+                const prevX = agendaLivePos[block.id]?.x ?? block.x
+                const prevY = agendaLivePos[block.id]?.y ?? block.y
+                const others = agendaBlocks.filter(o => o.id !== block.id && o.visible)
+                const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
+                if (others.some(o => overlaps(testXY, o))) {
+                  const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
+                  const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
+                  if (others.some(o => overlaps(testXOnly, o))) newX = prevX
+                  if (others.some(o => overlaps(testYOnly, o))) newY = prevY
+                }
+                agendaDragDataRef.current.curX = newX
+                agendaDragDataRef.current.curY = newY
+                setAgendaLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
+                setAgendaSnapLines({ x: newX !== (e.clientX - agendaDragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - agendaDragDataRef.current.offsetY) ? newY : undefined })
+              } : undefined}
+              onPointerUp={agendaEditMode ? (e) => {
+                ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                setAgendaDragActiveId(null)
+                const ddata = agendaDragDataRef.current
+                if (ddata && ddata.id === block.id) {
+                  const cw2 = getAgendaContainerWidth() || 9999
+                  const finalBlocks = agendaBlocks.map(b => clampBlock({ ...b, x: agendaLivePos[b.id]?.x ?? b.x, y: agendaLivePos[b.id]?.y ?? b.y, w: agendaLiveW[b.id] ?? b.w, h: agendaLiveH[b.id] ?? b.h }, cw2))
+                  salvarAgendaBlocks(finalBlocks)
+                  setAgendaLivePos({}); setAgendaLiveW({}); setAgendaLiveH({}); setAgendaSnapLines({})
+                  agendaDragDataRef.current = null
+                }
+              } : undefined}
             >
-              {agendaEditMode && (
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
-                  style={{ touchAction: 'none' }}
-                  onPointerDown={(e) => {
-                    e.preventDefault(); e.stopPropagation()
-                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                    setAgendaDragActiveId(block.id)
-                    agendaDragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
-                  }}
-                  onPointerMove={(e) => {
-                    if (!agendaDragDataRef.current || agendaDragDataRef.current.id !== block.id) return
-                    const cw = getAgendaContainerWidth()
-                    if (cw === 0) return
-                    const cands = getSnapCandidates(block.id, agendaBlocks, cw)
-                    let newX = snapValue(Math.max(0, e.clientX - agendaDragDataRef.current.offsetX), cands.x)
-                    let newY = snapValue(Math.max(0, e.clientY - agendaDragDataRef.current.offsetY), cands.y)
-                    newX = Math.max(0, Math.min(newX, cw - (agendaLiveW[block.id] ?? block.w)))
-                    newY = Math.max(0, newY)
-                    const curW = agendaLiveW[block.id] ?? block.w
-                    const curH = agendaLiveH[block.id] ?? block.h
-                    const prevX = agendaLivePos[block.id]?.x ?? block.x
-                    const prevY = agendaLivePos[block.id]?.y ?? block.y
-                    const others = agendaBlocks.filter(o => o.id !== block.id && o.visible)
-                    const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
-                    if (others.some(o => overlaps(testXY, o))) {
-                      const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
-                      const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
-                      if (others.some(o => overlaps(testXOnly, o))) newX = prevX
-                      if (others.some(o => overlaps(testYOnly, o))) newY = prevY
-                    }
-                    agendaDragDataRef.current.curX = newX
-                    agendaDragDataRef.current.curY = newY
-                    setAgendaLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
-                    setAgendaSnapLines({ x: newX !== (e.clientX - agendaDragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - agendaDragDataRef.current.offsetY) ? newY : undefined })
-                  }}
-                  onPointerUp={(e) => {
-                    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                    setAgendaDragActiveId(null)
-                    const ddata = agendaDragDataRef.current
-                    if (ddata && ddata.id === block.id) {
-                      const cw2 = getAgendaContainerWidth() || 9999
-                      const finalBlocks = agendaBlocks.map(b => clampBlock({ ...b, x: agendaLivePos[b.id]?.x ?? b.x, y: agendaLivePos[b.id]?.y ?? b.y, w: agendaLiveW[b.id] ?? b.w, h: agendaLiveH[b.id] ?? b.h }, cw2))
-                      salvarAgendaBlocks(finalBlocks)
-                      setAgendaLivePos({}); setAgendaLiveW({}); setAgendaLiveH({}); setAgendaSnapLines({})
-                      agendaDragDataRef.current = null
-                    }
-                  }}
-                >
-                  <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
-                  <span className="w-px h-3 bg-white/20" />
-                  <span className="text-[9px] text-white/40 px-1 tabular-nums">{Math.round(bw)}×{Math.round(bh)}px</span>
-                  <span className="w-px h-3 bg-white/20" />
-                  <button title={block.visible ? 'Ocultar' : 'Mostrar'} onClick={(e) => { e.stopPropagation(); toggleAgBlock(block.id) }} className="p-1 text-white/70 hover:text-white rounded-full active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
-                </div>
-              )}
               <div className="flex-1 min-h-0 overflow-auto">
                 {content}
               </div>

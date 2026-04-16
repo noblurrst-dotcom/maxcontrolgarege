@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps } from '../utils/dashboardLayout'
+import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps, autoArranjarBlocks } from '../utils/dashboardLayout'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -25,6 +25,7 @@ import {
   RotateCcw,
   LayoutGrid,
   X,
+  Wand2,
 } from 'lucide-react'
 import type { Checklist } from '../types'
 import { useBrand } from '../contexts/BrandContext'
@@ -389,6 +390,8 @@ export default function Dashboard() {
   const [, setChecklists] = useState<Checklist[]>([])
   const [, setLoading] = useState(true)
   const [mesAtual, setMesAtual] = useState(new Date())
+  const gridRef = useRef<HTMLDivElement>(null)
+  const getContainerWidth = () => gridRef.current?.clientWidth ?? 0
 
   // Block customization
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
@@ -418,7 +421,6 @@ export default function Dashboard() {
     window.addEventListener('resize', fn)
     return () => window.removeEventListener('resize', fn)
   }, [])
-  const gridRef = useRef<HTMLDivElement>(null)
   const resizeDataRef = useRef<{ id: BlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
   const dragDataRef = useRef<{ id: BlockId; offsetX: number; offsetY: number; curX: number; curY: number } | null>(null)
   const [liveW, setLiveW] = useState<Partial<Record<BlockId, number>>>({})
@@ -427,7 +429,6 @@ export default function Dashboard() {
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }>({})
   const [dragActiveId, setDragActiveId] = useState<BlockId | null>(null)
   const [resizeActiveId, setResizeActiveId] = useState<BlockId | null>(null)
-  const getContainerWidth = () => gridRef.current?.clientWidth ?? 0
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -837,13 +838,26 @@ export default function Dashboard() {
             </>
           )}
           {editMode && (
-            <button
-              onClick={resetBlocks}
-              className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
-            >
-              <RotateCcw size={14} />
-              Resetar
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  const cw = getContainerWidth()
+                  if (cw === 0) return
+                  salvarBlocks(autoArranjarBlocks(blocks, cw))
+                }}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+              >
+                <Wand2 size={14} />
+                Organizar
+              </button>
+              <button
+                onClick={resetBlocks}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+              >
+                <RotateCcw size={14} />
+                Resetar
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -953,68 +967,56 @@ export default function Dashboard() {
             return (
               <div
                 key={block.id}
-                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease' }}
-                className={`flex flex-col ${editMode ? 'pt-5' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
+                className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                onPointerDown={editMode ? (e) => {
+                  e.preventDefault()
+                  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                  setDragActiveId(block.id)
+                  dragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
+                } : undefined}
+                onPointerMove={editMode ? (e) => {
+                  if (!dragDataRef.current || dragDataRef.current.id !== block.id) return
+                  const cw = getContainerWidth()
+                  if (cw === 0) return
+                  const cands = getSnapCandidates(block.id, blocks, cw)
+                  let newX = snapValue(Math.max(0, e.clientX - dragDataRef.current.offsetX), cands.x)
+                  let newY = snapValue(Math.max(0, e.clientY - dragDataRef.current.offsetY), cands.y)
+                  newX = Math.max(0, Math.min(newX, cw - (liveW[block.id] ?? block.w)))
+                  newY = Math.max(0, newY)
+                  const curW = liveW[block.id] ?? block.w
+                  const curH = liveH[block.id] ?? block.h
+                  const prevX = livePos[block.id]?.x ?? block.x
+                  const prevY = livePos[block.id]?.y ?? block.y
+                  const others = blocks.filter(o => o.id !== block.id && o.visible)
+                  const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
+                  if (others.some(o => overlaps(testXY, o))) {
+                    const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
+                    const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
+                    if (others.some(o => overlaps(testXOnly, o))) newX = prevX
+                    if (others.some(o => overlaps(testYOnly, o))) newY = prevY
+                  }
+                  dragDataRef.current.curX = newX
+                  dragDataRef.current.curY = newY
+                  setLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
+                  setSnapLines({ x: newX !== (e.clientX - dragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - dragDataRef.current.offsetY) ? newY : undefined })
+                } : undefined}
+                onPointerUp={editMode ? (e) => {
+                  ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                  setDragActiveId(null)
+                  const ddata = dragDataRef.current
+                  if (ddata && ddata.id === block.id) {
+                    const cw2 = getContainerWidth() || 9999
+                    const finalBlocks = blocks.map(b => clampBlock({ ...b, x: livePos[b.id]?.x ?? b.x, y: livePos[b.id]?.y ?? b.y, w: liveW[b.id] ?? b.w, h: liveH[b.id] ?? b.h }, cw2))
+                    salvarBlocks(finalBlocks)
+                    setLivePos({})
+                    setLiveW({})
+                    setLiveH({})
+                    setSnapLines({})
+                    dragDataRef.current = null
+                  }
+                } : undefined}
               >
-                {editMode && (
-                  <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
-                    style={{ touchAction: 'none' }}
-                    onPointerDown={(e) => {
-                      e.preventDefault(); e.stopPropagation()
-                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                      setDragActiveId(block.id)
-                      dragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
-                    }}
-                    onPointerMove={(e) => {
-                      if (!dragDataRef.current || dragDataRef.current.id !== block.id) return
-                      const cw = getContainerWidth()
-                      if (cw === 0) return
-                      const cands = getSnapCandidates(block.id, blocks, cw)
-                      let newX = snapValue(Math.max(0, e.clientX - dragDataRef.current.offsetX), cands.x)
-                      let newY = snapValue(Math.max(0, e.clientY - dragDataRef.current.offsetY), cands.y)
-                      newX = Math.max(0, Math.min(newX, cw - (liveW[block.id] ?? block.w)))
-                      newY = Math.max(0, newY)
-                      const curW = liveW[block.id] ?? block.w
-                      const curH = liveH[block.id] ?? block.h
-                      const prevX = livePos[block.id]?.x ?? block.x
-                      const prevY = livePos[block.id]?.y ?? block.y
-                      const others = blocks.filter(o => o.id !== block.id && o.visible)
-                      const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
-                      if (others.some(o => overlaps(testXY, o))) {
-                        const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
-                        const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
-                        if (others.some(o => overlaps(testXOnly, o))) newX = prevX
-                        if (others.some(o => overlaps(testYOnly, o))) newY = prevY
-                      }
-                      dragDataRef.current.curX = newX
-                      dragDataRef.current.curY = newY
-                      setLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
-                      setSnapLines({ x: newX !== (e.clientX - dragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - dragDataRef.current.offsetY) ? newY : undefined })
-                    }}
-                    onPointerUp={(e) => {
-                      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                      setDragActiveId(null)
-                      const ddata = dragDataRef.current
-                      if (ddata && ddata.id === block.id) {
-                        const cw2 = getContainerWidth() || 9999
-                        const finalBlocks = blocks.map(b => clampBlock({ ...b, x: livePos[b.id]?.x ?? b.x, y: livePos[b.id]?.y ?? b.y, w: liveW[b.id] ?? b.w, h: liveH[b.id] ?? b.h }, cw2))
-                        salvarBlocks(finalBlocks)
-                        setLivePos({})
-                        setLiveW({})
-                        setLiveH({})
-                        setSnapLines({})
-                        dragDataRef.current = null
-                      }
-                    }}
-                  >
-                    <span className="text-[9px] font-bold text-white/50 px-1">{block.label}</span>
-                    <span className="w-px h-3 bg-white/20" />
-                    <span className="text-[9px] text-white/40 px-1 tabular-nums">{Math.round(bw)}×{Math.round(bh)}px</span>
-                    <span className="w-px h-3 bg-white/20" />
-                    <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={(e) => { e.stopPropagation(); toggleVisible(block.id) }} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
-                  </div>
-                )}
                 {content}
                 {editMode && (
                   <div

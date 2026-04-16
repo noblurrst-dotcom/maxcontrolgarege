@@ -95,3 +95,26 @@ export function calcularAlturaTotal(blocks: LayoutBlock[], livePosMap: Partial<R
   if (!blocks.length) return 400
   return Math.max(...blocks.map(b => (livePosMap[b.id]?.y ?? b.y) + (liveHMap[b.id] ?? b.h))) + 32
 }
+
+export function autoArranjarBlocks<T extends LayoutBlock>(blocks: T[], containerWidth: number, gap = GAP): T[] {
+  const visiveis = blocks.filter(b => b.visible)
+  const ocultos = blocks.filter(b => !b.visible)
+  const resultado: T[] = []
+  let curX = 0
+  let curY = 0
+  let alturaLinha = 0
+
+  for (const block of visiveis) {
+    if (curX > 0 && curX + block.w > containerWidth) {
+      curX = 0
+      curY += alturaLinha + gap
+      alturaLinha = 0
+    }
+    const x = Math.min(curX, containerWidth - block.w)
+    resultado.push({ ...block, x: Math.max(0, x), y: curY })
+    alturaLinha = Math.max(alturaLinha, block.h)
+    curX += block.w + gap
+  }
+
+  return [...resultado, ...ocultos]
+}
