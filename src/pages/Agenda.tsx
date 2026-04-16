@@ -251,7 +251,7 @@ export default function Agenda() {
           const agSpan = (agendaLiveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
           const agSpanClass = agSpan === 1 ? 'md:col-span-1' : agSpan === 2 ? 'md:col-span-2' : agSpan === 3 ? 'md:col-span-3' : 'md:col-span-4'
           const agRows = (agendaLiveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
-          const agMinH = agRows > 1 ? (agRows - 1) * 280 : 0
+          const agBlockH = agRows > 1 ? (agRows - 1) * 280 : 0
           let content: React.ReactNode = null
 
           if (block.id === 'filtro') {
@@ -494,8 +494,8 @@ export default function Agenda() {
                 setDragAgBlock(null); setDragOverAgBlock(null)
               } : undefined}
               onDragEnd={() => { setDragAgBlock(null); setDragOverAgBlock(null) }}
-              style={agMinH > 0 ? { minHeight: agMinH } : undefined}
-              className={`relative col-span-1 ${agSpanClass} transition-all ${
+              style={agBlockH > 0 ? { height: agBlockH } : undefined}
+              className={`relative flex flex-col col-span-1 ${agSpanClass} transition-all ${
                 agendaEditMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
               } ${agendaEditMode && !block.visible ? 'opacity-40' : ''} ${
                 dragAgBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
@@ -513,7 +513,9 @@ export default function Agenda() {
                   <button title={block.visible ? 'Ocultar' : 'Mostrar'} onClick={() => toggleAgBlock(block.id)} className="p-1 text-white/70 hover:text-white rounded-full active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
               )}
-              {content}
+              <div className={agBlockH > 0 ? 'flex-1 min-h-0 overflow-auto' : ''}>
+                {content}
+              </div>
               {agendaEditMode && (
                 <div
                   className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"

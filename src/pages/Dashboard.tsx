@@ -883,7 +883,7 @@ export default function Dashboard() {
           const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
           const spanClass = span === 1 ? 'md:col-span-1' : span === 2 ? 'md:col-span-2' : span === 3 ? 'md:col-span-3' : 'md:col-span-4'
           const rows = (liveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
-          const minH = rows > 1 ? (rows - 1) * 280 : 0
+          const blockH = rows > 1 ? (rows - 1) * 280 : 0
           return (
             <div
               key={block.id}
@@ -892,8 +892,8 @@ export default function Dashboard() {
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={minH > 0 ? { minHeight: minH } : undefined}
-              className={`relative col-span-1 ${spanClass} transition-all ${
+              style={blockH > 0 ? { height: blockH } : undefined}
+              className={`relative flex flex-col col-span-1 ${spanClass} transition-all ${
                 editMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
                 dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
@@ -911,7 +911,9 @@ export default function Dashboard() {
                   <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
               )}
-              {content}
+              <div className={blockH > 0 ? 'flex-1 min-h-0 overflow-auto' : ''}>
+                {content}
+              </div>
               {editMode && (
                 <div
                   className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
