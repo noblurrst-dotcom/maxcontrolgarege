@@ -391,23 +391,37 @@ export default function Dashboard() {
   const [, setLoading] = useState(true)
   const [mesAtual, setMesAtual] = useState(new Date())
   const gridRef = useRef<HTMLDivElement>(null)
-  const getContainerWidth = () => gridRef.current?.clientWidth ?? 0
+  const [containerWidth, setContainerWidth] = useState(0)
+  useEffect(() => {
+    const update = () => { if (gridRef.current) setContainerWidth(gridRef.current.offsetWidth) }
+    update()
+    const ro = new ResizeObserver(update)
+    if (gridRef.current) ro.observe(gridRef.current)
+    return () => ro.disconnect()
+  }, [])
+  const getContainerWidth = () => gridRef.current?.clientWidth ?? containerWidth ?? 0
 
   // Block customization
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
-  const blocks = useMemo(() => {
-    const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
-      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
-      : [...getDefaultBlocks(gridRef.current?.clientWidth || window.innerWidth)]
-    // Deduplica por id — previne duplicatas vindas de dados corrompidos
-    const seen = new Set<string>()
-    return raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true })
-  }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
   const [showCardManager, setShowCardManager] = useState(false)
 
   const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud(b as any) }
+  const blocks = useMemo(() => {
+    const cw = containerWidth || window.innerWidth - 80
+    const saved = (blocksCloud as any) as BlockConfig[] | undefined
+    const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
+      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
+      : [...getDefaultBlocks(cw)]
+    const seen = new Set<string>()
+    const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
+    const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
+    if (temSobreposicao && containerWidth > 0) {
+      setTimeout(() => salvarBlocks(getDefaultBlocks(containerWidth)), 0)
+      return getDefaultBlocks(containerWidth)
+    }
+    return final
+  }, [blocksCloud, containerWidth])
 
   const toggleVisible = (id: BlockId) => {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))

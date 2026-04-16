@@ -53,17 +53,32 @@ export default function Agenda() {
   const [agendaEditMode, setAgendaEditMode] = useState(false)
   const [showAgendaCardManager, setShowAgendaCardManager] = useState(false)
   const agendaGridRef = useRef<HTMLDivElement>(null)
-  const getAgendaContainerWidth = () => agendaGridRef.current?.clientWidth ?? 0
+  const [agendaContainerWidth, setAgendaContainerWidth] = useState(0)
+  useEffect(() => {
+    const update = () => { if (agendaGridRef.current) setAgendaContainerWidth(agendaGridRef.current.offsetWidth) }
+    update()
+    const ro = new ResizeObserver(update)
+    if (agendaGridRef.current) ro.observe(agendaGridRef.current)
+    return () => ro.disconnect()
+  }, [])
+  const getAgendaContainerWidth = () => agendaGridRef.current?.clientWidth ?? agendaContainerWidth ?? 0
   const { data: agendaBlocksCloud, save: salvarAgendaBlocksCloud } = useCloudSyncSingle<{ blocks: AgendaBlock[] }>({ table: 'agenda_blocks', storageKey: 'agenda_blocks', defaultValue: { blocks: DEFAULT_AGENDA_BLOCKS }, dataField: 'blocks' })
+  const salvarAgendaBlocks = (b: AgendaBlock[]) => { salvarAgendaBlocksCloud(b as any) }
   const agendaBlocks = useMemo(() => {
+    const cw = agendaContainerWidth || window.innerWidth - 80
     const saved = (agendaBlocksCloud as any) as AgendaBlock[] | undefined
     const raw: AgendaBlock[] = Array.isArray(saved) && saved.length > 0
       ? DEFAULT_AGENDA_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as AgendaBlock })
-      : [...getDefaultAgendaBlocks(agendaGridRef.current?.clientWidth || window.innerWidth)]
+      : [...getDefaultAgendaBlocks(cw)]
     const seen = new Set<string>()
-    return raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true })
-  }, [agendaBlocksCloud])
-  const salvarAgendaBlocks = (b: AgendaBlock[]) => { salvarAgendaBlocksCloud(b as any) }
+    const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
+    const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
+    if (temSobreposicao && agendaContainerWidth > 0) {
+      setTimeout(() => salvarAgendaBlocks(getDefaultAgendaBlocks(agendaContainerWidth)), 0)
+      return getDefaultAgendaBlocks(agendaContainerWidth)
+    }
+    return final
+  }, [agendaBlocksCloud, agendaContainerWidth])
   const toggleAgBlock = (id: AgendaBlockId) => salvarAgendaBlocks(agendaBlocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   const resetAgendaBlocks = () => salvarAgendaBlocks([...getDefaultAgendaBlocks(getAgendaContainerWidth() || window.innerWidth)])
   const agendaResizeDataRef = useRef<{ id: AgendaBlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
