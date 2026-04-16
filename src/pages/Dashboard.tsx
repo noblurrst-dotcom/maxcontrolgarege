@@ -399,9 +399,15 @@ export default function Dashboard() {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
-  const onBlockDragStart = (e: React.DragEvent, id: BlockId) => {
+  const onBlockDragStart = (e: React.DragEvent, id: BlockId, label: string) => {
     setDragBlock(id)
     e.dataTransfer.effectAllowed = 'move'
+    const ghost = document.createElement('div')
+    ghost.style.cssText = 'width:120px;height:36px;background:#1a1a1a;color:white;font-size:11px;font-weight:600;border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:0.9;position:fixed;top:-100px;'
+    ghost.textContent = label
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 60, 18)
+    requestAnimationFrame(() => document.body.removeChild(ghost))
   }
   const onBlockDragOver = (e: React.DragEvent, id: BlockId) => {
     e.preventDefault()
@@ -427,6 +433,7 @@ export default function Dashboard() {
   const resizeDataRef = useRef<{ id: BlockId; startX: number; startY: number; startSpan: 1|2|3|4; currentSpan: 1|2|3|4; startRows: 1|2|3|4; currentRows: 1|2|3|4 } | null>(null)
   const [liveSpans, setLiveSpans] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
   const [liveRows, setLiveRows] = useState<Partial<Record<BlockId, 1|2|3|4>>>({})
+  const [isResizing, setIsResizing] = useState(false)
 
   const { brand } = useBrand()
   const { subUsuarioAtivo } = useSubUsuario()
@@ -873,7 +880,7 @@ export default function Dashboard() {
       )}
 
       {/* Dynamic blocks */}
-      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-4 gap-6 [grid-auto-flow:dense]">
         {blocks.map((block, idx) => {
           if (!block.visible && !editMode) return null
           const content = renderBlock(block.id)
@@ -883,18 +890,17 @@ export default function Dashboard() {
           const span = (liveSpans[block.id] ?? block.span ?? 4) as 1|2|3|4
           const spanClass = span === 1 ? 'md:col-span-1' : span === 2 ? 'md:col-span-2' : span === 3 ? 'md:col-span-3' : 'md:col-span-4'
           const rows = (liveRows[block.id] ?? block.rows ?? 1) as 1|2|3|4
-          const blockH = rows > 1 ? (rows - 1) * 280 : 0
           return (
             <div
               key={block.id}
               draggable={editMode}
-              onDragStart={editMode ? (e) => onBlockDragStart(e, block.id) : undefined}
+              onDragStart={editMode ? (e) => onBlockDragStart(e, block.id, block.label) : undefined}
               onDragOver={editMode ? (e) => onBlockDragOver(e, block.id) : undefined}
               onDrop={editMode ? (e) => onBlockDrop(e, block.id) : undefined}
               onDragEnd={() => { setDragBlock(null); setDragOverBlock(null) }}
-              style={blockH > 0 ? { height: blockH } : undefined}
+              style={rows > 1 ? { minHeight: (rows - 1) * 280 } : undefined}
               className={`relative flex flex-col col-span-1 ${spanClass} transition-all ${
-                editMode ? 'cursor-grab active:cursor-grabbing animate-wiggle pt-5' : ''
+                editMode ? `cursor-grab active:cursor-grabbing ${isResizing ? '' : 'animate-wiggle'} pt-5` : ''
               } ${editMode && !block.visible ? 'opacity-40' : ''} ${
                 dragBlock === block.id ? 'opacity-50 scale-[0.98]' : ''
               } ${dragOverBlock === block.id && dragBlock !== block.id ? 'ring-2 ring-primary-400 ring-offset-2 rounded-2xl' : ''}`}
@@ -911,9 +917,7 @@ export default function Dashboard() {
                   <button title={block.visible ? 'Ocultar bloco' : 'Mostrar bloco'} onClick={() => toggleVisible(block.id)} className="p-1 text-white/70 hover:text-white rounded-full transition-colors active:scale-90">{block.visible ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 </div>
               )}
-              <div className={blockH > 0 ? 'flex-1 min-h-0 overflow-auto' : ''}>
-                {content}
-              </div>
+              {content}
               {editMode && (
                 <div
                   className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
@@ -922,22 +926,28 @@ export default function Dashboard() {
                   onPointerDown={(e) => {
                     e.preventDefault(); e.stopPropagation()
                     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                    setIsResizing(true)
                     resizeDataRef.current = { id: block.id, startX: e.clientX, startY: e.clientY, startSpan: span, currentSpan: span, startRows: rows, currentRows: rows }
                   }}
                   onPointerMove={(e) => {
                     if (!resizeDataRef.current || resizeDataRef.current.id !== block.id) return
                     const grid = gridRef.current; if (!grid) return
                     const gap = parseInt(window.getComputedStyle(grid).columnGap) || 24
-                    const colWidth = (grid.clientWidth - gap * 3) / 4
-                    const newSpan = Math.max(1, Math.min(4, resizeDataRef.current.startSpan + Math.round((e.clientX - resizeDataRef.current.startX) / colWidth))) as 1|2|3|4
+                    const rect = grid.getBoundingClientRect()
+                    const colWidth = (rect.width - gap * 3) / 4
+                    const deltaX = e.clientX - resizeDataRef.current.startX
+                    const newSpan = Math.max(1, Math.min(4, resizeDataRef.current.startSpan + Math.round((deltaX + colWidth * 0.1) / colWidth))) as 1|2|3|4
                     const newRows = Math.max(1, Math.min(4, resizeDataRef.current.startRows + Math.round((e.clientY - resizeDataRef.current.startY) / 280))) as 1|2|3|4
                     resizeDataRef.current.currentSpan = newSpan
                     resizeDataRef.current.currentRows = newRows
-                    setLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
-                    setLiveRows(prev => ({ ...prev, [block.id]: newRows }))
+                    requestAnimationFrame(() => {
+                      setLiveSpans(prev => ({ ...prev, [block.id]: newSpan }))
+                      setLiveRows(prev => ({ ...prev, [block.id]: newRows }))
+                    })
                   }}
                   onPointerUp={(e) => {
                     ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+                    setIsResizing(false)
                     const rdata = resizeDataRef.current
                     if (rdata && rdata.id === block.id) {
                       salvarBlocks(blocks.map(b => b.id === block.id ? { ...b, span: rdata.currentSpan, rows: rdata.currentRows } : b))
