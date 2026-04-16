@@ -386,8 +386,12 @@ export default function Dashboard() {
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
   const blocks = useMemo(() => {
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    if (Array.isArray(saved) && saved.length > 0) return DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; const rows = (s.rows ?? 1) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span, rows } as BlockConfig })
-    return DEFAULT_BLOCKS
+    const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
+      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; const span = (s.span ?? (s.size === 1 ? 2 : 4)) as 1|2|3|4; const rows = (s.rows ?? 1) as 1|2|3|4; return { ...d, visible: (s.visible ?? d.visible) as boolean, span, rows } as BlockConfig })
+      : [...DEFAULT_BLOCKS]
+    // Deduplica por id — previne duplicatas vindas de dados corrompidos
+    const seen = new Set<string>()
+    return raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true })
   }, [blocksCloud])
   const [editMode, setEditMode] = useState(false)
   const [dragBlock, setDragBlock] = useState<BlockId | null>(null)
