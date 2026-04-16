@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Phone, Car, Wrench, Filter, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Filter, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import type { Agendamento, Servico, Venda, KanbanItem, KanbanEtapa, PreVenda } from '../types'
+import type { Agendamento, Servico, Venda } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
@@ -23,16 +23,7 @@ const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; 
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const ETAPAS: { key: KanbanEtapa; label: string; color: string; bg: string; border: string }[] = [
-  { key: 'orcamento', label: 'Orçamento', color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200' },
-  { key: 'agendado', label: 'Agendado', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-  { key: 'na_oficina', label: 'Na Oficina', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { key: 'em_andamento', label: 'Em Andamento', color: 'text-primary-700', bg: 'bg-primary-50', border: 'border-primary-200' },
-  { key: 'finalizado', label: 'Finalizado', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  { key: 'entregue', label: 'Entregue', color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
-]
-
-type AgendaBlockId = 'filtro' | 'stats' | 'calendario' | 'lista' | 'kanban'
+type AgendaBlockId = 'filtro' | 'stats' | 'calendario' | 'lista'
 interface AgendaBlock { id: AgendaBlockId; label: string; visible: boolean; x: number; y: number; w: number; h: number }
 function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
   const half = Math.floor((cw - 8) / 2)
@@ -42,37 +33,9 @@ function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
     { id: 'stats',      label: 'Estatísticas',             visible: true, x: 0,        y: 98,   w: half, h: 140 },
     { id: 'lista',      label: 'Lista de Agendamentos',    visible: true, x: 0,        y: 246,  w: half, h: 440 },
     { id: 'calendario', label: 'Calendário Semanal',       visible: true, x: half + 8, y: 98,   w: half, h: 588 },
-    { id: 'kanban',     label: 'Kanban de Serviços',       visible: true, x: 0,        y: 694,  w: full, h: 480 },
   ]
 }
 const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
-
-function syncKanbanFromSources(kanban: KanbanItem[], preVendas: PreVenda[], agendamentos: Agendamento[]): { items: KanbanItem[]; changed: boolean } {
-  let changed = false
-  const items = [...kanban]
-  const origemIds = new Set(items.map(k => k.origem_id).filter(Boolean))
-
-  for (const pv of preVendas) {
-    if (pv.status === 'aprovado' || pv.status === 'recusado') {
-      const existIdx = items.findIndex(k => k.origem_id === pv.id && k.origem_tipo === 'prevenda' && k.etapa === 'orcamento')
-      if (existIdx !== -1) { items.splice(existIdx, 1); changed = true }
-      continue
-    }
-    if (origemIds.has(pv.id)) continue
-    const descItens = pv.itens?.map(i => i.descricao).filter(Boolean).join(', ') || ''
-    items.push({ id: uid(), user_id: '', etapa: 'orcamento', nome_cliente: pv.nome_cliente, telefone_cliente: pv.telefone_cliente || '', placa: '', veiculo: '', servico: descItens, valor: pv.valor_total || 0, observacoes: pv.observacoes || '', origem_tipo: 'prevenda', origem_id: pv.id, created_at: pv.created_at || new Date().toISOString(), updated_at: new Date().toISOString() })
-    changed = true
-  }
-
-  for (const ag of agendamentos) {
-    if (origemIds.has(ag.id)) continue
-    if (ag.status === 'cancelado') continue
-    items.push({ id: uid(), user_id: '', etapa: 'agendado', nome_cliente: ag.nome_cliente, telefone_cliente: ag.telefone_cliente || '', placa: '', veiculo: '', servico: ag.servico || ag.titulo || '', valor: ag.valor || 0, observacoes: ag.observacoes || '', origem_tipo: 'agendamento', origem_id: ag.id, created_at: ag.created_at || new Date().toISOString(), updated_at: new Date().toISOString() })
-    changed = true
-  }
-
-  return { items, changed }
-}
 
 const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
 
@@ -80,8 +43,6 @@ export default function Agenda() {
   const { user } = useAuth()
   const { data: lista, save: salvar } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
-  const { data: preVendasSync } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
-  const { data: kanban, save: salvarKanban } = useCloudSync<KanbanItem>({ table: 'kanban_items', storageKey: 'kanban_items' })
   const [servicos, setServicos] = useState<Servico[]>([])
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
@@ -89,8 +50,6 @@ export default function Agenda() {
   const [form, setForm] = useState(initForm())
   const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
-  const [dragItem, setDragItem] = useState<string | null>(null)
-  const [dragOverEtapa, setDragOverEtapa] = useState<KanbanEtapa | null>(null)
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   const [agendaEditMode, setAgendaEditMode] = useState(false)
@@ -109,12 +68,6 @@ export default function Agenda() {
   const salvarAgendaBlocks = (b: AgendaBlock[]) => { salvarAgendaBlocksCloud(b as any) }
   const toggleAgBlock = (id: AgendaBlockId) => salvarAgendaBlocks(agendaBlocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   const resetAgendaBlocks = () => salvarAgendaBlocks([...getDefaultAgendaBlocks(getAgendaContainerWidth() || window.innerWidth)])
-  const [agendaIsMobile, setAgendaIsMobile] = useState(() => window.innerWidth < 768)
-  useEffect(() => {
-    const fn = () => setAgendaIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', fn)
-    return () => window.removeEventListener('resize', fn)
-  }, [])
   const agendaResizeDataRef = useRef<{ id: AgendaBlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
   const agendaDragDataRef = useRef<{ id: AgendaBlockId; offsetX: number; offsetY: number; curX: number; curY: number } | null>(null)
   const [agendaLiveW, setAgendaLiveW] = useState<Partial<Record<AgendaBlockId, number>>>({})
@@ -140,30 +93,6 @@ export default function Agenda() {
       return inicio < semFim && fim > semIni
     })
   }, [lista, diasDaSemana])
-
-  // Auto-sync kanban from agendamentos + pré-vendas
-  useEffect(() => {
-    const { items, changed } = syncKanbanFromSources(kanban, preVendasSync, lista)
-    if (changed) salvarKanban(items)
-  }, [lista, preVendasSync]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Kanban helpers
-  const moverEtapa = (itemId: string, novaEtapa: KanbanEtapa) =>
-    salvarKanban(kanban.map(k => k.id === itemId ? { ...k, etapa: novaEtapa, updated_at: new Date().toISOString() } : k))
-  const removerKanban = (itemId: string) => salvarKanban(kanban.filter(k => k.id !== itemId))
-  const proximaEtapa = (etapaAtual: KanbanEtapa): KanbanEtapa | null => {
-    const idx = ETAPAS.findIndex(e => e.key === etapaAtual)
-    return idx < ETAPAS.length - 1 ? ETAPAS[idx + 1].key : null
-  }
-  const onDragStart = (e: React.DragEvent, id: string) => { setDragItem(id); e.dataTransfer.effectAllowed = 'move' }
-  const onDragOver = (e: React.DragEvent, etapa: KanbanEtapa) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverEtapa(etapa) }
-  const onDragLeave = () => setDragOverEtapa(null)
-  const onDrop = (e: React.DragEvent, etapa: KanbanEtapa) => { e.preventDefault(); if (dragItem) moverEtapa(dragItem, etapa); setDragItem(null); setDragOverEtapa(null) }
-  const kanbanPorEtapa = useMemo(() => {
-    const map: Record<KanbanEtapa, KanbanItem[]> = { orcamento: [], agendado: [], na_oficina: [], em_andamento: [], finalizado: [], entregue: [] }
-    kanban.forEach(k => { if (map[k.etapa]) map[k.etapa].push(k) })
-    return map
-  }, [kanban])
 
   // Load services from Supabase
   useEffect(() => {
@@ -307,7 +236,7 @@ export default function Agenda() {
       <div
         ref={agendaGridRef}
         className="relative w-full overflow-x-auto"
-        style={{ height: calcularAlturaTotal(agendaBlocks.filter(b => b.visible || agendaEditMode), agendaLivePos, agendaLiveH), minWidth: agendaIsMobile ? 1200 : undefined }}
+        style={{ height: calcularAlturaTotal(agendaBlocks.filter(b => b.visible || agendaEditMode), agendaLivePos, agendaLiveH) }}
       >
         {agendaEditMode && agendaSnapLines.x !== undefined && (
           <div style={{ position: 'absolute', left: agendaSnapLines.x, top: 0, bottom: 0, width: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
@@ -331,12 +260,12 @@ export default function Agenda() {
             )
           } else if (block.id === 'stats') {
             content = (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 h-full">
                 {[
                   { label: 'Hoje', value: agendHoje, Icon: CalendarDays, color: 'text-primary-600', iconBg: 'bg-primary-100' },
                   { label: 'No período', value: filtradas.length, Icon: Clock, color: 'text-violet-600', iconBg: 'bg-violet-100' },
                 ].map((item) => (
-                  <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+                  <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex flex-col justify-between">
                     <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                       <div className={`w-8 h-8 sm:w-9 sm:h-9 ${item.iconBg} rounded-xl flex items-center justify-center`}><item.Icon size={16} className={item.color} /></div>
                       <p className="text-[10px] sm:text-xs font-medium text-gray-400">{item.label}</p>
@@ -348,7 +277,7 @@ export default function Agenda() {
             )
           } else if (block.id === 'calendario') {
             content = (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <CalendarDays size={20} className="text-primary-600" />
@@ -365,7 +294,7 @@ export default function Agenda() {
                     <button onClick={() => setSemanaOffset(s => s + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronRight size={18} className="text-gray-500" /></button>
                   </div>
                 </div>
-                <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5">
+                <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5 flex-1 min-h-0 flex flex-col">
                   <div className="min-w-[640px]">
                     <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
                       <div />
@@ -382,7 +311,7 @@ export default function Agenda() {
                     {(() => {
                       const ROW_H = 48; const HORA_INICIO = 7; const TOTAL_HORAS = 14; const defaultEventColor = '#4285F4'
                       return (
-                        <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                        <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                           <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
                             <div className="relative">
                               {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
@@ -442,8 +371,8 @@ export default function Agenda() {
             )
           } else if (block.id === 'lista') {
             content = (
-              <div className="space-y-4">
-                <div className="relative">
+              <div className="flex flex-col h-full gap-4">
+                <div className="relative shrink-0">
                   <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente, serviço ou título..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
                 </div>
@@ -454,7 +383,7 @@ export default function Agenda() {
                     <p className="text-gray-400 text-sm mt-1">{busca ? 'Tente outro termo' : 'Crie um novo agendamento'}</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 min-h-0 overflow-y-auto">
                     {filtradas.map((a) => {
                       const st = STATUS_MAP[a.status]
                       const dataInicio = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
@@ -483,64 +412,6 @@ export default function Agenda() {
                 )}
               </div>
             )
-          } else if (block.id === 'kanban') {
-            content = (
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Kanban de Serviços</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Arraste os cards para mover entre etapas</p>
-                  </div>
-                </div>
-                <div className="overflow-x-auto -mx-3 sm:-mx-0 px-3 sm:px-0 pb-4">
-                  <div className="flex gap-3 min-w-[1100px]">
-                    {ETAPAS.map((etapa) => {
-                      const items = kanbanPorEtapa[etapa.key]
-                      const isDragOver = dragOverEtapa === etapa.key
-                      return (
-                        <div key={etapa.key} onDragOver={(e) => onDragOver(e, etapa.key)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, etapa.key)}
-                          className={`flex-1 min-w-[180px] rounded-2xl border-2 transition-colors ${isDragOver ? 'border-primary-400 bg-primary-50/40' : `${etapa.border} bg-white/60`}`}>
-                          <div className={`px-3 py-3 rounded-t-2xl ${etapa.bg}`}>
-                            <div className="flex items-center justify-between">
-                              <h3 className={`text-xs font-bold ${etapa.color} uppercase tracking-wider`}>{etapa.label}</h3>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${etapa.bg} ${etapa.color} border ${etapa.border}`}>{items.length}</span>
-                            </div>
-                          </div>
-                          <div className="p-2 space-y-2 min-h-[120px]">
-                            {items.length === 0 && <div className="text-center py-6"><p className="text-[10px] text-gray-300 font-medium">Nenhum veículo</p></div>}
-                            {items.map((item) => {
-                              const prox = proximaEtapa(item.etapa)
-                              return (
-                                <div key={item.id} draggable onDragStart={(e) => onDragStart(e, item.id)}
-                                  className={`bg-white rounded-xl border border-gray-100 shadow-sm p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${dragItem === item.id ? 'opacity-50' : ''}`}>
-                                  <div className="flex items-start gap-2">
-                                    <GripVertical size={14} className="text-gray-300 mt-0.5 shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-bold text-gray-900 truncate">{item.nome_cliente}</p>
-                                      {item.servico && <p className="text-[10px] text-gray-500 truncate flex items-center gap-1 mt-0.5"><Wrench size={9} className="shrink-0" /> {item.servico}</p>}
-                                      {item.placa && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Car size={9} className="shrink-0" /> {item.placa}{item.veiculo ? ` • ${item.veiculo}` : ''}</p>}
-                                      {item.telefone_cliente && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5"><Phone size={9} className="shrink-0" /> {item.telefone_cliente}</p>}
-                                      {item.valor > 0 && <p className="text-[10px] font-bold text-emerald-600 mt-1">{fmt(item.valor)}</p>}
-                                      {item.origem_tipo !== 'manual' && (
-                                        <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full mt-1 ${item.origem_tipo === 'prevenda' ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'}`}>{item.origem_tipo === 'prevenda' ? 'Pré-venda' : 'Agenda'}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-50">
-                                    {prox && (<button onClick={() => moverEtapa(item.id, prox)} className="flex items-center gap-1 text-[10px] font-bold text-primary-600 hover:text-primary-700 px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"><ChevronRight size={12} /> {ETAPAS.find(e => e.key === prox)?.label}</button>)}
-                                    <button onClick={() => removerKanban(item.id)} className="ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )
           }
 
           if (!content) return null
@@ -553,7 +424,7 @@ export default function Agenda() {
             <div
               key={block.id}
               style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 50 : 1, transition: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(agendaEditMode ? { touchAction: 'none' } : {}) }}
-              className={`flex flex-col ${agendaEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''} ${agendaEditMode && !block.visible ? 'opacity-40' : ''}`}
+              className={`flex flex-col ${agendaEditMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : ''} ${agendaEditMode && agendaDragActiveId !== block.id && agendaResizeActiveId !== block.id ? 'animate-wiggle' : ''} ${agendaEditMode && !block.visible ? 'opacity-40' : ''}`}
               onPointerDown={agendaEditMode ? (e) => {
                 e.preventDefault()
                 ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)

@@ -968,7 +968,7 @@ export default function Dashboard() {
               <div
                 key={block.id}
                 style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
-                className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : ''} ${editMode && dragActiveId !== block.id && resizeActiveId !== block.id ? 'animate-wiggle' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
                 onPointerDown={editMode ? (e) => {
                   e.preventDefault()
                   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
