@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Filter, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
@@ -23,16 +23,14 @@ const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; 
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-type AgendaBlockId = 'filtro' | 'stats' | 'calendario' | 'lista'
+type AgendaBlockId = 'stats' | 'calendario' | 'lista'
 interface AgendaBlock { id: AgendaBlockId; label: string; visible: boolean; x: number; y: number; w: number; h: number }
 function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
   const half = Math.floor((cw - 8) / 2)
-  const full = cw
   return [
-    { id: 'filtro',     label: 'Filtro de Período',       visible: true, x: 0,        y: 0,    w: full, h: 90  },
-    { id: 'stats',      label: 'Estatísticas',             visible: true, x: 0,        y: 98,   w: half, h: 140 },
-    { id: 'lista',      label: 'Lista de Agendamentos',    visible: true, x: 0,        y: 246,  w: half, h: 440 },
-    { id: 'calendario', label: 'Calendário Semanal',       visible: true, x: half + 8, y: 98,   w: half, h: 588 },
+    { id: 'stats',      label: 'Estatísticas',             visible: true, x: 0,        y: 0,    w: half, h: 140 },
+    { id: 'calendario', label: 'Calendário Semanal',       visible: true, x: half + 8, y: 0,    w: half, h: 588 },
+    { id: 'lista',      label: 'Lista de Agendamentos',    visible: true, x: 0,        y: 148,  w: half, h: 440 },
   ]
 }
 const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
@@ -50,7 +48,7 @@ export default function Agenda() {
   const [form, setForm] = useState(initForm())
   const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
-  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange } = useDateRange()
 
   const [agendaEditMode, setAgendaEditMode] = useState(false)
   const [showAgendaCardManager, setShowAgendaCardManager] = useState(false)
@@ -232,10 +230,24 @@ export default function Agenda() {
         </div>
       )}
 
+      {/* Filtro de período — fora do grid, igual ao Dashboard */}
+      {!agendaEditMode && (
+        <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+          <DateRangeFilter
+            preset={preset}
+            onChange={setPreset}
+            customInicio={customInicio}
+            customFim={customFim}
+            onCustomInicioChange={setCustomInicio}
+            onCustomFimChange={setCustomFim}
+          />
+        </div>
+      )}
+
       {/* Grid de blocos */}
       <div
         ref={agendaGridRef}
-        className="relative w-full overflow-x-auto"
+        className="relative w-full"
         style={{ height: calcularAlturaTotal(agendaBlocks.filter(b => b.visible || agendaEditMode), agendaLivePos, agendaLiveH) }}
       >
         {agendaEditMode && agendaSnapLines.x !== undefined && (
@@ -248,17 +260,7 @@ export default function Agenda() {
           if (!block.visible && !agendaEditMode) return null
           let content: React.ReactNode = null
 
-          if (block.id === 'filtro') {
-            content = (
-              <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Filter size={12} className="text-gray-400" />
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período — {periodoLabel}</span>
-                </div>
-                <DateRangeFilter preset={preset} onChange={setPreset} customInicio={customInicio} customFim={customFim} onCustomInicioChange={setCustomInicio} onCustomFimChange={setCustomFim} />
-              </div>
-            )
-          } else if (block.id === 'stats') {
+          if (block.id === 'stats') {
             content = (
               <div className="grid grid-cols-2 gap-3 h-full">
                 {[
