@@ -37,6 +37,47 @@ const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
 
 const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
 
+interface EventLayout { top: number; height: number; left: string; width: string; zIndex: number }
+
+function calcularLayoutEventos(
+  eventos: Array<{ inicio: number; fim: number; id: string }>,
+  ROW_H: number,
+  HORA_INICIO: number
+): Map<string, EventLayout> {
+  const result = new Map<string, EventLayout>()
+  const sorted = [...eventos].sort((a, b) => a.inicio - b.inicio)
+  const clusters: Array<typeof sorted> = []
+  let currentCluster: typeof sorted = []
+
+  for (const ev of sorted) {
+    if (currentCluster.length === 0) {
+      currentCluster.push(ev)
+    } else {
+      const colide = currentCluster.some(c => ev.inicio < c.fim && ev.fim > c.inicio)
+      if (colide) {
+        currentCluster.push(ev)
+      } else {
+        clusters.push(currentCluster)
+        currentCluster = [ev]
+      }
+    }
+  }
+  if (currentCluster.length > 0) clusters.push(currentCluster)
+
+  for (const cluster of clusters) {
+    const n = cluster.length
+    cluster.forEach((ev, colIdx) => {
+      const top = Math.max((ev.inicio - HORA_INICIO) * ROW_H, 0)
+      const height = Math.max((ev.fim - ev.inicio) * ROW_H, ROW_H * 0.5)
+      const colWidth = n === 1 ? 100 : Math.min(80, 100 / n + 15)
+      const colLeft = n === 1 ? 0 : (colIdx * (100 - colWidth)) / Math.max(n - 1, 1)
+      result.set(ev.id, { top, height, left: `${colLeft}%`, width: `${colWidth}%`, zIndex: 10 + colIdx })
+    })
+  }
+
+  return result
+}
+
 export default function Agenda() {
   const { user } = useAuth()
   const { data: lista, save: salvar } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
@@ -343,33 +384,39 @@ export default function Agenda() {
                               return (
                                 <div key={dia.toISOString()} className={`relative ${ehHoje ? 'bg-primary-50/30' : ''}`}>
                                   {Array.from({ length: TOTAL_HORAS }, (_, i) => (<div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />))}
-                                  {eventsDia.map((ag, evIdx) => {
-                                    const inicio = new Date(ag.data_hora); const durMin = ag.duracao_min || 60
-                                    const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
-                                    const isMultiDay = inicio.toDateString() !== fim.toDateString()
-                                    const isFirstDay = inicio.toDateString() === diaStart.toDateString()
-                                    const isLastDay = fim.toDateString() === diaStart.toDateString()
-                                    let effStart: number, effEnd: number
-                                    if (!isMultiDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = fim.getHours() + fim.getMinutes() / 60 }
-                                    else if (isFirstDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = BIZ_END }
-                                    else if (isLastDay) { effStart = BIZ_START; effEnd = fim.getHours() + fim.getMinutes() / 60 }
-                                    else { effStart = BIZ_START; effEnd = BIZ_END }
-                                    const top = Math.max((effStart - HORA_INICIO) * ROW_H, 0)
-                                    const bottom = Math.min((effEnd - HORA_INICIO) * ROW_H, TOTAL_HORAS * ROW_H)
-                                    const height = Math.max(bottom - top, ROW_H * 0.5)
-                                    const eventColor = ag.cor || defaultEventColor
-                                    return (
-                                      <div key={ag.id || evIdx} title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
-                                        className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden cursor-default"
-                                        style={{ top, height, zIndex: 10 + evIdx, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined }}>
-                                        <div className="px-1.5 py-1 text-white">
-                                          <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
-                                          <p className="text-[9px] opacity-80 leading-tight">{isFirstDay ? format(inicio, 'HH:mm') : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? format(fim, 'HH:mm') : `${BIZ_END}:00`}</p>
-                                          {height > ROW_H && ag.servico && <p className="text-[9px] opacity-70 leading-tight truncate mt-0.5">{ag.servico}</p>}
+                                  {(() => {
+                                    const eventosComTempo = eventsDia.map(ag => {
+                                      const inicio = new Date(ag.data_hora)
+                                      const durMin = ag.duracao_min || 60
+                                      const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+                                      const isMultiDay = inicio.toDateString() !== fim.toDateString()
+                                      const isFirstDay = inicio.toDateString() === diaStart.toDateString()
+                                      const isLastDay = fim.toDateString() === diaStart.toDateString()
+                                      let effStart: number, effEnd: number
+                                      if (!isMultiDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = fim.getHours() + fim.getMinutes() / 60 }
+                                      else if (isFirstDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = BIZ_END }
+                                      else if (isLastDay) { effStart = BIZ_START; effEnd = fim.getHours() + fim.getMinutes() / 60 }
+                                      else { effStart = BIZ_START; effEnd = BIZ_END }
+                                      return { id: ag.id, inicio: effStart, fim: effEnd }
+                                    })
+                                    const layouts = calcularLayoutEventos(eventosComTempo, ROW_H, HORA_INICIO)
+                                    return eventsDia.map((ag) => {
+                                      const layout = layouts.get(ag.id)
+                                      if (!layout) return null
+                                      const eventColor = ag.cor || defaultEventColor
+                                      return (
+                                        <div key={ag.id} title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
+                                          className="absolute rounded-lg overflow-hidden cursor-default"
+                                          style={{ top: layout.top, height: layout.height, left: layout.left, width: layout.width, zIndex: layout.zIndex, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+                                          <div className="px-1.5 py-1 text-white">
+                                            <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
+                                            <p className="text-[9px] opacity-80 leading-tight">{format(new Date(ag.data_hora), 'HH:mm')}{ag.data_hora_fim ? ` – ${format(new Date(ag.data_hora_fim), 'HH:mm')}` : ''}</p>
+                                            {layout.height > ROW_H && ag.servico && <p className="text-[9px] opacity-70 leading-tight truncate mt-0.5">{ag.servico}</p>}
+                                          </div>
                                         </div>
-                                      </div>
-                                    )
-                                  })}
+                                      )
+                                    })
+                                  })()}
                                 </div>
                               )
                             })}
