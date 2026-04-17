@@ -134,6 +134,8 @@ export interface Agendamento {
   venda_id?: string | null;
   nome_cliente: string;
   telefone_cliente: string;
+  placa?: string;
+  veiculo?: string;
   servico: string;
   titulo: string;
   data_hora: string;

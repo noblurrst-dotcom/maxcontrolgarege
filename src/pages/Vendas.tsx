@@ -25,7 +25,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
@@ -243,6 +243,7 @@ export default function Vendas() {
       const novoAg: Agendamento = {
         id: uid(), user_id: '', cliente_id: null, venda_id: vendaId,
         nome_cliente: form.nome_cliente, telefone_cliente: '',
+        placa: form.placa_agendamento || '', veiculo: form.veiculo_agendamento || '',
         servico: form.descricao, titulo: form.descricao,
         data_hora: dataHoraInicio,
         data_hora_fim: dataHoraFim,
@@ -534,6 +535,25 @@ export default function Vendas() {
                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50" />
                   </div>
                 </div>
+                {/* Placa + Modelo */}
+                {form.data_agendamento && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
+                      <input type="text" value={form.placa_agendamento}
+                        onChange={(e) => setForm({ ...form, placa_agendamento: e.target.value.toUpperCase() })}
+                        placeholder="ABC-1234" maxLength={8}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none uppercase" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Modelo</label>
+                      <input type="text" value={form.veiculo_agendamento}
+                        onChange={(e) => setForm({ ...form, veiculo_agendamento: e.target.value })}
+                        placeholder="Ex: Toyota Corolla"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none" />
+                    </div>
+                  </div>
+                )}
                 {/* Cor */}
                 {form.data_agendamento && (
                   <div>

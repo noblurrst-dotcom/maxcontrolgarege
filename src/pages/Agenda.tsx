@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2 } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2, Car } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format, startOfWeek, addDays, isToday } from 'date-fns'
@@ -35,7 +35,7 @@ function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
 }
 const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
 
-const initForm = () => ({ nome_cliente: '', telefone_cliente: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
+const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
 
 interface EventLayout { top: number; height: number; left: string; width: string; zIndex: number }
 
@@ -87,6 +87,7 @@ export default function Agenda() {
   const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(initForm())
+  const [agDetalhe, setAgDetalhe] = useState<Agendamento | null>(null)
   const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange } = useDateRange()
@@ -183,6 +184,7 @@ export default function Agenda() {
       id: uid(), user_id: '', cliente_id: null,
       venda_id: form.vendaId || null,
       nome_cliente: form.nome_cliente, telefone_cliente: form.telefone_cliente,
+      placa: form.placa || '', veiculo: form.veiculo || '',
       servico: form.servico, titulo: form.titulo,
       data_hora: form.data_hora, data_hora_fim: form.data_hora_fim,
       duracao_min: duracaoMin, status: 'pendente',
@@ -409,7 +411,8 @@ export default function Agenda() {
                                       const eventColor = ag.cor || defaultEventColor
                                       return (
                                         <div key={ag.id} title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
-                                          className="absolute rounded-lg overflow-hidden cursor-default"
+                                          onClick={() => setAgDetalhe(ag)}
+                                          className="absolute rounded-lg overflow-hidden cursor-pointer hover:brightness-110 transition-all"
                                           style={{ top: layout.top, height: layout.height, left: layout.left, width: layout.width, zIndex: layout.zIndex, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
                                           <div className="px-1.5 py-1 text-white">
                                             <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
@@ -598,6 +601,108 @@ export default function Agenda() {
         })}
       </div>
 
+      {agDetalhe && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAgDetalhe(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: agDetalhe.cor || '#4285F4' }} />
+                <h2 className="text-lg font-bold text-gray-900">{agDetalhe.titulo || agDetalhe.nome_cliente}</h2>
+              </div>
+              <button onClick={() => setAgDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_MAP[agDetalhe.status].bg} ${STATUS_MAP[agDetalhe.status].color}`}>{STATUS_MAP[agDetalhe.status].label}</span>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cliente</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-primary-600">{agDetalhe.nome_cliente.slice(0, 2).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{agDetalhe.nome_cliente}</p>
+                    {agDetalhe.telefone_cliente && <p className="text-xs text-gray-400">{agDetalhe.telefone_cliente}</p>}
+                  </div>
+                </div>
+                {(agDetalhe.placa || agDetalhe.veiculo) && (
+                  <div className="flex items-center gap-3 pt-2 border-t border-gray-100 mt-2">
+                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0"><Car size={18} className="text-gray-500" /></div>
+                    <div>
+                      {agDetalhe.veiculo && <p className="text-sm font-semibold text-gray-900">{agDetalhe.veiculo}</p>}
+                      {agDetalhe.placa && <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{agDetalhe.placa}</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Serviço</p>
+                {agDetalhe.servico && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Serviço</span>
+                    <span className="font-semibold text-gray-900 text-right max-w-[60%]">{agDetalhe.servico}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Entrada</span>
+                  <span className="font-semibold">{new Date(agDetalhe.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {agDetalhe.data_hora_fim && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Saída</span>
+                    <span className="font-semibold">{new Date(agDetalhe.data_hora_fim).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                )}
+                {agDetalhe.duracao_min > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Duração</span>
+                    <span className="font-semibold">{agDetalhe.duracao_min >= 60 ? `${Math.floor(agDetalhe.duracao_min / 60)}h${agDetalhe.duracao_min % 60 ? agDetalhe.duracao_min % 60 + 'min' : ''}` : `${agDetalhe.duracao_min}min`}</span>
+                  </div>
+                )}
+              </div>
+              {(agDetalhe.valor > 0 || agDetalhe.desconto > 0) && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Financeiro</p>
+                  {agDetalhe.valor > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Valor</span>
+                      <span className="font-semibold">{fmt(agDetalhe.valor)}</span>
+                    </div>
+                  )}
+                  {agDetalhe.desconto > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Desconto</span>
+                      <span className="font-semibold text-red-500">-{fmt(agDetalhe.desconto)}</span>
+                    </div>
+                  )}
+                  {agDetalhe.valor > 0 && (
+                    <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-1">
+                      <span>Total</span>
+                      <span className="text-emerald-600">{fmt(Math.max(agDetalhe.valor - (agDetalhe.desconto || 0), 0))}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {agDetalhe.observacoes && (
+                <div className="bg-amber-50 rounded-xl p-4">
+                  <p className="text-xs font-bold text-amber-700 mb-1">Observações</p>
+                  <p className="text-sm text-amber-800">{agDetalhe.observacoes}</p>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                {agDetalhe.telefone_cliente && (
+                  <button onClick={() => { const tel = agDetalhe.telefone_cliente.replace(/\D/g, ''); window.open(`https://wa.me/55${tel}`, '_blank') }} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                    <MessageCircle size={14} /> WhatsApp
+                  </button>
+                )}
+                <button onClick={() => { remover(agDetalhe.id); setAgDetalhe(null) }} className="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">Excluir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -661,6 +766,16 @@ export default function Agenda() {
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
                 <input type="tel" value={form.telefone_cliente} onChange={(e) => setForm({ ...form, telefone_cliente: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Placa do veículo</label>
+                  <input type="text" value={form.placa} onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} placeholder="ABC-1234" maxLength={8} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none uppercase" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Modelo do veículo</label>
+                  <input type="text" value={form.veiculo} onChange={(e) => setForm({ ...form, veiculo: e.target.value })} placeholder="Ex: Honda Civic 2022" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Serviço</label>
