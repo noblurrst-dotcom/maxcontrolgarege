@@ -6,7 +6,7 @@ import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendament
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
-import { uid, fmt, safeGetStorage, safeSetStorage } from '../lib/utils'
+import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
@@ -25,7 +25,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
@@ -69,8 +69,9 @@ export default function Vendas() {
   const [convPv, setConvPv] = useState<PreVenda | null>(null)
   const [convData, setConvData] = useState('')
   const [convHora, setConvHora] = useState('09:00')
-  const [convDuracao, setConvDuracao] = useState('60')
   const [convCor, setConvCor] = useState('#4285F4')
+  const [convHoraFim, setConvHoraFim] = useState('10:00')
+  const [convDataFim, setConvDataFim] = useState('')
 
   const salvar = (l: Venda[]) => { salvarVendas(l) }
   const salvarPv = (l: PreVenda[]) => { salvarPreVendas(l) }
@@ -101,8 +102,9 @@ export default function Vendas() {
     setConvPv(pv)
     setConvData(new Date().toISOString().split('T')[0])
     setConvHora('09:00')
-    setConvDuracao('60')
     setConvCor('#4285F4')
+    setConvHoraFim('10:00')
+    setConvDataFim('')
     setConvModal(true)
   }
 
@@ -124,11 +126,16 @@ export default function Vendas() {
     salvarPv(preVendas.map(p => p.id === pv.id ? { ...p, status: 'aprovado' as const } : p))
 
     // Criar agendamento
-    const duracaoMin = parseInt(convDuracao) || 60
     const dataHoraInicio = `${convData}T${convHora}:00`
-    const fim = new Date(dataHoraInicio)
-    fim.setMinutes(fim.getMinutes() + duracaoMin)
-    const dataHoraFim = fim.toISOString().slice(0, 19)
+    let dataHoraFim: string
+    if ((convDataFim || convData) && convHoraFim) {
+      dataHoraFim = `${convDataFim || convData}T${convHoraFim}:00`
+    } else {
+      const fimAuto = new Date(dataHoraInicio)
+      fimAuto.setHours(fimAuto.getHours() + 1)
+      dataHoraFim = fimAuto.toISOString().slice(0, 19)
+    }
+    const duracaoMin = Math.max(Math.round((new Date(dataHoraFim).getTime() - new Date(dataHoraInicio).getTime()) / 60000), 30)
 
     const agendamento: Agendamento = {
       id: uid(),
@@ -149,18 +156,12 @@ export default function Vendas() {
       cor: convCor,
       created_at: new Date().toISOString(),
     }
-    const agendamentos = safeGetStorage<Agendamento[]>('agendamentos', [])
-    const updated = [agendamento, ...agendamentos]
-    safeSetStorage('agendamentos', updated)
-    // Sync agendamento to Supabase
-    if (user) {
-      supabase.from('agendamentos').upsert({ ...agendamento, user_id: user.id }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('[CloudSync] Erro ao salvar agendamento:', error.message)
-      })
-    }
+    salvarAgendamentos([agendamento, ...agendamentos])
 
     setConvModal(false)
     setConvPv(null)
+    setConvHoraFim('10:00')
+    setConvDataFim('')
     setPvDetalhe(null)
     setTab('vendas')
   }
@@ -230,17 +231,24 @@ export default function Vendas() {
     // Se data de agendamento preenchida → criar agendamento automaticamente
     if (form.data_agendamento) {
       const dataHoraInicio = `${form.data_agendamento}T${form.hora_agendamento || '09:00'}:00`
-      const fim = new Date(dataHoraInicio)
-      fim.setMinutes(fim.getMinutes() + 60)
+      let dataHoraFim: string
+      if (form.data_agendamento_fim && form.hora_agendamento_fim) {
+        dataHoraFim = `${form.data_agendamento_fim}T${form.hora_agendamento_fim}:00`
+      } else {
+        const fimAuto = new Date(dataHoraInicio)
+        fimAuto.setHours(fimAuto.getHours() + 1)
+        dataHoraFim = fimAuto.toISOString().slice(0, 19)
+      }
+      const duracaoMin = Math.max(Math.round((new Date(dataHoraFim).getTime() - new Date(dataHoraInicio).getTime()) / 60000), 30)
       const novoAg: Agendamento = {
         id: uid(), user_id: '', cliente_id: null, venda_id: vendaId,
         nome_cliente: form.nome_cliente, telefone_cliente: '',
         servico: form.descricao, titulo: form.descricao,
         data_hora: dataHoraInicio,
-        data_hora_fim: fim.toISOString().slice(0, 19),
-        duracao_min: 60, status: 'pendente',
+        data_hora_fim: dataHoraFim,
+        duracao_min: duracaoMin, status: 'pendente',
         observacoes: form.observacoes, desconto, valor: valorTotal,
-        cor: '#4285F4', created_at: new Date().toISOString(),
+        cor: form.cor_agendamento || '#4285F4', created_at: new Date().toISOString(),
       }
       salvarAgendamentos([novoAg, ...agendamentos])
       // Criar item no kanban na etapa Agendado
@@ -488,21 +496,58 @@ export default function Vendas() {
                 </div>
               </div>
               {/* Agendamento automático */}
-              <div className="border border-blue-100 bg-blue-50 rounded-xl p-3 space-y-3">
+              <div className="border border-blue-100 bg-blue-50 rounded-xl p-4 space-y-3">
                 <p className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
                   <CalendarDays size={13} /> Agendamento (opcional)
                 </p>
-                <p className="text-[11px] text-blue-500 -mt-1">Se preenchido, cria um agendamento automático e move o serviço para <strong>Agendado</strong> no Kanban.</p>
+                {/* Entrada */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Data do Serviço</label>
-                    <input type="date" value={form.data_agendamento} onChange={(e) => setForm({ ...form, data_agendamento: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none" />
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Data de entrada</label>
+                    <input type="date" value={form.data_agendamento}
+                      onChange={(e) => setForm({ ...form, data_agendamento: e.target.value, data_agendamento_fim: form.data_agendamento_fim || e.target.value })}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Hora</label>
-                    <input type="time" value={form.hora_agendamento} onChange={(e) => setForm({ ...form, hora_agendamento: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none" disabled={!form.data_agendamento} />
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Hora de entrada</label>
+                    <input type="time" value={form.hora_agendamento}
+                      onChange={(e) => setForm({ ...form, hora_agendamento: e.target.value })}
+                      disabled={!form.data_agendamento}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50" />
                   </div>
                 </div>
+                {/* Saída */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Data de saída</label>
+                    <input type="date" value={form.data_agendamento_fim}
+                      onChange={(e) => setForm({ ...form, data_agendamento_fim: e.target.value })}
+                      disabled={!form.data_agendamento}
+                      min={form.data_agendamento}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Hora de saída</label>
+                    <input type="time" value={form.hora_agendamento_fim}
+                      onChange={(e) => setForm({ ...form, hora_agendamento_fim: e.target.value })}
+                      disabled={!form.data_agendamento}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50" />
+                  </div>
+                </div>
+                {/* Cor */}
+                {form.data_agendamento && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Cor na agenda</label>
+                    <div className="flex flex-wrap gap-2">
+                      {CORES_AGENDA.map((c) => (
+                        <button key={c} type="button"
+                          onClick={() => setForm({ ...form, cor_agendamento: c })}
+                          className={`w-7 h-7 rounded-full transition-all ${form.cor_agendamento === c ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'hover:scale-105'}`}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
@@ -845,25 +890,31 @@ export default function Vendas() {
                 <input type="date" value={convData} onChange={e => setConvData(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
               </div>
 
-              {/* Hora + Duração */}
+              {/* Hora entrada */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
-                    <Clock size={14} className="text-primary-600" /> Horário
+                    <Clock size={14} className="text-primary-600" /> Hora de entrada
                   </label>
-                  <input type="time" value={convHora} onChange={e => setConvHora(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <input type="time" value={convHora} onChange={e => setConvHora(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+                <div />
+              </div>
+
+              {/* Saída */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Data de saída</label>
+                  <input type="date" value={convDataFim || convData}
+                    onChange={e => setConvDataFim(e.target.value)}
+                    min={convData}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Duração (min)</label>
-                  <select value={convDuracao} onChange={e => setConvDuracao(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white">
-                    <option value="30">30 min</option>
-                    <option value="60">1 hora</option>
-                    <option value="90">1h30</option>
-                    <option value="120">2 horas</option>
-                    <option value="180">3 horas</option>
-                    <option value="240">4 horas</option>
-                    <option value="480">8 horas (dia)</option>
-                  </select>
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Hora de saída</label>
+                  <input type="time" value={convHoraFim}
+                    onChange={e => setConvHoraFim(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                 </div>
               </div>
 

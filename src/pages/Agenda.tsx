@@ -176,13 +176,16 @@ export default function Agenda() {
     if (!form.nome_cliente || !form.data_hora) return
     const valor = parseFloat(form.valor || '0')
     const desconto = parseFloat(form.desconto || '0')
+    const duracaoMin = form.data_hora && form.data_hora_fim
+      ? Math.max(Math.round((new Date(form.data_hora_fim).getTime() - new Date(form.data_hora).getTime()) / 60000), 30)
+      : 60
     const novo: Agendamento = {
       id: uid(), user_id: '', cliente_id: null,
       venda_id: form.vendaId || null,
       nome_cliente: form.nome_cliente, telefone_cliente: form.telefone_cliente,
       servico: form.servico, titulo: form.titulo,
       data_hora: form.data_hora, data_hora_fim: form.data_hora_fim,
-      duracao_min: 60, status: 'pendente',
+      duracao_min: duracaoMin, status: 'pendente',
       observacoes: form.observacoes, valor, desconto,
       cor: form.cor || '#4285F4',
       created_at: new Date().toISOString(),
