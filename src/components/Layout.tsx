@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   DollarSign,
-  ClipboardCheck,
   Briefcase,
   MoreHorizontal,
   Settings,
@@ -114,7 +113,6 @@ export default function Layout() {
     { path: '/vendas', label: 'Vendas', icon: ShoppingCart, modulo: 'vendas' as ModuloId },
     { path: '/agenda', label: 'Agenda', icon: CalendarDays, modulo: 'agenda' as ModuloId },
     { path: '/clientes', label: 'Clientes', icon: Users, modulo: 'clientes' as ModuloId },
-    { path: '/checklists', label: 'Checklists', icon: ClipboardCheck, modulo: 'checklists' as ModuloId },
     { path: '/financeiro', label: 'Financeiro', icon: DollarSign, modulo: 'financeiro' as ModuloId },
     { path: '/servicos', label: 'Serviços', icon: Briefcase, modulo: 'servicos' as ModuloId },
   ]
@@ -134,7 +132,6 @@ export default function Layout() {
 
   const moreItems = [
     { path: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: 'financeiro' as ModuloId },
-    { path: '/checklists', icon: ClipboardCheck, label: 'Checklists', modulo: 'checklists' as ModuloId },
     { path: '/servicos', icon: Briefcase, label: 'Serviços', modulo: 'servicos' as ModuloId },
   ].filter(i => podeVer(i.modulo))
 

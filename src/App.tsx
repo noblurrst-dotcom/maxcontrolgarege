@@ -12,9 +12,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Vendas = lazy(() => import('./pages/Vendas'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Clientes = lazy(() => import('./pages/Clientes'))
-const Checklists = lazy(() => import('./pages/Checklists'))
-const NovoChecklist = lazy(() => import('./pages/NovoChecklist'))
-const VisualizarChecklist = lazy(() => import('./pages/VisualizarChecklist'))
 const Servicos = lazy(() => import('./pages/Servicos'))
 const Financeiro = lazy(() => import('./pages/Financeiro'))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
@@ -74,9 +71,6 @@ function App() {
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/clientes" element={<Clientes />} />
-              <Route path="/checklists" element={<Checklists />} />
-              <Route path="/novo-checklist" element={<NovoChecklist />} />
-              <Route path="/checklist/:id" element={<VisualizarChecklist />} />
               <Route path="/servicos" element={<Servicos />} />
               <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
