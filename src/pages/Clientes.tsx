@@ -1,9 +1,12 @@
-import { useState, useMemo, useRef } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save, Camera, Loader2 } from 'lucide-react'
 import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
+import { supabase, garantirBucketFotosVeiculos } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import toast from 'react-hot-toast'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
 
@@ -79,6 +82,7 @@ const CAMPOS_CSV: { value: string; label: string }[] = [
 ]
 
 export default function Clientes() {
+  const { user } = useAuth()
   const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
@@ -96,6 +100,10 @@ export default function Clientes() {
   const [abaClientes, setAbaClientes] = useState<'todos' | 'inativos'>('todos')
   const [editForm, setEditForm] = useState<ReturnType<typeof initForm> | null>(null)
   const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
+  const [uploadingFace, setUploadingFace] = useState<string | null>(null)
+  const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null)
+
+  useEffect(() => { garantirBucketFotosVeiculos() }, [])
 
   const handleCSVFile = (file: File) => {
     const reader = new FileReader()
@@ -182,6 +190,62 @@ export default function Clientes() {
     salvar(lista.map(c => c.id === detalhe.id ? atualizado : c))
     setDetalhe(atualizado)
     setEditForm(null)
+  }
+
+  const uploadFotoVeiculo = async (
+    cliente: Cliente,
+    face: 'frente' | 'traseira' | 'direita' | 'esquerda',
+    file: File
+  ): Promise<string | null> => {
+    if (!user) return null
+    setUploadingFace(face)
+    try {
+      const campoAtual = cliente[`foto_${face}` as keyof Cliente] as string | null
+      if (campoAtual) {
+        try {
+          const url = new URL(campoAtual)
+          const path = url.pathname.split('/fotos-veiculos/')[1]
+          if (path) await supabase.storage.from('fotos-veiculos').remove([path])
+        } catch { /* ignora erro ao remover */ }
+      }
+      const ext = file.name.split('.').pop() || 'jpg'
+      const fileName = `${user.id}/${cliente.id}/${face}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('fotos-veiculos')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('fotos-veiculos').getPublicUrl(fileName)
+      const campo = `foto_${face}` as keyof Cliente
+      const clienteAtualizado = { ...cliente, [campo]: urlData.publicUrl }
+      salvar(lista.map(c => c.id === cliente.id ? clienteAtualizado : c))
+      await supabase.from('clientes').update({ [campo]: urlData.publicUrl }).eq('id', cliente.id)
+      if (detalhe?.id === cliente.id) setDetalhe(clienteAtualizado)
+      return urlData.publicUrl
+    } catch (err) {
+      console.error('Erro ao fazer upload:', err)
+      toast.error('Erro ao enviar foto')
+      return null
+    } finally {
+      setUploadingFace(null)
+    }
+  }
+
+  const removerFotoVeiculo = async (
+    cliente: Cliente,
+    face: 'frente' | 'traseira' | 'direita' | 'esquerda'
+  ) => {
+    const campo = `foto_${face}` as keyof Cliente
+    const urlAtual = cliente[campo] as string | null
+    if (!urlAtual) return
+    try {
+      const url = new URL(urlAtual)
+      const path = url.pathname.split('/fotos-veiculos/')[1]
+      if (path) await supabase.storage.from('fotos-veiculos').remove([path])
+    } catch { /* ignora */ }
+    const clienteAtualizado = { ...cliente, [campo]: null }
+    salvar(lista.map(c => c.id === cliente.id ? clienteAtualizado : c))
+    await supabase.from('clientes').update({ [campo]: null }).eq('id', cliente.id)
+    if (detalhe?.id === cliente.id) setDetalhe(clienteAtualizado)
   }
 
   const enviarWhatsApp = (c: Cliente) => {
@@ -825,6 +889,91 @@ export default function Clientes() {
                 </div>
               )}
 
+              {(detalhe.placa || detalhe.veiculo) && (
+                <div>
+                  <p className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                    <Camera size={13} /> Fotos do veículo
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['frente', 'traseira', 'direita', 'esquerda'] as const).map((face) => {
+                      const campo = `foto_${face}` as keyof Cliente
+                      const url = detalhe[campo] as string | null
+                      const isLoading = uploadingFace === face
+                      const labels = {
+                        frente: '⬆ Frente',
+                        traseira: '⬇ Traseira',
+                        direita: '➡ Direita',
+                        esquerda: '⬅ Esquerda',
+                      }
+                      return (
+                        <div key={face} className="relative">
+                          {url ? (
+                            <div className="relative group">
+                              <img
+                                src={url}
+                                alt={`Foto ${face}`}
+                                className="w-full h-28 object-cover rounded-xl border border-gray-200 cursor-pointer"
+                                onClick={() => setFotoAmpliada(url)}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-xl transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                <label className="cursor-pointer p-1.5 bg-white/90 rounded-lg">
+                                  <Camera size={14} className="text-gray-700" />
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0]
+                                      if (f) uploadFotoVeiculo(detalhe, face, f)
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  onClick={() => removerFotoVeiculo(detalhe, face)}
+                                  className="p-1.5 bg-red-500/90 rounded-lg"
+                                >
+                                  <Trash2 size={14} className="text-white" />
+                                </button>
+                              </div>
+                              <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">
+                                {labels[face]}
+                              </span>
+                            </div>
+                          ) : (
+                            <label className={`flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                              isLoading
+                                ? 'border-primary-400 bg-primary-50'
+                                : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50'
+                            }`}>
+                              {isLoading ? (
+                                <Loader2 size={20} className="text-primary-500 animate-spin" />
+                              ) : (
+                                <>
+                                  <Camera size={20} className="text-gray-300 mb-1" />
+                                  <span className="text-[10px] font-bold text-gray-400">{labels[face]}</span>
+                                  <span className="text-[9px] text-gray-300 mt-0.5">toque para adicionar</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0]
+                                  if (f) uploadFotoVeiculo(detalhe, face, f)
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {(() => {
                 const { vendasCliente } = getDadosCliente(detalhe)
                 if (vendasCliente.length === 0) return null
@@ -881,6 +1030,19 @@ export default function Clientes() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <img
+            src={fotoAmpliada}
+            alt="Foto ampliada"
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
         </div>
       )}
     </div>

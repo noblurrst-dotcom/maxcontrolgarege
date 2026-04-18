@@ -184,6 +184,10 @@ export interface Cliente {
   observacoes: string;
   total_gasto: number;
   created_at: string;
+  foto_frente?: string | null;
+  foto_traseira?: string | null;
+  foto_direita?: string | null;
+  foto_esquerda?: string | null;
 }
 
 export interface Funcionario {
