@@ -666,8 +666,8 @@ export default function Dashboard() {
                             if (horaAtual < HORA_INICIO || horaAtual > HORA_INICIO + TOTAL_HORAS) return null
                             const topAtual = (horaAtual - HORA_INICIO) * ROW_H
                             return (
-                              <div style={{ position: 'absolute', top: topAtual, left: 0, right: 0, height: 2, background: '#ff4444', zIndex: 50, pointerEvents: 'none' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4444', position: 'absolute', left: -4, top: -3 }} />
+                              <div style={{ position: 'absolute', top: topAtual, left: 0, right: 0, height: 2, background: '#ef4444', zIndex: 40, pointerEvents: 'none', borderRadius: 1 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', position: 'absolute', left: -4, top: -3, boxShadow: '0 0 6px rgba(239,68,68,0.6)' }} />
                               </div>
                             )
                           })()}
@@ -704,30 +704,41 @@ export default function Dashboard() {
                               <div
                                 key={ag.id || idx}
                                 title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + formatCurrency(ag.valor) : ''}`}
-                                onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.filter = 'brightness(1.1)'; el.style.transform = 'scale(1.015)' }}
-                                onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.filter = ''; el.style.transform = '' }}
+                                onMouseEnter={(e) => {
+                                  if (ehCancelado) return
+                                  const el = e.currentTarget as HTMLElement
+                                  el.style.filter = 'brightness(1.12)'
+                                  el.style.transform = 'scale(1.015)'
+                                  el.style.boxShadow = gerarSombraEvento(eventColor).replace('0.35', '0.55')
+                                }}
+                                onMouseLeave={(e) => {
+                                  const el = e.currentTarget as HTMLElement
+                                  el.style.filter = ''
+                                  el.style.transform = ''
+                                  el.style.boxShadow = ehCancelado ? 'none' : gerarSombraEvento(eventColor)
+                                }}
                                 className="absolute left-0.5 right-0.5"
                                 style={{
                                   top, height, zIndex: 10 + idx,
                                   background: ehCancelado
-                                    ? 'repeating-linear-gradient(45deg, rgba(100,100,100,0.3) 0px, rgba(100,100,100,0.3) 2px, transparent 2px, transparent 8px)'
+                                    ? 'repeating-linear-gradient(45deg, rgba(120,120,120,0.25) 0px, rgba(120,120,120,0.25) 2px, rgba(80,80,80,0.15) 2px, rgba(80,80,80,0.15) 10px)'
                                     : gerarGradienteEvento(eventColor),
                                   boxShadow: ehCancelado ? 'none' : gerarSombraEvento(eventColor),
-                                  border: ehCancelado ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.12)',
+                                  border: ehCancelado ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.12)',
                                   borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                                  opacity: ehCancelado ? 0.5 : 1,
-                                  transition: 'filter 0.15s ease, transform 0.15s ease',
+                                  opacity: ehCancelado ? 0.45 : 1,
+                                  transition: 'filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
                                 }}
                               >
-                                <div style={{ padding: '6px 8px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                  <p style={{ fontSize: 10, fontWeight: 700, color: 'white', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                <div style={{ padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: ehCancelado ? 'rgba(255,255,255,0.5)' : 'white', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: ehCancelado ? 'none' : '0 1px 2px rgba(0,0,0,0.25)' }}>
                                     {ag.nome_cliente || 'Agendamento'}
                                   </p>
-                                  <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', margin: '2px 0 0', lineHeight: 1.2 }}>
+                                  <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.82)', margin: '1px 0 0', lineHeight: 1.2 }}>
                                     {isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}
                                   </p>
-                                  {height > 48 && ag.servico && (
-                                    <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', margin: '3px 0 0', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
+                                  {height > 52 && ag.servico && (
+                                    <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)', margin: '3px 0 0', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
                                       {ag.servico}
                                     </p>
                                   )}
