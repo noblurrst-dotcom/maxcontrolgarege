@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download } from 'lucide-react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save } from 'lucide-react'
 import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -94,6 +94,7 @@ export default function Clientes() {
   const [csvDragover, setCsvDragover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [abaClientes, setAbaClientes] = useState<'todos' | 'inativos'>('todos')
+  const [editForm, setEditForm] = useState<ReturnType<typeof initForm> | null>(null)
   const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
 
   const handleCSVFile = (file: File) => {
@@ -161,6 +162,27 @@ export default function Clientes() {
   }
 
   const remover = (id: string) => { salvar(lista.filter((c) => c.id !== id)); setDetalhe(null) }
+
+  const iniciarEdicao = (c: Cliente) => {
+    setEditForm({
+      nome: c.nome, telefone: c.telefone, email: c.email,
+      cpf_cnpj: c.cpf_cnpj || '', veiculo: c.veiculo || '', placa: c.placa || '',
+      endereco: c.endereco || '', aniversario: c.aniversario || '', observacoes: c.observacoes || '',
+    })
+  }
+
+  const salvarEdicao = () => {
+    if (!detalhe || !editForm || !editForm.nome) return
+    const atualizado: Cliente = {
+      ...detalhe,
+      nome: editForm.nome, telefone: editForm.telefone, email: editForm.email,
+      cpf_cnpj: editForm.cpf_cnpj, veiculo: editForm.veiculo, placa: editForm.placa.toUpperCase(),
+      endereco: editForm.endereco, aniversario: editForm.aniversario, observacoes: editForm.observacoes,
+    }
+    salvar(lista.map(c => c.id === detalhe.id ? atualizado : c))
+    setDetalhe(atualizado)
+    setEditForm(null)
+  }
 
   const enviarWhatsApp = (c: Cliente) => {
     const tel = sanitizePhone(c.telefone || '')
@@ -647,10 +669,72 @@ export default function Clientes() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDetalhe(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Ficha do Cliente</h2>
-              <button onClick={() => setDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h2 className="text-lg font-bold text-gray-900">{editForm ? 'Editar Cliente' : 'Ficha do Cliente'}</h2>
+              <div className="flex items-center gap-1">
+                {!editForm && (
+                  <button onClick={() => iniciarEdicao(detalhe)} className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors" title="Editar"><Pencil size={16} /></button>
+                )}
+                <button onClick={() => { setDetalhe(null); setEditForm(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              </div>
             </div>
             <div className="space-y-4">
+              {editForm ? (
+                <>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Nome *</label>
+                      <input type="text" value={editForm.nome} onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
+                        <input type="tel" value={editForm.telefone} onChange={(e) => setEditForm({ ...editForm, telefone: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">CPF / CNPJ</label>
+                        <input type="text" value={editForm.cpf_cnpj} onChange={(e) => setEditForm({ ...editForm, cpf_cnpj: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
+                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Aniversário</label>
+                        <input type="date" value={editForm.aniversario} onChange={(e) => setEditForm({ ...editForm, aniversario: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Endereço</label>
+                      <input type="text" value={editForm.endereco} onChange={(e) => setEditForm({ ...editForm, endereco: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Veículo</label>
+                        <input type="text" value={editForm.veiculo} onChange={(e) => setEditForm({ ...editForm, veiculo: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
+                        <input type="text" value={editForm.placa} onChange={(e) => setEditForm({ ...editForm, placa: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none uppercase" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
+                      <textarea value={editForm.observacoes} onChange={(e) => setEditForm({ ...editForm, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={salvarEdicao} className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                      <Save size={14} /> Salvar Alterações
+                    </button>
+                    <button onClick={() => setEditForm(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
                 <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center">
                   <span className="text-lg font-bold text-primary-600">{detalhe.nome.slice(0, 2).toUpperCase()}</span>
@@ -785,9 +869,16 @@ export default function Clientes() {
                 </div>
               )}
 
-              <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
-                Excluir Cliente
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => iniciarEdicao(detalhe)} className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                  <Pencil size={14} /> Editar
+                </button>
+                <button onClick={() => remover(detalhe.id)} className="flex-1 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
+                  Excluir Cliente
+                </button>
+              </div>
+                </>
+              )}
             </div>
           </div>
         </div>
