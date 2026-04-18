@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps, autoArranjarBlocks } from '../utils/dashboardLayout'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
 import { fmt as formatCurrencyUtil } from '../lib/utils'
 import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
 import {
@@ -27,7 +26,6 @@ import {
   X,
   Wand2,
 } from 'lucide-react'
-import type { Checklist } from '../types'
 import { useBrand } from '../contexts/BrandContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, startOfWeek, addDays } from 'date-fns'
@@ -406,8 +404,6 @@ const DEFAULT_BLOCKS = getDefaultBlocks(1200)
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [, setChecklists] = useState<Checklist[]>([])
-  const [, setLoading] = useState(true)
   const [mesAtual, setMesAtual] = useState(new Date())
   const gridRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -471,27 +467,6 @@ export default function Dashboard() {
   const dataFormatada = format(hoje, "d 'de' MMMM", { locale: ptBR })
 
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
-
-  useEffect(() => {
-    if (user) carregarChecklists()
-  }, [user])
-
-  const carregarChecklists = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('checklists')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      setChecklists(data || [])
-    } catch (err) {
-      console.error('Erro ao carregar checklists:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Dados sincronizados via cloud
   const { data: vendas } = useCloudSync<any>({ table: 'vendas', storageKey: 'vendas' })
