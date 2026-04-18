@@ -23,6 +23,7 @@ import {
   Copy,
   Loader2,
   Check,
+  Search,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -52,6 +53,9 @@ export default function Layout() {
   const [copied, setCopied] = useState(false)
   const [adminCode, setAdminCode] = useState('')
   const profileRef = useRef<HTMLDivElement>(null)
+  const [busca, setBusca] = useState('')
+  const [buscaAberta, setBuscaAberta] = useState(false)
+  const buscaRef = useRef<HTMLInputElement>(null)
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -116,6 +120,11 @@ export default function Layout() {
   ]
   const navItems = allNavItems.filter(i => podeVer(i.modulo))
 
+  const todasTelas = allNavItems.map(i => ({ label: i.label, path: i.path, icon: i.icon, modulo: i.modulo }))
+  const resultadosBusca = busca.trim().length > 0
+    ? todasTelas.filter(t => podeVer(t.modulo) && t.label.toLowerCase().includes(busca.toLowerCase()))
+    : []
+
   const bottomNavItems = [
     { path: '/', icon: LayoutDashboard, label: 'Painel', modulo: 'dashboard' as ModuloId },
     { path: '/vendas', icon: ShoppingCart, label: 'Vendas', modulo: 'vendas' as ModuloId },
@@ -134,61 +143,87 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 shadow-lg safe-area-top" style={{ backgroundColor: brand.cor_secundaria }}>
+      <header className="sticky top-0 z-40 shadow-md safe-area-top" style={{ backgroundColor: brand.cor_secundaria }}>
+
+        {/* LINHA 1 — Logo + Busca + Perfil */}
         <div className="container-responsive">
-          <div className="h-14 sm:h-16 flex items-center justify-between">
+          <div className="h-14 flex items-center gap-3">
+
             {/* Logo */}
-            <div
-              className="flex items-center gap-2 sm:gap-3 cursor-pointer"
-              onClick={() => navigate('/')}
-            >
+            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>
               {brand.logo_url ? (
-                <img src={brand.logo_url} alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain" />
+                <img src={brand.logo_url} alt="Logo" className="w-8 h-8 rounded-xl object-contain" />
               ) : (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                  <Car className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: brand.cor_secundaria }} />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
+                  <Car className="w-4 h-4" style={{ color: brand.cor_secundaria }} />
                 </div>
               )}
-              <span className="text-base sm:text-lg font-bold text-white tracking-tight hidden sm:block">
+              <span className="text-base font-bold text-white tracking-tight hidden sm:block">
                 {brand.nome_empresa || <>estética<span className="text-primary-400">natã</span></>}
               </span>
             </div>
 
-            {/* Nav - desktop */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? ''
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                    style={isActive ? { color: brand.cor_primaria } : undefined}
-                  >
-                    {item.label}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full" style={{ backgroundColor: brand.cor_primaria }} />
-                    )}
-                  </button>
-                )
-              })}
-            </nav>
+            {/* Busca global — centro */}
+            <div className="flex-1 max-w-md mx-auto relative">
+              <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2 transition-colors cursor-text"
+                onClick={() => { setBuscaAberta(true); buscaRef.current?.focus() }}>
+                <Search size={15} className="text-white/50 shrink-0" />
+                <input
+                  ref={buscaRef}
+                  type="text"
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  onFocus={() => setBuscaAberta(true)}
+                  onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
+                  placeholder="Buscar tela ou função..."
+                  className="flex-1 bg-transparent text-white placeholder-white/40 text-sm outline-none min-w-0"
+                />
+              </div>
 
-            {/* Right side */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Profile dropdown */}
+              {/* Dropdown de resultados */}
+              {buscaAberta && resultadosBusca.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
+                  {resultadosBusca.map(t => {
+                    const Icon = t.icon
+                    return (
+                      <button
+                        key={t.path}
+                        onMouseDown={() => { navigate(t.path); setBusca(''); setBuscaAberta(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <Icon size={16} className="text-gray-400 shrink-0" />
+                        <span className="text-sm font-medium text-gray-700">{t.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Ações direita */}
+            <div className="flex items-center gap-2 shrink-0">
+
+              {/* Toggle dark mode */}
+              <button onClick={toggleTheme}
+                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex"
+                title={isDark ? 'Modo claro' : 'Modo noturno'}>
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+
+              {/* Perfil dropdown */}
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: brand.cor_primaria }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                   title={nomeUsuario}
                 >
-                  <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: brand.cor_primaria }}>
+                    <UserCircle className="w-5 h-5" style={{ color: brand.cor_secundaria }} />
+                  </div>
+                  <span className="text-sm font-medium text-white hidden sm:block max-w-[100px] truncate">
+                    {subUsuarioAtivo ? subUsuarioAtivo.nome : nomeUsuario}
+                  </span>
                 </button>
 
                 {profileOpen && (
@@ -318,12 +353,42 @@ export default function Layout() {
                 )}
               </div>
 
+              {/* Menu hamburguer mobile */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-1.5 text-gray-400 hover:text-white transition-colors"
+                className="md:hidden p-1.5 text-white/60 hover:text-white transition-colors"
               >
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* LINHA 2 — Navegação horizontal com ícone + label (apenas desktop) */}
+        <div className="hidden md:block border-t border-white/10" style={{ backgroundColor: brand.cor_secundaria }}>
+          <div className="container-responsive">
+            <div className="flex items-center gap-0.5 h-10">
+              {navItems.map(item => {
+                const isActive = location.pathname === item.path
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`relative flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-colors rounded-t-lg ${
+                      isActive ? 'text-white' : 'text-white/50 hover:text-white/80'
+                    }`}
+                    style={isActive ? { color: brand.cor_primaria } : undefined}
+                  >
+                    <Icon size={14} />
+                    <span>{item.label}</span>
+                    {isActive && (
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
+                        style={{ backgroundColor: brand.cor_primaria }} />
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -361,7 +426,7 @@ export default function Layout() {
 
       {/* Support Mode Banner */}
       {isSupport && (
-        <div className="sticky top-14 sm:top-16 z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+        <div className="sticky top-14 md:top-[96px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
           <div className="flex items-center gap-2 min-w-0">
             <Shield size={14} className="shrink-0" />
             <p className="text-xs font-bold truncate">
