@@ -133,6 +133,25 @@ function getFeriadoDoDia(dia: Date, feriados: Feriado[]): Feriado | undefined {
   return feriados.find(f => f.data === chave)
 }
 
+function gerarGradienteEvento(cor: string): string {
+  const hex = cor.replace('#', '')
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  const darken = (v: number, pct: number) => Math.max(0, Math.round(v * (1 - pct)))
+  const r2 = darken(r, 0.35), g2 = darken(g, 0.35), b2 = darken(b, 0.35)
+  const r3 = darken(r, 0.55), g3 = darken(g, 0.55), b3 = darken(b, 0.55)
+  return `linear-gradient(150deg, ${cor} 0%, rgb(${r2},${g2},${b2}) 55%, rgb(${r3},${g3},${b3}) 100%)`
+}
+
+function gerarSombraEvento(cor: string): string {
+  const hex = cor.replace('#', '')
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  return `0 4px 16px rgba(${r},${g},${b},0.35), inset 0 1px 0 rgba(255,255,255,0.18)`
+}
+
 // Componente do Calendário
 function Calendario({
   mesAtual,
@@ -641,6 +660,17 @@ export default function Dashboard() {
                           {Array.from({ length: TOTAL_HORAS }, (_, i) => (
                             <div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />
                           ))}
+                          {ehHoje && (() => {
+                            const agora = new Date()
+                            const horaAtual = agora.getHours() + agora.getMinutes() / 60
+                            if (horaAtual < HORA_INICIO || horaAtual > HORA_INICIO + TOTAL_HORAS) return null
+                            const topAtual = (horaAtual - HORA_INICIO) * ROW_H
+                            return (
+                              <div style={{ position: 'absolute', top: topAtual, left: 0, right: 0, height: 2, background: '#ff4444', zIndex: 50, pointerEvents: 'none' }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4444', position: 'absolute', left: -4, top: -3 }} />
+                              </div>
+                            )
+                          })()}
                           {/* Events absolutely positioned */}
                           {eventsDia.map((ag: any, idx: number) => {
                             const inicio = new Date(ag.data_hora)
@@ -667,20 +697,39 @@ export default function Dashboard() {
                             const bottom = Math.min((effEnd - HORA_INICIO) * ROW_H, TOTAL_HORAS * ROW_H)
                             const height = Math.max(bottom - top, ROW_H * 0.5)
                             const eventColor = ag.cor || defaultEventColor
+                            const ehCancelado = ag.status === 'cancelado'
                             const horaIni = format(inicio, 'HH:mm')
                             const horaFim = format(fim, 'HH:mm')
                             return (
                               <div
                                 key={ag.id || idx}
                                 title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + formatCurrency(ag.valor) : ''}`}
-                                className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden cursor-default"
-                                style={{ top, height, zIndex: 10 + idx, backgroundColor: eventColor, borderLeft: `3px solid ${eventColor}`, filter: ag.status === 'cancelado' ? 'opacity(0.4) grayscale(1)' : undefined }}
+                                onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.filter = 'brightness(1.1)'; el.style.transform = 'scale(1.015)' }}
+                                onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.filter = ''; el.style.transform = '' }}
+                                className="absolute left-0.5 right-0.5"
+                                style={{
+                                  top, height, zIndex: 10 + idx,
+                                  background: ehCancelado
+                                    ? 'repeating-linear-gradient(45deg, rgba(100,100,100,0.3) 0px, rgba(100,100,100,0.3) 2px, transparent 2px, transparent 8px)'
+                                    : gerarGradienteEvento(eventColor),
+                                  boxShadow: ehCancelado ? 'none' : gerarSombraEvento(eventColor),
+                                  border: ehCancelado ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
+                                  opacity: ehCancelado ? 0.5 : 1,
+                                  transition: 'filter 0.15s ease, transform 0.15s ease',
+                                }}
                               >
-                                <div className="px-1.5 py-1 text-white">
-                                  <p className="text-[10px] font-bold leading-tight truncate">{ag.nome_cliente || 'Agendamento'}</p>
-                                  <p className="text-[9px] opacity-80 leading-tight">{isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}</p>
-                                  {height > ROW_H && ag.servico && (
-                                    <p className="text-[9px] opacity-70 leading-tight truncate mt-0.5">{ag.servico}</p>
+                                <div style={{ padding: '6px 8px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: 'white', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                    {ag.nome_cliente || 'Agendamento'}
+                                  </p>
+                                  <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', margin: '2px 0 0', lineHeight: 1.2 }}>
+                                    {isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}
+                                  </p>
+                                  {height > 48 && ag.servico && (
+                                    <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', margin: '3px 0 0', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
+                                      {ag.servico}
+                                    </p>
                                   )}
                                 </div>
                               </div>
