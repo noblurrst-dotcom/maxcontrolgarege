@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save, Camera, Loader2 } from 'lucide-react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save, Camera, Loader2, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react'
 import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -7,6 +7,7 @@ import { useCloudSync } from '../hooks/useCloudSync'
 import { supabase, garantirBucketFotosVeiculos } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import ChecklistEmbutido from '../components/ChecklistEmbutido'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
 
@@ -102,6 +103,8 @@ export default function Clientes() {
   const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
   const [uploadingFace, setUploadingFace] = useState<string | null>(null)
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null)
+  const [mostrarChecklistCliente, setMostrarChecklistCliente] = useState(false)
+  const [checklistClienteSalvo, setChecklistClienteSalvo] = useState(false)
 
   useEffect(() => { garantirBucketFotosVeiculos() }, [])
 
@@ -730,7 +733,7 @@ export default function Clientes() {
 
       {/* Modal Detalhe do Cliente */}
       {detalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDetalhe(null)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setDetalhe(null); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">{editForm ? 'Editar Cliente' : 'Ficha do Cliente'}</h2>
@@ -738,7 +741,7 @@ export default function Clientes() {
                 {!editForm && (
                   <button onClick={() => iniciarEdicao(detalhe)} className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors" title="Editar"><Pencil size={16} /></button>
                 )}
-                <button onClick={() => { setDetalhe(null); setEditForm(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                <button onClick={() => { setDetalhe(null); setEditForm(null); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
               </div>
             </div>
             <div className="space-y-4">
@@ -1017,6 +1020,48 @@ export default function Clientes() {
                   <p className="text-xs text-gray-700">{detalhe.observacoes}</p>
                 </div>
               )}
+
+              {/* Novo checklist para este cliente */}
+              <div className={`border rounded-xl overflow-hidden transition-all ${
+                mostrarChecklistCliente ? 'border-emerald-200' : 'border-gray-200'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setMostrarChecklistCliente(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck size={16} className={mostrarChecklistCliente ? 'text-emerald-500' : 'text-gray-400'} />
+                    <span className="text-sm font-semibold text-gray-700">
+                      Novo checklist
+                    </span>
+                    {checklistClienteSalvo && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                        ✓ Salvo
+                      </span>
+                    )}
+                  </div>
+                  {mostrarChecklistCliente
+                    ? <ChevronUp size={16} className="text-gray-400" />
+                    : <ChevronDown size={16} className="text-gray-400" />
+                  }
+                </button>
+
+                {mostrarChecklistCliente && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <ChecklistEmbutido
+                      nomeCliente={detalhe.nome}
+                      placa={detalhe.placa || ''}
+                      telefone={detalhe.telefone || ''}
+                      onSalvo={() => {
+                        setChecklistClienteSalvo(true)
+                        setMostrarChecklistCliente(false)
+                        toast.success('Checklist criado com sucesso!')
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="flex gap-2">
                 <button onClick={() => iniciarEdicao(detalhe)} className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">

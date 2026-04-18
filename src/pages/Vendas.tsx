@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter } from 'lucide-react'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
@@ -10,6 +10,8 @@ import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
+import ChecklistEmbutido from '../components/ChecklistEmbutido'
+import toast from 'react-hot-toast'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
@@ -43,6 +45,8 @@ export default function Vendas() {
   const [editDetalhe, setEditDetalhe] = useState<{ valor: string; desconto: string; forma_pagamento: FormaPagamento; parcelas: string; descontoTipo: 'valor' | 'percentual' } | null>(null)
   const [form, setForm] = useState(initForm())
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
+  const [mostrarChecklist, setMostrarChecklist] = useState(false)
+  const [checklistSalvo, setChecklistSalvo] = useState(false)
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   // Load services from Supabase
@@ -265,6 +269,8 @@ export default function Vendas() {
 
     setModal(false)
     setForm(initForm())
+    setMostrarChecklist(false)
+    setChecklistSalvo(false)
   }
 
   const remover = (id: string) => { salvar(vendas.filter((v) => v.id !== id)); setDetalhe(null) }
@@ -573,6 +579,52 @@ export default function Vendas() {
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
                 <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações da venda..." rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
               </div>
+
+              {/* Checklist opcional */}
+              <div className={`border rounded-xl overflow-hidden transition-all ${
+                mostrarChecklist ? 'border-emerald-200' : 'border-gray-200'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setMostrarChecklist(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck size={16} className={mostrarChecklist ? 'text-emerald-500' : 'text-gray-400'} />
+                    <span className="text-sm font-semibold text-gray-700">
+                      Checklist de inspeção
+                    </span>
+                    <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      opcional
+                    </span>
+                    {checklistSalvo && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                        ✓ Salvo
+                      </span>
+                    )}
+                  </div>
+                  {mostrarChecklist
+                    ? <ChevronUp size={16} className="text-gray-400" />
+                    : <ChevronDown size={16} className="text-gray-400" />
+                  }
+                </button>
+
+                {mostrarChecklist && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <ChecklistEmbutido
+                      nomeCliente={form.nome_cliente}
+                      placa=""
+                      telefone=""
+                      onSalvo={() => {
+                        setChecklistSalvo(true)
+                        setMostrarChecklist(false)
+                        toast.success('Checklist vinculado à venda!')
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Resumo */}
               {form.valor && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-1">
