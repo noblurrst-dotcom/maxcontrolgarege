@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download } from 'lucide-react'
 import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -49,6 +49,22 @@ function normalizarData(d: string): string {
   return d
 }
 
+function calcularInatividade(
+  cliente: Cliente,
+  vendas: Venda[]
+): { diasSemVisita: number | null; ultimaVisita: Date | null; totalVisitas: number } {
+  const vendasCliente = vendas.filter(v =>
+    v.nome_cliente.toLowerCase().trim() === cliente.nome.toLowerCase().trim()
+  )
+  if (vendasCliente.length === 0) {
+    return { diasSemVisita: null, ultimaVisita: null, totalVisitas: 0 }
+  }
+  const datas = vendasCliente.map(v => new Date(v.data_venda).getTime())
+  const ultimaVisita = new Date(Math.max(...datas))
+  const diasSemVisita = Math.floor((Date.now() - ultimaVisita.getTime()) / (1000 * 60 * 60 * 24))
+  return { diasSemVisita, ultimaVisita, totalVisitas: vendasCliente.length }
+}
+
 const CAMPOS_CSV: { value: string; label: string }[] = [
   { value: '', label: '— Ignorar —' },
   { value: 'nome', label: 'Nome' },
@@ -77,6 +93,8 @@ export default function Clientes() {
   const [csvImportados, setCsvImportados] = useState<number | null>(null)
   const [csvDragover, setCsvDragover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [abaClientes, setAbaClientes] = useState<'todos' | 'inativos'>('todos')
+  const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
 
   const handleCSVFile = (file: File) => {
     const reader = new FileReader()
@@ -168,6 +186,53 @@ export default function Clientes() {
     return { vendasCliente, agendamentosCliente, totalGasto, qtdServicos, proximoAg }
   }
 
+  const clientesInativos = useMemo(() => {
+    return lista
+      .map(c => ({ ...c, ...calcularInatividade(c, vendas) }))
+      .filter(c =>
+        c.totalVisitas >= 2 &&
+        c.diasSemVisita !== null &&
+        c.diasSemVisita >= filtroInatividade
+      )
+      .sort((a, b) => (b.diasSemVisita ?? 0) - (a.diasSemVisita ?? 0))
+  }, [lista, vendas, filtroInatividade])
+
+  const ausentes30 = useMemo(() =>
+    lista.filter(c => {
+      const { diasSemVisita, totalVisitas } = calcularInatividade(c, vendas)
+      return totalVisitas >= 1 && diasSemVisita !== null && diasSemVisita >= 30
+    }).length
+  , [lista, vendas])
+
+  const ausentes90 = useMemo(() =>
+    lista.filter(c => {
+      const { diasSemVisita, totalVisitas } = calcularInatividade(c, vendas)
+      return totalVisitas >= 1 && diasSemVisita !== null && diasSemVisita >= 90
+    }).length
+  , [lista, vendas])
+
+  const exportarCSV = () => {
+    const cabecalho = ['Nome', 'Telefone', 'Email', 'CPF/CNPJ', 'Veículo', 'Placa', 'Endereço', 'Aniversário', 'Total Gasto', 'Observações']
+    const linhas = lista.map(c => {
+      const totalReal = vendas
+        .filter(v => v.nome_cliente.toLowerCase().trim() === c.nome.toLowerCase().trim())
+        .reduce((sum, v) => sum + ((v as any).valor_total || v.valor || 0), 0)
+      return [
+        c.nome, c.telefone, c.email, c.cpf_cnpj, c.veiculo, c.placa, c.endereco,
+        c.aniversario ? new Date(c.aniversario + 'T12:00:00').toLocaleDateString('pt-BR') : '',
+        totalReal.toFixed(2).replace('.', ','), c.observacoes,
+      ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`)
+    })
+    const csv = '\uFEFF' + [cabecalho.join(';'), ...linhas.map(l => l.join(';'))].join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `clientes_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const filtradas = useMemo(() => lista.filter((c) => {
     const t = buscaDebounced.toLowerCase()
     return c.nome.toLowerCase().includes(t) || c.placa.toLowerCase().includes(t) || c.telefone.includes(t) || (c.cpf_cnpj || '').includes(t)
@@ -188,6 +253,9 @@ export default function Clientes() {
           <p className="text-sm text-gray-400 mt-0.5">{lista.length} cliente{lista.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={exportarCSV} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
+            <Download size={14} /> Exportar CSV
+          </button>
           <button onClick={() => setCsvModal(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
             <Upload size={14} /> Importar CSV
           </button>
@@ -202,22 +270,47 @@ export default function Clientes() {
         <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, placa, telefone ou CPF/CNPJ..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Total', value: lista.length, Icon: Users, color: 'text-primary-600', iconBg: 'bg-primary-100' },
-          { label: 'Com veículo', value: lista.filter((c) => c.placa).length, Icon: Car, color: 'text-violet-600', iconBg: 'bg-violet-100' },
-          { label: 'Este mês', value: lista.filter((c) => { const d = new Date(c.created_at); return d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear() }).length, Icon: Users, color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
-          { label: 'Aniversário hoje', value: aniversariantes.length, Icon: Cake, color: 'text-rose-500', iconBg: 'bg-rose-100' },
-        ].map((item) => (
-          <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-              <div className={`w-8 h-8 sm:w-9 sm:h-9 ${item.iconBg} rounded-xl flex items-center justify-center`}><item.Icon size={16} className={item.color} /></div>
-              <p className="text-[10px] sm:text-xs font-medium text-gray-400">{item.label}</p>
-            </div>
-            <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>{item.value}</p>
-          </div>
-        ))}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <button
+          onClick={() => setAbaClientes('todos')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+            abaClientes === 'todos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Users size={13} /> Todos ({lista.length})
+        </button>
+        <button
+          onClick={() => setAbaClientes('inativos')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+            abaClientes === 'inativos'
+              ? 'bg-white text-amber-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <AlertCircle size={13} /> Inativos
+          {clientesInativos.length > 0 && (
+            <span className="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+              {clientesInativos.length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {abaClientes === 'todos' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Total', value: lista.length, color: 'text-primary-600' },
+            { label: 'Com veículo', value: lista.filter(c => c.placa).length, color: 'text-violet-600' },
+            { label: 'Sem visita +30d', value: ausentes30, color: 'text-amber-600' },
+            { label: 'Sem visita +90d', value: ausentes90, color: 'text-red-500' },
+          ].map(item => (
+            <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+              <p className="text-[10px] sm:text-xs font-medium text-gray-400 mb-2">{item.label}</p>
+              <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {aniversariantes.length > 0 && (
         <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
@@ -247,13 +340,89 @@ export default function Clientes() {
         </div>
       )}
 
-      {filtradas.length === 0 ? (
+      {abaClientes === 'inativos' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-500 font-medium shrink-0">Ausentes há mais de:</p>
+            <div className="flex gap-1">
+              {([30, 60, 90] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setFiltroInatividade(d)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    filtroInatividade === d
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {d} dias
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {clientesInativos.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+              <CheckCircle2 size={40} className="text-emerald-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-gray-700">Nenhum cliente inativo</p>
+              <p className="text-xs text-gray-400 mt-1">Todos os clientes regulares visitaram nos últimos {filtroInatividade} dias</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {clientesInativos.map(c => {
+                const badge =
+                  (c.diasSemVisita ?? 0) >= 90 ? { label: '+90 dias', cls: 'bg-red-100 text-red-600' } :
+                  (c.diasSemVisita ?? 0) >= 60 ? { label: '+60 dias', cls: 'bg-amber-100 text-amber-600' } :
+                                                  { label: '+30 dias', cls: 'bg-yellow-100 text-yellow-700' }
+                return (
+                  <div
+                    key={c.id}
+                    className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => setDetalhe(c)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-amber-600">{c.nome.slice(0, 2).toUpperCase()}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
+                        <p className="text-[10px] text-gray-400">
+                          Última visita: {c.ultimaVisita?.toLocaleDateString('pt-BR')} · {c.totalVisitas} visita{c.totalVisitas !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                      {c.telefone && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const tel = c.telefone.replace(/\D/g, '')
+                            const msg = `Olá ${c.nome.split(' ')[0]}! Sentimos sua falta por aqui. Que tal agendar um serviço? Estamos à disposição! 😊`
+                            window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank')
+                          }}
+                          className="p-1.5 text-gray-300 hover:text-green-500 transition-colors"
+                          title="Enviar mensagem de retorno"
+                        >
+                          <MessageCircle size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {abaClientes === 'todos' && filtradas.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
           <Users size={48} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-900 font-semibold text-lg">{busca ? 'Nenhum resultado' : 'Nenhum cliente cadastrado'}</p>
           <p className="text-gray-400 text-sm mt-1">{busca ? 'Tente outro termo' : 'Cadastre seu primeiro cliente'}</p>
         </div>
-      ) : (
+      ) : abaClientes === 'todos' ? (
         <div className="space-y-2">
           {filtradas.map((c) => (
             <div key={c.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setDetalhe(c)}>
@@ -283,7 +452,7 @@ export default function Clientes() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Modal Novo Cliente */}
       {modal && (
