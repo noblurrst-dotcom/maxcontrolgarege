@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2 } from 'lucide-react'
-import type { Cliente } from '../types'
+import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
@@ -64,6 +64,8 @@ const CAMPOS_CSV: { value: string; label: string }[] = [
 
 export default function Clientes() {
   const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
+  const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
@@ -148,6 +150,24 @@ export default function Clientes() {
     window.open(`https://wa.me/${tel}`, '_blank')
   }
 
+  const getDadosCliente = (cliente: Cliente) => {
+    const vendasCliente = vendas.filter(v =>
+      v.nome_cliente.toLowerCase().trim() === cliente.nome.toLowerCase().trim()
+    )
+    const agendamentosCliente = agendamentos.filter(a =>
+      a.nome_cliente.toLowerCase().trim() === cliente.nome.toLowerCase().trim()
+    )
+    const totalGasto = vendasCliente.reduce((sum, v) => sum + ((v as any).valor_total || v.valor || 0), 0)
+    const qtdServicos = vendasCliente.length
+
+    const agora = new Date()
+    const proximoAg = agendamentosCliente
+      .filter(a => new Date(a.data_hora) > agora && a.status !== 'cancelado')
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime())[0]
+
+    return { vendasCliente, agendamentosCliente, totalGasto, qtdServicos, proximoAg }
+  }
+
   const filtradas = useMemo(() => lista.filter((c) => {
     const t = buscaDebounced.toLowerCase()
     return c.nome.toLowerCase().includes(t) || c.placa.toLowerCase().includes(t) || c.telefone.includes(t) || (c.cpf_cnpj || '').includes(t)
@@ -204,7 +224,24 @@ export default function Clientes() {
           <p className="text-xs font-bold text-rose-600 mb-2"><Cake size={14} className="inline mr-1" />Aniversariantes de hoje</p>
           <div className="flex flex-wrap gap-2">
             {aniversariantes.map(c => (
-              <span key={c.id} className="text-xs bg-white text-rose-600 font-semibold px-3 py-1 rounded-full border border-rose-200">{c.nome}</span>
+              <div key={c.id} className="flex items-center gap-1.5">
+                <span className="text-xs bg-white text-rose-600 font-semibold px-3 py-1 rounded-full border border-rose-200">
+                  {c.nome}
+                </span>
+                {c.telefone && (
+                  <button
+                    onClick={() => {
+                      const tel = c.telefone.replace(/\D/g, '')
+                      const msg = `Olá ${c.nome.split(' ')[0]}! 🎉 Feliz aniversário! Que seu dia seja especial. Conte sempre conosco!`
+                      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank')
+                    }}
+                    className="p-1 text-rose-400 hover:text-green-500 transition-colors"
+                    title="Enviar parabéns no WhatsApp"
+                  >
+                    <MessageCircle size={13} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -232,6 +269,14 @@ export default function Clientes() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
+                {(() => {
+                  const { totalGasto } = getDadosCliente(c)
+                  return totalGasto > 0 ? (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                      {fmt(totalGasto)}
+                    </span>
+                  ) : null
+                })()}
                 {c.telefone && <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(c) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
                 <button onClick={(e) => { e.stopPropagation(); remover(c.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
               </div>
@@ -448,6 +493,50 @@ export default function Clientes() {
                 </div>
               </div>
 
+              {detalhe.telefone && (
+                <button
+                  onClick={() => enviarWhatsApp(detalhe)}
+                  className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <MessageCircle size={16} />
+                  Enviar mensagem no WhatsApp
+                  <span className="text-xs font-normal opacity-80">{detalhe.telefone}</span>
+                </button>
+              )}
+
+              {(() => {
+                const { totalGasto, qtdServicos, proximoAg } = getDadosCliente(detalhe)
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-[10px] text-emerald-600 font-medium mb-1">Total gasto</p>
+                        <p className="text-lg font-bold text-emerald-600">{fmt(totalGasto)}</p>
+                      </div>
+                      <div className="bg-violet-50 rounded-xl p-3 text-center">
+                        <p className="text-[10px] text-violet-600 font-medium mb-1">Serviços</p>
+                        <p className="text-lg font-bold text-violet-600">{qtdServicos}</p>
+                      </div>
+                    </div>
+
+                    {proximoAg && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <p className="text-[10px] font-bold text-blue-600 mb-1">Próximo agendamento</p>
+                        <p className="text-xs font-semibold text-blue-800">
+                          {new Date(proximoAg.data_hora).toLocaleString('pt-BR', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                        {proximoAg.servico && (
+                          <p className="text-[10px] text-blue-500 mt-0.5">{proximoAg.servico}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+
               <div className="grid grid-cols-2 gap-3">
                 {detalhe.telefone && (
                   <div className="bg-gray-50 rounded-xl p-3">
@@ -467,12 +556,6 @@ export default function Clientes() {
                     <p className="text-xs font-semibold text-gray-700">{new Date(detalhe.aniversario + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                   </div>
                 )}
-                {detalhe.total_gasto > 0 && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-400 font-medium mb-0.5">Total gasto</p>
-                    <p className="text-xs font-bold text-emerald-600">{fmt(detalhe.total_gasto)}</p>
-                  </div>
-                )}
               </div>
 
               {detalhe.endereco && (
@@ -489,6 +572,43 @@ export default function Clientes() {
                 </div>
               )}
 
+              {(() => {
+                const { vendasCliente } = getDadosCliente(detalhe)
+                if (vendasCliente.length === 0) return null
+                const historico = [...vendasCliente]
+                  .sort((a, b) => new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime())
+                  .slice(0, 10)
+
+                return (
+                  <div>
+                    <p className="text-xs font-bold text-gray-700 mb-2">
+                      Histórico de serviços
+                      <span className="text-gray-400 font-normal ml-1">({vendasCliente.length} total)</span>
+                    </p>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {historico.map((v) => (
+                        <div
+                          key={v.id}
+                          className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-gray-800 truncate">
+                              {v.descricao || 'Serviço'}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              {new Date(v.data_venda).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold text-emerald-600 shrink-0 ml-2">
+                            {fmt((v as any).valor_total || v.valor)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
               {detalhe.observacoes && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 font-medium mb-0.5">Observações</p>
@@ -496,16 +616,9 @@ export default function Clientes() {
                 </div>
               )}
 
-              <div className="flex gap-2">
-                {detalhe.telefone && (
-                  <button onClick={() => enviarWhatsApp(detalhe)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
-                    <MessageCircle size={14} /> WhatsApp
-                  </button>
-                )}
-                <button onClick={() => remover(detalhe.id)} className="flex-1 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
-                  Excluir Cliente
-                </button>
-              </div>
+              <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
+                Excluir Cliente
+              </button>
             </div>
           </div>
         </div>
