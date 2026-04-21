@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Camera, Loader2, ChevronDown, ChevronUp, ClipboardCheck, Mail, CreditCard, ShoppingCart, CalendarDays, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { Cliente, Venda, Agendamento } from '../types'
+import type { Cliente, Venda, Agendamento, Veiculo } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
@@ -89,6 +89,7 @@ export default function Clientes() {
   const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: veiculos, save: salvarVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
@@ -102,13 +103,17 @@ export default function Clientes() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [abaClientes, setAbaClientes] = useState<'todos' | 'inativos'>('todos')
   const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
-  const [uploadingFace, setUploadingFace] = useState<string | null>(null)
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null)
   const [mostrarChecklistCliente, setMostrarChecklistCliente] = useState(false)
   const [checklistClienteSalvo, setChecklistClienteSalvo] = useState(false)
   const [camposAtivos, setCamposAtivos] = useState<Set<string>>(new Set())
   const [buscaVeiculo, setBuscaVeiculo] = useState('')
   const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [veiculoModal, setVeiculoModal] = useState(false)
+  const [veiculoEditando, setVeiculoEditando] = useState<Veiculo | null>(null)
+  const [uploadingFaceVeiculo, setUploadingFaceVeiculo] = useState<string | null>(null)
+  const initVeiculoForm = () => ({ placa: '', modelo: '', marca: '', ano: '', cor: '', observacoes: '' })
+  const [veiculoForm, setVeiculoForm] = useState(initVeiculoForm())
 
   const toggleCampo = (campo: string) => {
     setCamposAtivos(prev => {
@@ -202,61 +207,90 @@ export default function Clientes() {
 
   const remover = (id: string) => { salvar(lista.filter((c) => c.id !== id)); setDetalhe(null) }
 
+  const getVeiculosCliente = (clienteId: string): Veiculo[] =>
+    veiculos.filter(v => v.cliente_id === clienteId)
 
-  const uploadFotoVeiculo = async (
-    cliente: Cliente,
+  const salvarVeiculo = () => {
+    if (!detalhe || !veiculoForm.placa) return
+    if (veiculoEditando) {
+      salvarVeiculos(veiculos.map(v =>
+        v.id === veiculoEditando.id ? { ...v, ...veiculoForm, placa: veiculoForm.placa.toUpperCase() } : v
+      ))
+    } else {
+      const novo: Veiculo = {
+        id: uid(),
+        user_id: user?.id || '',
+        cliente_id: detalhe.id,
+        ...veiculoForm,
+        placa: veiculoForm.placa.toUpperCase(),
+        created_at: new Date().toISOString(),
+      }
+      salvarVeiculos([novo, ...veiculos])
+    }
+    setVeiculoModal(false)
+    setVeiculoForm(initVeiculoForm())
+    setVeiculoEditando(null)
+  }
+
+  const removerVeiculo = async (veiculo: Veiculo) => {
+    const faces = ['frente', 'traseira', 'direita', 'esquerda'] as const
+    for (const face of faces) {
+      const url = veiculo[`foto_${face}`]
+      if (url) {
+        try {
+          const path = new URL(url).pathname.split('/fotos-veiculos/')[1]
+          if (path) await supabase.storage.from('fotos-veiculos').remove([path])
+        } catch { /* ignora */ }
+      }
+    }
+    salvarVeiculos(veiculos.filter(v => v.id !== veiculo.id))
+  }
+
+  const uploadFotoVeiculoNovo = async (
+    veiculo: Veiculo,
     face: 'frente' | 'traseira' | 'direita' | 'esquerda',
     file: File
-  ): Promise<string | null> => {
-    if (!user) return null
-    setUploadingFace(face)
+  ) => {
+    if (!user) return
+    setUploadingFaceVeiculo(`${veiculo.id}-${face}`)
     try {
-      const campoAtual = cliente[`foto_${face}` as keyof Cliente] as string | null
-      if (campoAtual) {
+      const campo = `foto_${face}` as keyof Veiculo
+      const urlAtual = veiculo[campo] as string | null
+      if (urlAtual) {
         try {
-          const url = new URL(campoAtual)
-          const path = url.pathname.split('/fotos-veiculos/')[1]
+          const path = new URL(urlAtual).pathname.split('/fotos-veiculos/')[1]
           if (path) await supabase.storage.from('fotos-veiculos').remove([path])
-        } catch { /* ignora erro ao remover */ }
+        } catch { /* ignora */ }
       }
       const ext = file.name.split('.').pop() || 'jpg'
-      const fileName = `${user.id}/${cliente.id}/${face}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
+      const fileName = `${user.id}/${veiculo.cliente_id}/${veiculo.id}/${face}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage
         .from('fotos-veiculos')
         .upload(fileName, file, { cacheControl: '3600', upsert: true })
-      if (uploadError) throw uploadError
+      if (error) throw error
       const { data: urlData } = supabase.storage.from('fotos-veiculos').getPublicUrl(fileName)
-      const campo = `foto_${face}` as keyof Cliente
-      const clienteAtualizado = { ...cliente, [campo]: urlData.publicUrl }
-      salvar(lista.map(c => c.id === cliente.id ? clienteAtualizado : c))
-      await supabase.from('clientes').update({ [campo]: urlData.publicUrl }).eq('id', cliente.id)
-      if (detalhe?.id === cliente.id) setDetalhe(clienteAtualizado)
-      return urlData.publicUrl
-    } catch (err) {
-      console.error('Erro ao fazer upload:', err)
+      const atualizado = { ...veiculo, [campo]: urlData.publicUrl }
+      salvarVeiculos(veiculos.map(v => v.id === veiculo.id ? atualizado : v))
+      toast.success('Foto adicionada!')
+    } catch {
       toast.error('Erro ao enviar foto')
-      return null
     } finally {
-      setUploadingFace(null)
+      setUploadingFaceVeiculo(null)
     }
   }
 
-  const removerFotoVeiculo = async (
-    cliente: Cliente,
+  const removerFotoVeiculoNovo = async (
+    veiculo: Veiculo,
     face: 'frente' | 'traseira' | 'direita' | 'esquerda'
   ) => {
-    const campo = `foto_${face}` as keyof Cliente
-    const urlAtual = cliente[campo] as string | null
-    if (!urlAtual) return
+    const campo = `foto_${face}` as keyof Veiculo
+    const url = veiculo[campo] as string | null
+    if (!url) return
     try {
-      const url = new URL(urlAtual)
-      const path = url.pathname.split('/fotos-veiculos/')[1]
+      const path = new URL(url).pathname.split('/fotos-veiculos/')[1]
       if (path) await supabase.storage.from('fotos-veiculos').remove([path])
     } catch { /* ignora */ }
-    const clienteAtualizado = { ...cliente, [campo]: null }
-    salvar(lista.map(c => c.id === cliente.id ? clienteAtualizado : c))
-    await supabase.from('clientes').update({ [campo]: null }).eq('id', cliente.id)
-    if (detalhe?.id === cliente.id) setDetalhe(clienteAtualizado)
+    salvarVeiculos(veiculos.map(v => v.id === veiculo.id ? { ...v, [campo]: null } : v))
   }
 
   const enviarWhatsApp = (c: Cliente) => {
@@ -1030,119 +1064,152 @@ export default function Clientes() {
 
               {/* ── Seção 3: Veículos do cliente ── */}
               <div className="px-5 py-5 border-b border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-0.5">Veículos do cliente</h3>
-                <p className="text-xs text-gray-400 mb-4">Esses são os veículos cadastrados do cliente</p>
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Veículos do cliente</h3>
+                    <p className="text-xs text-gray-400">
+                      {getVeiculosCliente(detalhe.id).length} veículo(s) cadastrado(s)
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setVeiculoEditando(null); setVeiculoForm(initVeiculoForm()); setVeiculoModal(true) }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    <Plus size={13} /> Novo veículo
+                  </button>
+                </div>
 
-                {(detalhe.veiculo || detalhe.placa) && (
-                  <div className="relative mb-3">
+                {getVeiculosCliente(detalhe.id).length > 0 && (
+                  <div className="relative my-3">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
                       value={buscaVeiculo}
                       onChange={(e) => setBuscaVeiculo(e.target.value)}
-                      placeholder="Buscar veículo por marca, modelo, placa ou ano..."
+                      placeholder="Buscar por marca, modelo, placa ou ano..."
                       className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-primary-500 outline-none"
                     />
                   </div>
                 )}
 
-                {detalhe.veiculo || detalhe.placa ? (
-                  (() => {
-                    const termo = buscaVeiculo.toLowerCase()
-                    const match = !termo ||
-                      (detalhe.veiculo || '').toLowerCase().includes(termo) ||
-                      (detalhe.placa || '').toLowerCase().includes(termo)
-                    return match ? (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-start gap-3">
-                          <Car size={32} className="text-red-400 shrink-0 mt-1" />
-                          <div className="space-y-1">
-                            {detalhe.veiculo && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-gray-400 w-14">Modelo</span>
-                                <span className="text-xs font-semibold text-gray-800">{detalhe.veiculo}</span>
-                              </div>
-                            )}
-                            {detalhe.placa && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-gray-400 w-14">Placa</span>
-                                <span className="text-xs font-semibold text-gray-800 uppercase">{detalhe.placa}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Fotos das 4 faces */}
-                        {(detalhe.foto_frente || detalhe.foto_traseira || detalhe.foto_direita || detalhe.foto_esquerda) && (
-                          <div className="grid grid-cols-4 gap-1.5 mt-3">
-                            {(['frente', 'traseira', 'direita', 'esquerda'] as const).map(face => {
-                              const url = detalhe[`foto_${face}` as keyof Cliente] as string | null
-                              return url ? (
-                                <img key={face} src={url} alt={face}
-                                  onClick={() => setFotoAmpliada(url)}
-                                  className="w-full h-14 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" />
-                              ) : null
-                            })}
-                          </div>
-                        )}
-
-                        {/* Upload fotos do veículo */}
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                          {(['frente', 'traseira', 'direita', 'esquerda'] as const).map((face) => {
-                            const campo = `foto_${face}` as keyof Cliente
-                            const url = detalhe[campo] as string | null
-                            const isLoading = uploadingFace === face
-                            const labels = { frente: '⬆ Frente', traseira: '⬇ Traseira', direita: '➡ Direita', esquerda: '⬅ Esquerda' }
-                            return (
-                              <div key={face} className="relative">
-                                {url ? (
-                                  <div className="relative group">
-                                    <img src={url} alt={`Foto ${face}`}
-                                      className="w-full h-20 object-cover rounded-xl border border-gray-200 cursor-pointer"
-                                      onClick={() => setFotoAmpliada(url)} />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-xl transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                      <label className="cursor-pointer p-1.5 bg-white/90 rounded-lg">
-                                        <Camera size={14} className="text-gray-700" />
-                                        <input type="file" accept="image/*" capture="environment" className="hidden"
-                                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculo(detalhe, face, f) }} />
-                                      </label>
-                                      <button onClick={() => removerFotoVeiculo(detalhe, face)} className="p-1.5 bg-red-500/90 rounded-lg">
-                                        <Trash2 size={14} className="text-white" />
-                                      </button>
-                                    </div>
-                                    <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">{labels[face]}</span>
-                                  </div>
-                                ) : (
-                                  <label className={`flex flex-col items-center justify-center h-20 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-                                    isLoading ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50'
-                                  }`}>
-                                    {isLoading ? (
-                                      <Loader2 size={18} className="text-primary-500 animate-spin" />
-                                    ) : (
-                                      <>
-                                        <Camera size={16} className="text-gray-300 mb-0.5" />
-                                        <span className="text-[9px] font-bold text-gray-400">{labels[face]}</span>
-                                      </>
-                                    )}
-                                    <input type="file" accept="image/*" capture="environment" className="hidden"
-                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculo(detalhe, face, f) }} />
-                                  </label>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-4">
-                        Nenhum veículo encontrado para "{buscaVeiculo}"
-                      </p>
-                    )
-                  })()
-                ) : (
-                  <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl">
+                {getVeiculosCliente(detalhe.id).length === 0 ? (
+                  <div className="text-center py-8 border border-dashed border-gray-200 rounded-xl mt-3">
                     <Car size={28} className="text-gray-200 mx-auto mb-2" />
                     <p className="text-xs text-gray-400">Nenhum veículo cadastrado</p>
+                    <button
+                      onClick={() => { setVeiculoEditando(null); setVeiculoForm(initVeiculoForm()); setVeiculoModal(true) }}
+                      className="mt-2 text-xs font-bold text-primary-600 hover:text-primary-700"
+                    >
+                      + Adicionar primeiro veículo
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 mt-3">
+                    {getVeiculosCliente(detalhe.id)
+                      .filter(v => {
+                        const t = buscaVeiculo.toLowerCase()
+                        return !t || v.placa.toLowerCase().includes(t) ||
+                          v.modelo.toLowerCase().includes(t) ||
+                          v.marca.toLowerCase().includes(t) ||
+                          v.ano.includes(t)
+                      })
+                      .map(veiculo => (
+                        <div key={veiculo.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                          <div className="flex items-center justify-between px-3 py-3 bg-gray-50">
+                            <div className="flex items-center gap-3">
+                              <Car size={20} className="text-red-400 shrink-0" />
+                              <div>
+                                <p className="text-sm font-bold text-gray-900 uppercase">{veiculo.placa}</p>
+                                <p className="text-xs text-gray-500">
+                                  {[veiculo.marca, veiculo.modelo, veiculo.ano].filter(Boolean).join(' · ')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setVeiculoEditando(veiculo)
+                                  setVeiculoForm({
+                                    placa: veiculo.placa, modelo: veiculo.modelo,
+                                    marca: veiculo.marca, ano: veiculo.ano,
+                                    cor: veiculo.cor, observacoes: veiculo.observacoes,
+                                  })
+                                  setVeiculoModal(true)
+                                }}
+                                className="p-1.5 text-gray-400 hover:text-primary-600 transition-colors"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => removerVeiculo(veiculo)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {veiculo.cor && (
+                            <div className="px-3 py-1.5 border-t border-gray-100 flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full border border-gray-200"
+                                style={{ backgroundColor: veiculo.cor }} />
+                              <span className="text-xs text-gray-500">{veiculo.cor}</span>
+                            </div>
+                          )}
+
+                          <div className="px-3 pb-3 pt-2 border-t border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Fotos</p>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {(['frente', 'traseira', 'direita', 'esquerda'] as const).map(face => {
+                                const url = veiculo[`foto_${face}`] as string | null
+                                const isLoading = uploadingFaceVeiculo === `${veiculo.id}-${face}`
+                                const labels = { frente: '⬆ Frente', traseira: '⬇ Traseira', direita: '➡ Direita', esquerda: '⬅ Esquerda' }
+                                return (
+                                  <div key={face} className="relative">
+                                    {url ? (
+                                      <div className="relative group">
+                                        <img src={url} alt={face}
+                                          className="w-full h-16 object-cover rounded-lg cursor-pointer border border-gray-200"
+                                          onClick={() => setFotoAmpliada(url)} />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-lg transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                                          <label className="cursor-pointer p-1 bg-white/90 rounded-md">
+                                            <Camera size={11} className="text-gray-700" />
+                                            <input type="file" accept="image/*" capture="environment" className="hidden"
+                                              onChange={e => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculoNovo(veiculo, face, f) }} />
+                                          </label>
+                                          <button onClick={() => removerFotoVeiculoNovo(veiculo, face)}
+                                            className="p-1 bg-red-500/90 rounded-md">
+                                            <X size={11} className="text-white" />
+                                          </button>
+                                        </div>
+                                        <span className="absolute bottom-1 left-1 text-[8px] font-bold text-white bg-black/50 px-1 rounded">
+                                          {labels[face].split(' ')[1]}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <label className={`flex flex-col items-center justify-center h-16 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                                        isLoading ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50'
+                                      }`}>
+                                        {isLoading
+                                          ? <Loader2 size={14} className="text-primary-500 animate-spin" />
+                                          : <>
+                                              <Camera size={14} className="text-gray-300 mb-0.5" />
+                                              <span className="text-[8px] text-gray-300 text-center leading-tight px-0.5">
+                                                {labels[face].split(' ')[1]}
+                                              </span>
+                                            </>
+                                        }
+                                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculoNovo(veiculo, face, f) }} />
+                                      </label>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>
@@ -1249,9 +1316,109 @@ export default function Clientes() {
         </div>
       )}
 
+      {/* Modal Veículo */}
+      {veiculoModal && detalhe && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => { setVeiculoModal(false); setVeiculoForm(initVeiculoForm()); setVeiculoEditando(null) }}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl"
+            onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">
+                {veiculoEditando ? 'Editar veículo' : 'Novo veículo'}
+              </h2>
+              <button onClick={() => { setVeiculoModal(false); setVeiculoForm(initVeiculoForm()); setVeiculoEditando(null) }}
+                className="p-1.5 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                  Placa <span className="text-red-400">*</span>
+                </label>
+                <input type="text"
+                  value={veiculoForm.placa}
+                  onChange={e => setVeiculoForm(f => ({ ...f, placa: e.target.value.toUpperCase() }))}
+                  placeholder="ABC-1234"
+                  maxLength={8}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-mono font-bold tracking-wider uppercase focus:ring-2 focus:ring-primary-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Marca</label>
+                  <input type="text"
+                    value={veiculoForm.marca}
+                    onChange={e => setVeiculoForm(f => ({ ...f, marca: e.target.value }))}
+                    placeholder="Ex: Honda"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Modelo</label>
+                  <input type="text"
+                    value={veiculoForm.modelo}
+                    onChange={e => setVeiculoForm(f => ({ ...f, modelo: e.target.value }))}
+                    placeholder="Ex: Civic EXL"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Ano</label>
+                  <input type="text"
+                    value={veiculoForm.ano}
+                    onChange={e => setVeiculoForm(f => ({ ...f, ano: e.target.value }))}
+                    placeholder="Ex: 2022"
+                    maxLength={4}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Cor</label>
+                  <input type="text"
+                    value={veiculoForm.cor}
+                    onChange={e => setVeiculoForm(f => ({ ...f, cor: e.target.value }))}
+                    placeholder="Ex: Preto"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
+                <textarea
+                  value={veiculoForm.observacoes}
+                  onChange={e => setVeiculoForm(f => ({ ...f, observacoes: e.target.value }))}
+                  placeholder="Observações sobre o veículo..."
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100">
+              <button
+                onClick={salvarVeiculo}
+                disabled={!veiculoForm.placa}
+                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+              >
+                {veiculoEditando ? 'Salvar alterações' : 'Adicionar veículo'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {fotoAmpliada && (
         <div
-          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4"
           onClick={() => setFotoAmpliada(null)}
         >
           <img

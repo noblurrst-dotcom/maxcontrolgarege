@@ -288,5 +288,22 @@ export interface ContaBancaria {
   created_at: string;
 }
 
+export interface Veiculo {
+  id: string
+  user_id: string
+  cliente_id: string
+  placa: string
+  modelo: string
+  marca: string
+  ano: string
+  cor: string
+  foto_frente?: string | null
+  foto_traseira?: string | null
+  foto_direita?: string | null
+  foto_esquerda?: string | null
+  observacoes: string
+  created_at: string
+}
+
 
 
