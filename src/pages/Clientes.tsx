@@ -105,6 +105,20 @@ export default function Clientes() {
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null)
   const [mostrarChecklistCliente, setMostrarChecklistCliente] = useState(false)
   const [checklistClienteSalvo, setChecklistClienteSalvo] = useState(false)
+  const [camposAtivos, setCamposAtivos] = useState<Set<string>>(new Set())
+
+  const toggleCampo = (campo: string) => {
+    setCamposAtivos(prev => {
+      const next = new Set(prev)
+      if (next.has(campo)) {
+        next.delete(campo)
+        setForm(f => ({ ...f, [campo]: '' }))
+      } else {
+        next.add(campo)
+      }
+      return next
+    })
+  }
 
   useEffect(() => { garantirBucketFotosVeiculos() }, [])
 
@@ -170,6 +184,7 @@ export default function Clientes() {
     salvar([novo, ...lista])
     setModal(false)
     setForm(initForm())
+    setCamposAtivos(new Set())
   }
 
   const remover = (id: string) => { salvar(lista.filter((c) => c.id !== id)); setDetalhe(null) }
@@ -545,58 +560,184 @@ export default function Clientes() {
 
       {/* Modal Novo Cliente */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(false)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">Novo Cliente</h2>
-              <button onClick={() => setModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <button onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
+
+              {/* Nome — obrigatório */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Nome *</label>
-                <input type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                  Nome <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  placeholder="Nome completo do cliente"
+                  autoFocus
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
-                  <input type="tel" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">CPF / CNPJ</label>
-                  <input type="text" value={form.cpf_cnpj} onChange={(e) => setForm({ ...form, cpf_cnpj: e.target.value })} placeholder="000.000.000-00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
-                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Aniversário</label>
-                  <input type="date" value={form.aniversario} onChange={(e) => setForm({ ...form, aniversario: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
-              </div>
+
+              {/* WhatsApp — obrigatório */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Endereço</label>
-                <input type="text" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, número, bairro, cidade" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Veículo</label>
-                  <input type="text" value={form.veiculo} onChange={(e) => setForm({ ...form, veiculo: e.target.value })} placeholder="Ex: Honda Civic 2022 Preto" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                  WhatsApp <span className="text-red-400">*</span>
+                </label>
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-500">
+                  <span className="px-3 py-2.5 bg-gray-50 text-sm text-gray-500 border-r border-gray-200 shrink-0 flex items-center gap-1.5">
+                    🇧🇷 +55
+                  </span>
+                  <input
+                    type="tel"
+                    value={form.telefone}
+                    onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    className="flex-1 px-3 py-2.5 text-sm outline-none bg-white"
+                  />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
-                  <input type="text" value={form.placa} onChange={(e) => setForm({ ...form, placa: e.target.value })} placeholder="ABC-1234" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none uppercase" />
-                </div>
               </div>
+
+              {/* Veículo */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
-                <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações sobre o cliente..." rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
+                <label className="text-xs font-medium text-gray-500 mb-2 block">Veículo</label>
+                {(form.veiculo || form.placa) ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={form.placa}
+                      onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })}
+                      placeholder="Placa"
+                      maxLength={8}
+                      className="w-28 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none uppercase"
+                    />
+                    <input
+                      type="text"
+                      value={form.veiculo}
+                      onChange={(e) => setForm({ ...form, veiculo: e.target.value })}
+                      placeholder="Ex: Honda Civic 2022 Preto"
+                      className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, veiculo: '', placa: '' }))}
+                      className="p-2.5 text-gray-300 hover:text-red-400 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, veiculo: ' ' }))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-300 rounded-xl text-xs font-semibold text-gray-500 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                  >
+                    <Plus size={13} /> Adicionar veículo
+                  </button>
+                )}
               </div>
-              <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
+
+              {/* Chips de campos opcionais */}
+              <div>
+                <p className="text-xs font-medium text-gray-400 mb-2">Informações adicionais</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'email',       label: 'E-mail'      },
+                    { key: 'cpf_cnpj',   label: 'CPF/CNPJ'    },
+                    { key: 'endereco',   label: 'Endereço'     },
+                    { key: 'aniversario', label: 'Aniversário' },
+                    { key: 'observacoes', label: 'Observações' },
+                  ].map(({ key, label }) => {
+                    const ativo = camposAtivos.has(key)
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleCampo(key)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                          ativo
+                            ? 'bg-primary-500 text-dark-900 shadow-sm'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        <span>{ativo ? '−' : '+'}</span>
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Campos expandidos */}
+              {camposAtivos.size > 0 && (
+                <div className="space-y-3 border-t border-gray-100 pt-3">
+
+                  {camposAtivos.has('email') && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">E-mail</label>
+                      <input type="email" value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="email@exemplo.com" autoFocus
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  )}
+
+                  {camposAtivos.has('cpf_cnpj') && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">CPF / CNPJ</label>
+                      <input type="text" value={form.cpf_cnpj}
+                        onChange={(e) => setForm({ ...form, cpf_cnpj: e.target.value })}
+                        placeholder="000.000.000-00"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  )}
+
+                  {camposAtivos.has('endereco') && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Endereço</label>
+                      <input type="text" value={form.endereco}
+                        onChange={(e) => setForm({ ...form, endereco: e.target.value })}
+                        placeholder="Rua, número, bairro, cidade"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  )}
+
+                  {camposAtivos.has('aniversario') && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Data de aniversário</label>
+                      <input type="date" value={form.aniversario}
+                        onChange={(e) => setForm({ ...form, aniversario: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  )}
+
+                  {camposAtivos.has('observacoes') && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
+                      <textarea value={form.observacoes}
+                        onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                        placeholder="Observações sobre o cliente..."
+                        rows={2}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+              {/* Botão salvar */}
+              <button
+                onClick={adicionar}
+                disabled={!form.nome || !form.telefone}
+                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+              >
                 Cadastrar Cliente
               </button>
+
             </div>
           </div>
         </div>
