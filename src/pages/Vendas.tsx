@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, Loader2 } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
@@ -12,6 +12,8 @@ import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 import ChecklistEmbutido from '../components/ChecklistEmbutido'
 import toast from 'react-hot-toast'
+import { exportarOrcamentoPDF } from '../lib/exportarOrcamentoPDF'
+import DiagramaDefeitos from '../components/DiagramaDefeitos'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
@@ -65,6 +67,17 @@ export default function Vendas() {
   const { data: preVendas, save: salvarPreVendas } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
   const [pvModal, setPvModal] = useState(false)
   const [pvDetalhe, setPvDetalhe] = useState<PreVenda | null>(null)
+  const [exportModal, setExportModal] = useState(false)
+  const [exportPv, setExportPv] = useState<PreVenda | null>(null)
+  const [marcacoesDefeitos, setMarcacoesDefeitos] = useState<{x:number;y:number}[]>([])
+  const [estadoPintura, setEstadoPintura] = useState<'otimo'|'bom'|'regular'|'ruim'|''>('')
+  const [lavador, setLavador] = useState('')
+  const [tecnicoPolidor, setTecnicoPolidor] = useState('')
+  const [dataEntradaLoja, setDataEntradaLoja] = useState('')
+  const [dataEntradaOficina, setDataEntradaOficina] = useState('')
+  const [dataSaidaOficina, setDataSaidaOficina] = useState('')
+  const [obsExport, setObsExport] = useState('')
+  const [gerandoPDF, setGerandoPDF] = useState(false)
   const [pvForm, setPvForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
   const [pvItens, setPvItens] = useState<PreVendaItem[]>([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
 
@@ -923,6 +936,12 @@ export default function Vendas() {
                 <button onClick={() => exportarPvPDF(pvDetalhe)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                   <Download size={14} /> Exportar PDF
                 </button>
+                <button
+                  onClick={() => { setExportPv(pvDetalhe); setExportModal(true) }}
+                  className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                >
+                  <FileText size={14} /> Check List PDF
+                </button>
               </div>
               {pvDetalhe.telefone_cliente && (
                 <button onClick={() => { const tel = pvDetalhe.telefone_cliente?.replace(/\D/g, ''); window.open(`https://wa.me/${tel ? '55' + tel : ''}`, '_blank') }} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
@@ -931,6 +950,118 @@ export default function Vendas() {
               )}
               <button onClick={() => removerPv(pvDetalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Pré-Venda
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Exportação Check List PDF */}
+      {exportModal && exportPv && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4"
+          onClick={() => setExportModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">Gerar Check List PDF</h2>
+              <button onClick={() => setExportModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4">
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-2 block">
+                  Identificação de Defeitos
+                </label>
+                <DiagramaDefeitos
+                  marcacoes={marcacoesDefeitos}
+                  onChange={setMarcacoesDefeitos}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-2 block">Estado da Pintura</label>
+                <div className="flex gap-2">
+                  {(['otimo','bom','regular','ruim'] as const).map(e => (
+                    <button key={e} type="button"
+                      onClick={() => setEstadoPintura(v => v === e ? '' : e)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${
+                        estadoPintura === e
+                          ? 'bg-primary-500 text-dark-900'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      {e === 'otimo' ? 'Ótimo' : e.charAt(0).toUpperCase() + e.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Lavador</label>
+                  <input type="text" value={lavador} onChange={e => setLavador(e.target.value)}
+                    placeholder="Nome do lavador"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Técnico Polidor</label>
+                  <input type="text" value={tecnicoPolidor} onChange={e => setTecnicoPolidor(e.target.value)}
+                    placeholder="Nome do técnico"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Entrada na Loja', val: dataEntradaLoja, set: setDataEntradaLoja },
+                  { label: 'Entrada Oficina', val: dataEntradaOficina, set: setDataEntradaOficina },
+                  { label: 'Saída Oficina', val: dataSaidaOficina, set: setDataSaidaOficina },
+                ].map(({ label, val, set }) => (
+                  <div key={label}>
+                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">{label}</label>
+                    <input type="date" value={val} onChange={e => set(e.target.value)}
+                      className="w-full px-2 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-primary-500 outline-none" />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
+                <textarea value={obsExport} onChange={e => setObsExport(e.target.value)}
+                  placeholder="Observações gerais sobre o veículo ou serviço..."
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
+              </div>
+
+              <button
+                onClick={async () => {
+                  setGerandoPDF(true)
+                  try {
+                    await exportarOrcamentoPDF({
+                      preVenda: exportPv,
+                      servicos,
+                      brand,
+                      marcacoesDefeitos,
+                      estadoPintura: estadoPintura || undefined,
+                      lavador, tecnicoPolidor,
+                      dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
+                      observacoes: obsExport,
+                    })
+                    setExportModal(false)
+                  } finally {
+                    setGerandoPDF(false)
+                  }
+                }}
+                disabled={gerandoPDF}
+                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-dark-900 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                {gerandoPDF
+                  ? <><Loader2 size={16} className="animate-spin" /> Gerando PDF...</>
+                  : <><Download size={16} /> Baixar Check List PDF</>
+                }
               </button>
             </div>
           </div>
