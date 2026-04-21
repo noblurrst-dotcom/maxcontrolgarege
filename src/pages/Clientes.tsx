@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Save, Camera, Loader2, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react'
+import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Camera, Loader2, ChevronDown, ChevronUp, ClipboardCheck, Mail, CreditCard, ShoppingCart, CalendarDays, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { Cliente, Venda, Agendamento } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
@@ -84,6 +85,7 @@ const CAMPOS_CSV: { value: string; label: string }[] = [
 
 export default function Clientes() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
@@ -99,13 +101,14 @@ export default function Clientes() {
   const [csvDragover, setCsvDragover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [abaClientes, setAbaClientes] = useState<'todos' | 'inativos'>('todos')
-  const [editForm, setEditForm] = useState<ReturnType<typeof initForm> | null>(null)
   const [filtroInatividade, setFiltroInatividade] = useState<30 | 60 | 90>(60)
   const [uploadingFace, setUploadingFace] = useState<string | null>(null)
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null)
   const [mostrarChecklistCliente, setMostrarChecklistCliente] = useState(false)
   const [checklistClienteSalvo, setChecklistClienteSalvo] = useState(false)
   const [camposAtivos, setCamposAtivos] = useState<Set<string>>(new Set())
+  const [buscaVeiculo, setBuscaVeiculo] = useState('')
+  const [editandoId, setEditandoId] = useState<string | null>(null)
 
   const toggleCampo = (campo: string) => {
     setCamposAtivos(prev => {
@@ -174,41 +177,31 @@ export default function Clientes() {
 
   const adicionar = () => {
     if (!form.nome) return
-    const novo: Cliente = {
-      id: uid(), user_id: '', nome: form.nome, telefone: form.telefone,
-      email: form.email, cpf_cnpj: form.cpf_cnpj, veiculo: form.veiculo,
-      placa: form.placa.toUpperCase(), endereco: form.endereco,
-      aniversario: form.aniversario, observacoes: form.observacoes,
-      total_gasto: 0, created_at: new Date().toISOString(),
+    if (editandoId) {
+      const existente = lista.find(c => c.id === editandoId)
+      if (existente) {
+        const atualizado = { ...existente, ...form, placa: form.placa.toUpperCase() }
+        salvar(lista.map(c => c.id === editandoId ? atualizado : c))
+      }
+      setEditandoId(null)
+    } else {
+      const novo: Cliente = {
+        id: uid(), user_id: '', nome: form.nome, telefone: form.telefone,
+        email: form.email, cpf_cnpj: form.cpf_cnpj, veiculo: form.veiculo,
+        placa: form.placa.toUpperCase(), endereco: form.endereco,
+        aniversario: form.aniversario, observacoes: form.observacoes,
+        total_gasto: 0, created_at: new Date().toISOString(),
+      }
+      salvar([novo, ...lista])
     }
-    salvar([novo, ...lista])
     setModal(false)
     setForm(initForm())
     setCamposAtivos(new Set())
+    setEditandoId(null)
   }
 
   const remover = (id: string) => { salvar(lista.filter((c) => c.id !== id)); setDetalhe(null) }
 
-  const iniciarEdicao = (c: Cliente) => {
-    setEditForm({
-      nome: c.nome, telefone: c.telefone, email: c.email,
-      cpf_cnpj: c.cpf_cnpj || '', veiculo: c.veiculo || '', placa: c.placa || '',
-      endereco: c.endereco || '', aniversario: c.aniversario || '', observacoes: c.observacoes || '',
-    })
-  }
-
-  const salvarEdicao = () => {
-    if (!detalhe || !editForm || !editForm.nome) return
-    const atualizado: Cliente = {
-      ...detalhe,
-      nome: editForm.nome, telefone: editForm.telefone, email: editForm.email,
-      cpf_cnpj: editForm.cpf_cnpj, veiculo: editForm.veiculo, placa: editForm.placa.toUpperCase(),
-      endereco: editForm.endereco, aniversario: editForm.aniversario, observacoes: editForm.observacoes,
-    }
-    salvar(lista.map(c => c.id === detalhe.id ? atualizado : c))
-    setDetalhe(atualizado)
-    setEditForm(null)
-  }
 
   const uploadFotoVeiculo = async (
     cliente: Cliente,
@@ -560,11 +553,11 @@ export default function Clientes() {
 
       {/* Modal Novo Cliente */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()) }}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Novo Cliente</h2>
-              <button onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h2 className="text-lg font-bold text-gray-900">{editandoId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+              <button onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
 
@@ -874,280 +867,305 @@ export default function Clientes() {
 
       {/* Modal Detalhe do Cliente */}
       {detalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setDetalhe(null); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">{editForm ? 'Editar Cliente' : 'Ficha do Cliente'}</h2>
-              <div className="flex items-center gap-1">
-                {!editForm && (
-                  <button onClick={() => iniciarEdicao(detalhe)} className="p-1.5 text-gray-400 hover:text-primary-500 transition-colors" title="Editar"><Pencil size={16} /></button>
-                )}
-                <button onClick={() => { setDetalhe(null); setEditForm(null); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => { setDetalhe(null); setBuscaVeiculo(''); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }}
+        >
+          <div
+            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Users size={16} className="text-gray-400" />
+                </div>
+                <span className="text-base font-bold text-gray-900">{detalhe.nome}</span>
               </div>
+              <button
+                onClick={() => { setDetalhe(null); setBuscaVeiculo(''); setMostrarChecklistCliente(false); setChecklistClienteSalvo(false) }}
+                className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div className="space-y-4">
-              {editForm ? (
-                <>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Nome *</label>
-                      <input type="text" value={editForm.nome} onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
-                        <input type="tel" value={editForm.telefone} onChange={(e) => setEditForm({ ...editForm, telefone: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">CPF / CNPJ</label>
-                        <input type="text" value={editForm.cpf_cnpj} onChange={(e) => setEditForm({ ...editForm, cpf_cnpj: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
-                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Aniversário</label>
-                        <input type="date" value={editForm.aniversario} onChange={(e) => setEditForm({ ...editForm, aniversario: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Endereço</label>
-                      <input type="text" value={editForm.endereco} onChange={(e) => setEditForm({ ...editForm, endereco: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Veículo</label>
-                        <input type="text" value={editForm.veiculo} onChange={(e) => setEditForm({ ...editForm, veiculo: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
-                        <input type="text" value={editForm.placa} onChange={(e) => setEditForm({ ...editForm, placa: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none uppercase" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
-                      <textarea value={editForm.observacoes} onChange={(e) => setEditForm({ ...editForm, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={salvarEdicao} className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
-                      <Save size={14} /> Salvar Alterações
+
+            {/* Conteúdo com scroll */}
+            <div className="flex-1 overflow-y-auto">
+
+              {/* ── Seção 1: Opções do cliente ── */}
+              <div className="px-5 py-5 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 mb-0.5">Opções do cliente</h3>
+                <p className="text-xs text-gray-400 mb-4">Ações rápidas que você pode realizar com este cliente</p>
+
+                <div className="space-y-2.5">
+                  {detalhe.telefone && (
+                    <button
+                      onClick={() => enviarWhatsApp(detalhe)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                    >
+                      <MessageCircle size={18} />
+                      Chamar no WhatsApp
                     </button>
-                    <button onClick={() => setEditForm(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors">
-                      Cancelar
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary-600">{detalhe.nome.slice(0, 2).toUpperCase()}</span>
-                </div>
-                <div>
-                  <p className="text-base font-bold text-gray-900">{detalhe.nome}</p>
-                  {detalhe.cpf_cnpj && <p className="text-xs text-gray-400">CPF/CNPJ: {detalhe.cpf_cnpj}</p>}
-                  <p className="text-xs text-gray-400">Cliente desde {new Date(detalhe.created_at).toLocaleDateString('pt-BR')}</p>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setDetalhe(null)
+                      navigate('/agenda', { state: { novoAgendamento: true, cliente: detalhe } })
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                  >
+                    <CalendarDays size={18} />
+                    Criar agendamento na agenda
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setDetalhe(null)
+                      navigate('/vendas', { state: { novaVenda: true, cliente: detalhe } })
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                  >
+                    <ShoppingCart size={18} />
+                    Criar venda com cliente
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setDetalhe(null)
+                      navigate('/vendas', { state: { novaPreVenda: true, cliente: detalhe } })
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                  >
+                    <FileText size={18} />
+                    Criar orçamento com cliente
+                  </button>
                 </div>
               </div>
 
-              {detalhe.telefone && (
-                <button
-                  onClick={() => enviarWhatsApp(detalhe)}
-                  className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <MessageCircle size={16} />
-                  Enviar mensagem no WhatsApp
-                  <span className="text-xs font-normal opacity-80">{detalhe.telefone}</span>
-                </button>
-              )}
+              {/* ── Seção 2: Informações do cliente ── */}
+              <div className="px-5 py-5 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 mb-0.5">Informações do cliente</h3>
+                <p className="text-xs text-gray-400 mb-4">Dados de contato e informações pessoais do cliente</p>
 
-              {(() => {
-                const { totalGasto, qtdServicos, proximoAg } = getDadosCliente(detalhe)
-                return (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2.5">
+                  {detalhe.telefone && (
+                    <div className="flex items-center gap-2.5">
+                      <MessageCircle size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-blue-500 font-medium">{detalhe.telefone}</span>
+                    </div>
+                  )}
+                  {detalhe.email && (
+                    <div className="flex items-center gap-2.5">
+                      <Mail size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-700">{detalhe.email}</span>
+                    </div>
+                  )}
+                  {detalhe.cpf_cnpj && (
+                    <div className="flex items-center gap-2.5">
+                      <CreditCard size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-700">{detalhe.cpf_cnpj}</span>
+                    </div>
+                  )}
+                  {detalhe.endereco && (
+                    <div className="flex items-center gap-2.5">
+                      <MapPin size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-700">{detalhe.endereco}</span>
+                    </div>
+                  )}
+                  {detalhe.aniversario && (
+                    <div className="flex items-center gap-2.5">
+                      <Cake size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-700">
+                        {new Date(detalhe.aniversario + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  )}
+                  {detalhe.observacoes && (
+                    <div className="flex items-start gap-2.5">
+                      <FileText size={16} className="text-gray-400 shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700">{detalhe.observacoes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Métricas */}
+                {(() => {
+                  const { totalGasto, qtdServicos } = getDadosCliente(detalhe)
+                  return totalGasto > 0 || qtdServicos > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 mt-4">
                       <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                        <p className="text-[10px] text-emerald-600 font-medium mb-1">Total gasto</p>
-                        <p className="text-lg font-bold text-emerald-600">{fmt(totalGasto)}</p>
+                        <p className="text-[10px] text-emerald-600 font-medium mb-0.5">Total gasto</p>
+                        <p className="text-base font-bold text-emerald-600">{fmt(totalGasto)}</p>
                       </div>
                       <div className="bg-violet-50 rounded-xl p-3 text-center">
-                        <p className="text-[10px] text-violet-600 font-medium mb-1">Serviços</p>
-                        <p className="text-lg font-bold text-violet-600">{qtdServicos}</p>
+                        <p className="text-[10px] text-violet-600 font-medium mb-0.5">Serviços</p>
+                        <p className="text-base font-bold text-violet-600">{qtdServicos}</p>
                       </div>
                     </div>
+                  ) : null
+                })()}
 
-                    {proximoAg && (
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                        <p className="text-[10px] font-bold text-blue-600 mb-1">Próximo agendamento</p>
-                        <p className="text-xs font-semibold text-blue-800">
-                          {new Date(proximoAg.data_hora).toLocaleString('pt-BR', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                          })}
-                        </p>
-                        {proximoAg.servico && (
-                          <p className="text-[10px] text-blue-500 mt-0.5">{proximoAg.servico}</p>
+                {/* Próximo agendamento */}
+                {(() => {
+                  const { proximoAg } = getDadosCliente(detalhe)
+                  return proximoAg ? (
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mt-3">
+                      <p className="text-[10px] font-bold text-blue-600 mb-0.5">Próximo agendamento</p>
+                      <p className="text-xs font-semibold text-blue-800">
+                        {new Date(proximoAg.data_hora).toLocaleString('pt-BR', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        })}
+                      </p>
+                      {proximoAg.servico && (
+                        <p className="text-[10px] text-blue-500 mt-0.5">{proximoAg.servico}</p>
+                      )}
+                    </div>
+                  ) : null
+                })()}
+              </div>
+
+              {/* ── Seção 3: Veículos do cliente ── */}
+              <div className="px-5 py-5 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 mb-0.5">Veículos do cliente</h3>
+                <p className="text-xs text-gray-400 mb-4">Esses são os veículos cadastrados do cliente</p>
+
+                {(detalhe.veiculo || detalhe.placa) && (
+                  <div className="relative mb-3">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscaVeiculo}
+                      onChange={(e) => setBuscaVeiculo(e.target.value)}
+                      placeholder="Buscar veículo por marca, modelo, placa ou ano..."
+                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-primary-500 outline-none"
+                    />
+                  </div>
+                )}
+
+                {detalhe.veiculo || detalhe.placa ? (
+                  (() => {
+                    const termo = buscaVeiculo.toLowerCase()
+                    const match = !termo ||
+                      (detalhe.veiculo || '').toLowerCase().includes(termo) ||
+                      (detalhe.placa || '').toLowerCase().includes(termo)
+                    return match ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <Car size={32} className="text-red-400 shrink-0 mt-1" />
+                          <div className="space-y-1">
+                            {detalhe.veiculo && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 w-14">Modelo</span>
+                                <span className="text-xs font-semibold text-gray-800">{detalhe.veiculo}</span>
+                              </div>
+                            )}
+                            {detalhe.placa && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 w-14">Placa</span>
+                                <span className="text-xs font-semibold text-gray-800 uppercase">{detalhe.placa}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Fotos das 4 faces */}
+                        {(detalhe.foto_frente || detalhe.foto_traseira || detalhe.foto_direita || detalhe.foto_esquerda) && (
+                          <div className="grid grid-cols-4 gap-1.5 mt-3">
+                            {(['frente', 'traseira', 'direita', 'esquerda'] as const).map(face => {
+                              const url = detalhe[`foto_${face}` as keyof Cliente] as string | null
+                              return url ? (
+                                <img key={face} src={url} alt={face}
+                                  onClick={() => setFotoAmpliada(url)}
+                                  className="w-full h-14 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" />
+                              ) : null
+                            })}
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
 
-              <div className="grid grid-cols-2 gap-3">
-                {detalhe.telefone && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-400 font-medium mb-0.5">Telefone</p>
-                    <p className="text-xs font-semibold text-gray-700">{detalhe.telefone}</p>
-                  </div>
-                )}
-                {detalhe.email && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-400 font-medium mb-0.5">Email</p>
-                    <p className="text-xs font-semibold text-gray-700 truncate">{detalhe.email}</p>
-                  </div>
-                )}
-                {detalhe.aniversario && (
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-400 font-medium mb-0.5">Aniversário</p>
-                    <p className="text-xs font-semibold text-gray-700">{new Date(detalhe.aniversario + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                        {/* Upload fotos do veículo */}
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          {(['frente', 'traseira', 'direita', 'esquerda'] as const).map((face) => {
+                            const campo = `foto_${face}` as keyof Cliente
+                            const url = detalhe[campo] as string | null
+                            const isLoading = uploadingFace === face
+                            const labels = { frente: '⬆ Frente', traseira: '⬇ Traseira', direita: '➡ Direita', esquerda: '⬅ Esquerda' }
+                            return (
+                              <div key={face} className="relative">
+                                {url ? (
+                                  <div className="relative group">
+                                    <img src={url} alt={`Foto ${face}`}
+                                      className="w-full h-20 object-cover rounded-xl border border-gray-200 cursor-pointer"
+                                      onClick={() => setFotoAmpliada(url)} />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-xl transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                      <label className="cursor-pointer p-1.5 bg-white/90 rounded-lg">
+                                        <Camera size={14} className="text-gray-700" />
+                                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculo(detalhe, face, f) }} />
+                                      </label>
+                                      <button onClick={() => removerFotoVeiculo(detalhe, face)} className="p-1.5 bg-red-500/90 rounded-lg">
+                                        <Trash2 size={14} className="text-white" />
+                                      </button>
+                                    </div>
+                                    <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">{labels[face]}</span>
+                                  </div>
+                                ) : (
+                                  <label className={`flex flex-col items-center justify-center h-20 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                                    isLoading ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50'
+                                  }`}>
+                                    {isLoading ? (
+                                      <Loader2 size={18} className="text-primary-500 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Camera size={16} className="text-gray-300 mb-0.5" />
+                                        <span className="text-[9px] font-bold text-gray-400">{labels[face]}</span>
+                                      </>
+                                    )}
+                                    <input type="file" accept="image/*" capture="environment" className="hidden"
+                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculo(detalhe, face, f) }} />
+                                  </label>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 text-center py-4">
+                        Nenhum veículo encontrado para "{buscaVeiculo}"
+                      </p>
+                    )
+                  })()
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl">
+                    <Car size={28} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">Nenhum veículo cadastrado</p>
                   </div>
                 )}
               </div>
 
-              {detalhe.endereco && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[10px] text-gray-400 font-medium mb-0.5"><MapPin size={10} className="inline mr-1" />Endereço</p>
-                  <p className="text-xs font-semibold text-gray-700">{detalhe.endereco}</p>
-                </div>
-              )}
-
-              {(detalhe.veiculo || detalhe.placa) && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[10px] text-gray-400 font-medium mb-0.5"><Car size={10} className="inline mr-1" />Veículo</p>
-                  <p className="text-xs font-semibold text-gray-700">{detalhe.veiculo}{detalhe.placa ? ` · ${detalhe.placa}` : ''}</p>
-                </div>
-              )}
-
-              {(detalhe.placa || detalhe.veiculo) && (
-                <div>
-                  <p className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
-                    <Camera size={13} /> Fotos do veículo
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['frente', 'traseira', 'direita', 'esquerda'] as const).map((face) => {
-                      const campo = `foto_${face}` as keyof Cliente
-                      const url = detalhe[campo] as string | null
-                      const isLoading = uploadingFace === face
-                      const labels = {
-                        frente: '⬆ Frente',
-                        traseira: '⬇ Traseira',
-                        direita: '➡ Direita',
-                        esquerda: '⬅ Esquerda',
-                      }
-                      return (
-                        <div key={face} className="relative">
-                          {url ? (
-                            <div className="relative group">
-                              <img
-                                src={url}
-                                alt={`Foto ${face}`}
-                                className="w-full h-28 object-cover rounded-xl border border-gray-200 cursor-pointer"
-                                onClick={() => setFotoAmpliada(url)}
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-xl transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                <label className="cursor-pointer p-1.5 bg-white/90 rounded-lg">
-                                  <Camera size={14} className="text-gray-700" />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const f = e.target.files?.[0]
-                                      if (f) uploadFotoVeiculo(detalhe, face, f)
-                                    }}
-                                  />
-                                </label>
-                                <button
-                                  onClick={() => removerFotoVeiculo(detalhe, face)}
-                                  className="p-1.5 bg-red-500/90 rounded-lg"
-                                >
-                                  <Trash2 size={14} className="text-white" />
-                                </button>
-                              </div>
-                              <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">
-                                {labels[face]}
-                              </span>
-                            </div>
-                          ) : (
-                            <label className={`flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-                              isLoading
-                                ? 'border-primary-400 bg-primary-50'
-                                : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50'
-                            }`}>
-                              {isLoading ? (
-                                <Loader2 size={20} className="text-primary-500 animate-spin" />
-                              ) : (
-                                <>
-                                  <Camera size={20} className="text-gray-300 mb-1" />
-                                  <span className="text-[10px] font-bold text-gray-400">{labels[face]}</span>
-                                  <span className="text-[9px] text-gray-300 mt-0.5">toque para adicionar</span>
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0]
-                                  if (f) uploadFotoVeiculo(detalhe, face, f)
-                                }}
-                              />
-                            </label>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
+              {/* ── Seção 4: Histórico de serviços ── */}
               {(() => {
                 const { vendasCliente } = getDadosCliente(detalhe)
                 if (vendasCliente.length === 0) return null
                 const historico = [...vendasCliente]
                   .sort((a, b) => new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime())
                   .slice(0, 10)
-
                 return (
-                  <div>
-                    <p className="text-xs font-bold text-gray-700 mb-2">
-                      Histórico de serviços
-                      <span className="text-gray-400 font-normal ml-1">({vendasCliente.length} total)</span>
-                    </p>
+                  <div className="px-5 py-5 border-b border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 mb-0.5">Histórico de serviços</h3>
+                    <p className="text-xs text-gray-400 mb-4">{vendasCliente.length} serviço{vendasCliente.length !== 1 ? 's' : ''} realizado{vendasCliente.length !== 1 ? 's' : ''}</p>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {historico.map((v) => (
-                        <div
-                          key={v.id}
-                          className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
-                        >
+                      {historico.map(v => (
+                        <div key={v.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-gray-800 truncate">
-                              {v.descricao || 'Serviço'}
-                            </p>
-                            <p className="text-[10px] text-gray-400">
-                              {new Date(v.data_venda).toLocaleDateString('pt-BR')}
-                            </p>
+                            <p className="text-xs font-semibold text-gray-800 truncate">{v.descricao || 'Serviço'}</p>
+                            <p className="text-[10px] text-gray-400">{new Date(v.data_venda).toLocaleDateString('pt-BR')}</p>
                           </div>
-                          <span className="text-xs font-bold text-emerald-600 shrink-0 ml-2">
-                            {fmt((v as any).valor_total || v.valor)}
-                          </span>
+                          <span className="text-xs font-bold text-emerald-600 shrink-0 ml-2">{fmt((v as any).valor_total || v.valor)}</span>
                         </div>
                       ))}
                     </div>
@@ -1155,66 +1173,78 @@ export default function Clientes() {
                 )
               })()}
 
-              {detalhe.observacoes && (
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[10px] text-gray-400 font-medium mb-0.5">Observações</p>
-                  <p className="text-xs text-gray-700">{detalhe.observacoes}</p>
+              {/* ── Seção 5: Checklist ── */}
+              <div className="px-5 py-5 border-b border-gray-100">
+                <div className={`border rounded-xl overflow-hidden ${mostrarChecklistCliente ? 'border-emerald-200' : 'border-gray-200'}`}>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarChecklistCliente(v => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck size={16} className={mostrarChecklistCliente ? 'text-emerald-500' : 'text-gray-400'} />
+                      <span className="text-sm font-semibold text-gray-700">Novo checklist</span>
+                      {checklistClienteSalvo && (
+                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">✓ Salvo</span>
+                      )}
+                    </div>
+                    {mostrarChecklistCliente ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                  </button>
+                  {mostrarChecklistCliente && (
+                    <div className="px-4 pb-4 border-t border-gray-100">
+                      <ChecklistEmbutido
+                        nomeCliente={detalhe.nome}
+                        placa={detalhe.placa || ''}
+                        telefone={detalhe.telefone || ''}
+                        onSalvo={() => {
+                          setChecklistClienteSalvo(true)
+                          setMostrarChecklistCliente(false)
+                          toast.success('Checklist criado!')
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Novo checklist para este cliente */}
-              <div className={`border rounded-xl overflow-hidden transition-all ${
-                mostrarChecklistCliente ? 'border-emerald-200' : 'border-gray-200'
-              }`}>
+              {/* ── Rodapé: Excluir ── */}
+              <div className="px-5 py-4">
                 <button
-                  type="button"
-                  onClick={() => setMostrarChecklistCliente(v => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                  onClick={() => remover(detalhe.id)}
+                  className="w-full py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <ClipboardCheck size={16} className={mostrarChecklistCliente ? 'text-emerald-500' : 'text-gray-400'} />
-                    <span className="text-sm font-semibold text-gray-700">
-                      Novo checklist
-                    </span>
-                    {checklistClienteSalvo && (
-                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
-                        ✓ Salvo
-                      </span>
-                    )}
-                  </div>
-                  {mostrarChecklistCliente
-                    ? <ChevronUp size={16} className="text-gray-400" />
-                    : <ChevronDown size={16} className="text-gray-400" />
-                  }
-                </button>
-
-                {mostrarChecklistCliente && (
-                  <div className="px-4 pb-4 border-t border-gray-100">
-                    <ChecklistEmbutido
-                      nomeCliente={detalhe.nome}
-                      placa={detalhe.placa || ''}
-                      telefone={detalhe.telefone || ''}
-                      onSalvo={() => {
-                        setChecklistClienteSalvo(true)
-                        setMostrarChecklistCliente(false)
-                        toast.success('Checklist criado com sucesso!')
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={() => iniciarEdicao(detalhe)} className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
-                  <Pencil size={14} /> Editar
-                </button>
-                <button onClick={() => remover(detalhe.id)} className="flex-1 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
-                  Excluir Cliente
+                  Excluir cliente
                 </button>
               </div>
-                </>
-              )}
+
             </div>
+
+            {/* Footer fixo — Editar */}
+            <div className="shrink-0 px-5 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setEditandoId(detalhe.id)
+                  setForm({
+                    nome: detalhe.nome,
+                    telefone: detalhe.telefone || '',
+                    email: detalhe.email || '',
+                    cpf_cnpj: detalhe.cpf_cnpj || '',
+                    veiculo: detalhe.veiculo || '',
+                    placa: detalhe.placa || '',
+                    endereco: detalhe.endereco || '',
+                    aniversario: detalhe.aniversario || '',
+                    observacoes: detalhe.observacoes || '',
+                  })
+                  setDetalhe(null)
+                  setModal(true)
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors active:scale-[0.98]"
+              >
+                <Pencil size={16} />
+                Editar
+              </button>
+            </div>
+
           </div>
         </div>
       )}
