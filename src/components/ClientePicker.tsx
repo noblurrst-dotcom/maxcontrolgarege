@@ -7,7 +7,7 @@ import { useCloudSync } from '../hooks/useCloudSync'
 interface Props {
   value: string
   telefone?: string
-  onChange: (nome: string, telefone?: string, veiculo?: string, placa?: string) => void
+  onChange: (nome: string, telefone?: string, veiculo?: string, placa?: string, clienteId?: string) => void
 }
 
 export default function ClientePicker({ value, onChange }: Props) {
@@ -114,7 +114,7 @@ export default function ClientePicker({ value, onChange }: Props) {
                   onClick={() => {
                     const veiculosCliente = veiculos.filter(v => v.cliente_id === c.id)
                     const v1 = veiculosCliente[0]
-                    onChange(c.nome, c.telefone, v1 ? `${v1.marca} ${v1.modelo}`.trim() : c.veiculo || undefined, v1 ? v1.placa : c.placa || undefined)
+                    onChange(c.nome, c.telefone, v1 ? `${v1.marca} ${v1.modelo}`.trim() : c.veiculo || undefined, v1 ? v1.placa : c.placa || undefined, c.id)
                     setAberto(false)
                     setBusca('')
                   }}

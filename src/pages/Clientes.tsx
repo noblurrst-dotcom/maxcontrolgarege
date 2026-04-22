@@ -1127,6 +1127,9 @@ export default function Clientes() {
                                   {[veiculo.marca, veiculo.modelo, veiculo.ano].filter(Boolean).join(' · ')}
                                 </p>
                               </div>
+                              {veiculo.cor && (
+                                <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100">{veiculo.cor}</span>
+                              )}
                             </div>
                             <div className="flex items-center gap-1">
                               <button

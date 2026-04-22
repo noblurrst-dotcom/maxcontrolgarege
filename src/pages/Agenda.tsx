@@ -6,7 +6,7 @@ import { format, startOfWeek, addDays, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import type { Agendamento, Servico, Venda } from '../types'
+import type { Agendamento, Servico, Venda, Veiculo } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
@@ -35,7 +35,7 @@ function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
 }
 const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
 
-const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4' })
+const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4', clienteId: '' })
 
 interface EventLayout { top: number; height: number; left: string; width: string; zIndex: number }
 
@@ -101,6 +101,7 @@ export default function Agenda() {
   const { user } = useAuth()
   const { data: lista, save: salvar } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: todosVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [servicos, setServicos] = useState<Servico[]>([])
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
@@ -854,14 +855,65 @@ export default function Agenda() {
               <ClientePicker
                 value={form.nome_cliente}
                 telefone={form.telefone_cliente}
-                onChange={(nome, tel, veiculo, placa) => setForm(prev => ({
+                onChange={(nome, tel, veiculo, placa, clienteId) => setForm(prev => ({
                   ...prev,
                   nome_cliente: nome,
                   telefone_cliente: tel || prev.telefone_cliente,
-                  veiculo: veiculo || prev.veiculo,
-                  placa: placa || prev.placa,
+                  veiculo: veiculo || '',
+                  placa: placa || '',
+                  clienteId: clienteId || '',
                 }))}
               />
+
+              {/* Veículo do cliente */}
+              {(() => {
+                const veiculosCliente = form.clienteId ? todosVeiculos.filter(v => v.cliente_id === form.clienteId) : []
+                if (veiculosCliente.length === 0) return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
+                      <input type="text" value={form.placa} onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} placeholder="ABC-1234" maxLength={8} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none uppercase font-mono" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Veículo</label>
+                      <input type="text" value={form.veiculo} onChange={(e) => setForm({ ...form, veiculo: e.target.value })} placeholder="Ex: Honda Civic" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  </div>
+                )
+                return (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Veículo do cliente</label>
+                    <div className="space-y-2">
+                      {veiculosCliente.map((v) => {
+                        const selecionado = form.placa === v.placa
+                        return (
+                          <button key={v.id} type="button"
+                            onClick={() => setForm(prev => ({ ...prev, placa: v.placa, veiculo: `${v.marca} ${v.modelo}`.trim() }))}
+                            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border-2 transition-all text-left ${
+                              selecionado
+                                ? 'border-primary-500 bg-primary-50'
+                                : 'border-gray-100 hover:border-gray-200 bg-white'
+                            }`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${selecionado ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                              <Car size={18} className={selecionado ? 'text-primary-600' : 'text-gray-400'} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-gray-900 truncate">{v.placa}</p>
+                              <p className="text-[11px] text-gray-400 truncate">
+                                {[v.marca, v.modelo, v.ano].filter(Boolean).join(' · ')}
+                              </p>
+                            </div>
+                            {v.cor && (
+                              <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full shrink-0">{v.cor}</span>
+                            )}
+                            {selecionado && <Check size={16} className="text-primary-600 shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Título */}
               <div>
@@ -900,18 +952,6 @@ export default function Agenda() {
                 {form.servicoSelecionado === 'custom' && (
                   <input type="text" value={form.servico} onChange={(e) => setForm({ ...form, servico: e.target.value })} placeholder="Digite o nome do serviço..." className="w-full mt-2 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                 )}
-              </div>
-
-              {/* Veículo */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
-                  <input type="text" value={form.placa} onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} placeholder="ABC-1234" maxLength={8} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none uppercase font-mono" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Veículo</label>
-                  <input type="text" value={form.veiculo} onChange={(e) => setForm({ ...form, veiculo: e.target.value })} placeholder="Ex: Honda Civic" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
-                </div>
               </div>
 
               {/* Vincular a venda */}
