@@ -47,7 +47,22 @@ const formatCurrency = formatCurrencyUtil
 const AGENDA_ROW_H = 48
 const AGENDA_HORA_INICIO = 7
 
-const DASHBOARD_VERSION = 3
+const DASHBOARD_VERSION = 4
+
+function calcularAlturaCalendario(mesAtual: Date): number {
+  const feriados = getFeriadosDoAno(mesAtual.getFullYear())
+  const mesStr = String(mesAtual.getMonth() + 1).padStart(2, '0')
+  const feriadosDoMes = feriados.filter(f => f.data.startsWith(mesStr + '-'))
+
+  const HEADER_H = 52
+  const GRID_H = 6 * 44
+  const LEGENDA_H = 36
+  const TITULO_FERIADOS_H = feriadosDoMes.length > 0 ? 28 : 0
+  const FERIADO_H = 28
+  const PADDING_H = 40
+
+  return HEADER_H + GRID_H + LEGENDA_H + TITULO_FERIADOS_H + feriadosDoMes.length * FERIADO_H + PADDING_H
+}
 
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '', destino }: { children: React.ReactNode; className?: string; destino?: string }) {
@@ -453,7 +468,7 @@ export default function Dashboard() {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
-  const resetBlocks = () => salvarBlocks([...getDefaultBlocks(getContainerWidth() || window.innerWidth, alturaCardAgenda)])
+  const resetBlocks = () => salvarBlocks([...getDefaultBlocks(getContainerWidth() || window.innerWidth, alturaLinhaCalendario)])
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -550,48 +565,54 @@ export default function Dashboard() {
   const alturaCardAgenda = useMemo(() => {
     const totalHoras = horaFinalAgenda - AGENDA_HORA_INICIO
     const gridH = AGENDA_ROW_H * totalHoras
-    return gridH + 180
+    return gridH + 80 + 44 + 32
   }, [horaFinalAgenda])
+
+  const alturaLinhaCalendario = useMemo(() => {
+    const altCal = calcularAlturaCalendario(mesAtual)
+    const altAg = alturaCardAgenda
+    return Math.max(altCal, altAg)
+  }, [mesAtual, alturaCardAgenda])
 
   const blocks = useMemo(() => {
     const cw = containerWidth || window.innerWidth - 80
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
     const savedVersion = Array.isArray(saved) ? (saved as any[]).find((b: any) => b._version)?._version : undefined
     if (!Array.isArray(saved) || saved.length === 0 || savedVersion !== DASHBOARD_VERSION) {
-      return getDefaultBlocks(cw, alturaCardAgenda)
+      return getDefaultBlocks(cw, alturaLinhaCalendario)
     }
     const raw: BlockConfig[] = DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
     const seen = new Set<string>()
     const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
     const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
     if (temSobreposicao && containerWidth > 0) {
-      setTimeout(() => salvarBlocks(getDefaultBlocks(containerWidth, alturaCardAgenda)), 0)
-      return getDefaultBlocks(containerWidth, alturaCardAgenda)
+      setTimeout(() => salvarBlocks(getDefaultBlocks(containerWidth, alturaLinhaCalendario)), 0)
+      return getDefaultBlocks(containerWidth, alturaLinhaCalendario)
     }
     return final
-  }, [blocksCloud, containerWidth, alturaCardAgenda])
+  }, [blocksCloud, containerWidth, alturaLinhaCalendario])
 
-  // Atualizar altura dos blocos quando alturaCardAgenda muda
+  // Atualizar altura dos blocos quando alturaLinhaCalendario muda
   useEffect(() => {
-    if (!containerWidth || alturaCardAgenda === 0) return
+    if (!containerWidth || alturaLinhaCalendario === 0) return
     const blocoAgenda = blocks.find(b => b.id === 'agenda_semanal')
     const blocoCalendario = blocks.find(b => b.id === 'calendario')
-    const agendaDesatualizada = blocoAgenda && Math.abs(blocoAgenda.h - alturaCardAgenda) > 10
-    const calendarioDesatualizado = blocoCalendario && Math.abs(blocoCalendario.h - alturaCardAgenda) > 10
-    if (agendaDesatualizada || calendarioDesatualizado) {
-      const diffAltura = alturaCardAgenda - (blocoAgenda?.h || alturaCardAgenda)
-      const novosBlocks = blocks.map(b => {
-        if (b.id === 'agenda_semanal' || b.id === 'calendario') {
-          return { ...b, h: alturaCardAgenda }
-        }
-        if (b.y > 0) {
-          return { ...b, y: b.y + diffAltura }
-        }
-        return b
-      })
-      salvarBlocks(novosBlocks)
-    }
-  }, [alturaCardAgenda, containerWidth])
+    const agendaDiferente = blocoAgenda && Math.abs(blocoAgenda.h - alturaLinhaCalendario) > 10
+    const calendarioDiferente = blocoCalendario && Math.abs(blocoCalendario.h - alturaLinhaCalendario) > 10
+    if (!agendaDiferente && !calendarioDiferente) return
+    const alturaAntiga = blocoAgenda?.h ?? alturaLinhaCalendario
+    const diff = alturaLinhaCalendario - alturaAntiga
+    const novosBlocks = blocks.map(b => {
+      if (b.id === 'agenda_semanal' || b.id === 'calendario') {
+        return { ...b, h: alturaLinhaCalendario }
+      }
+      if (b.y > alturaAntiga / 2) {
+        return { ...b, y: b.y + diff }
+      }
+      return b
+    })
+    salvarBlocks(novosBlocks)
+  }, [alturaLinhaCalendario, containerWidth])
 
 
   // Vendas por forma de pagamento
