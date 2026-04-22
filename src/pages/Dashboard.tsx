@@ -43,10 +43,19 @@ function getSaudacao() {
 
 const formatCurrency = formatCurrencyUtil
 
+// Constantes da Agenda Semanal
+const AGENDA_ROW_H = 48
+const AGENDA_HORA_INICIO = 7
+const AGENDA_TOTAL_HORAS = 14
+const AGENDA_GRID_H = AGENDA_ROW_H * AGENDA_TOTAL_HORAS
+const AGENDA_CARD_MIN_H = AGENDA_GRID_H + 180
+
+const DASHBOARD_VERSION = 2
+
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '', destino }: { children: React.ReactNode; className?: string; destino?: string }) {
   return (
-    <div className={`card-responsive relative group ${className}`}>
+    <div className={`card-responsive relative group h-full flex flex-col ${className}`}>
       {children}
       {destino && (
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -407,15 +416,16 @@ interface BlockConfig {
 
 function getDefaultBlocks(cw: number): BlockConfig[] {
   const half = Math.floor((cw - 8) / 2)
+  const agH = AGENDA_CARD_MIN_H
   return [
-    { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,        y: 0,    w: half, h: 480 },
-    { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: half + 8, y: 0,    w: half, h: 480 },
-    { id: 'resumo_financeiro', label: 'Resumo Financeiro',    visible: true, x: 0,        y: 488,  w: half, h: 320 },
-    { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: half + 8, y: 488,  w: half, h: 320 },
-    { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,        y: 816,  w: half, h: 280 },
-    { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: half + 8, y: 816,  w: half, h: 280 },
-    { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,        y: 1104, w: half, h: 160 },
-    { id: 'agendamentos_hoje',  label: 'Agendamentos Hoje',    visible: true, x: half + 8, y: 1104, w: half, h: 160 },
+    { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,        y: 0,             w: half, h: agH },
+    { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: half + 8, y: 0,             w: half, h: agH },
+    { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: 0,        y: agH + 8,       w: half, h: 320 },
+    { id: 'resumo_financeiro', label: 'Resumo Financeiro',    visible: true, x: half + 8, y: agH + 8,       w: half, h: 320 },
+    { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,        y: agH + 336,     w: half, h: 280 },
+    { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: half + 8, y: agH + 336,     w: half, h: 280 },
+    { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,        y: agH + 624,     w: half, h: 160 },
+    { id: 'agendamentos_hoje', label: 'Agendamentos Hoje',    visible: true, x: half + 8, y: agH + 624,     w: half, h: 160 },
   ]
 }
 const DEFAULT_BLOCKS = getDefaultBlocks(1200)
@@ -440,13 +450,15 @@ export default function Dashboard() {
   const [editMode, setEditMode] = useState(false)
   const [showCardManager, setShowCardManager] = useState(false)
 
-  const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud(b as any) }
+  const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud([...b, { _version: DASHBOARD_VERSION }] as any) }
   const blocks = useMemo(() => {
     const cw = containerWidth || window.innerWidth - 80
     const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    const raw: BlockConfig[] = Array.isArray(saved) && saved.length > 0
-      ? DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
-      : [...getDefaultBlocks(cw)]
+    const savedVersion = Array.isArray(saved) ? (saved as any[]).find((b: any) => b._version)?._version : undefined
+    if (!Array.isArray(saved) || saved.length === 0 || savedVersion !== DASHBOARD_VERSION) {
+      return getDefaultBlocks(cw)
+    }
+    const raw: BlockConfig[] = DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
     const seen = new Set<string>()
     const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
     const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
@@ -644,13 +656,13 @@ export default function Dashboard() {
 
             {/* Time slots — Google Calendar style */}
             {(() => {
-              const ROW_H = 48
-              const HORA_INICIO = 7
-              const TOTAL_HORAS = 14
+              const ROW_H = AGENDA_ROW_H
+              const HORA_INICIO = AGENDA_HORA_INICIO
+              const TOTAL_HORAS = AGENDA_TOTAL_HORAS
               const defaultEventColor = '#4285F4'
               return (
-                <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
+                <div style={{ height: AGENDA_GRID_H, overflow: 'visible' }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: AGENDA_GRID_H }}>
                     {/* Coluna de horários */}
                     <div className="relative">
                       {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
@@ -1168,7 +1180,7 @@ export default function Dashboard() {
             return (
               <div
                 key={block.id}
-                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
+                style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: block.id === 'agenda_semanal' ? 'visible' : 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
                 className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : BLOCK_NAVEGACAO[block.id] ? 'cursor-pointer' : ''} ${editMode && dragActiveId !== block.id && resizeActiveId !== block.id ? 'animate-wiggle' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
                 onClick={!editMode && BLOCK_NAVEGACAO[block.id] ? () => navigate(BLOCK_NAVEGACAO[block.id]!) : undefined}
                 onPointerDown={editMode ? (e) => {
