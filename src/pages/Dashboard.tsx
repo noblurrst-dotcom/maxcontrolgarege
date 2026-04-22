@@ -48,7 +48,7 @@ const formatCurrency = formatCurrencyUtil
 const AGENDA_ROW_H = 48
 const AGENDA_HORA_INICIO = 7
 
-const DASHBOARD_VERSION = 4
+const DASHBOARD_VERSION = 5
 
 function calcularAlturaCalendario(mesAtual: Date): number {
   const feriados = getFeriadosDoAno(mesAtual.getFullYear())
@@ -431,8 +431,10 @@ export default function Dashboard() {
   const [mesAtual, setMesAtual] = useState(new Date())
   const gridRef = useRef<HTMLDivElement>(null)
   const calendarioRef = useRef<HTMLDivElement>(null)
+  const agendaRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [alturaRealCalendario, setAlturaRealCalendario] = useState(0)
+  const [alturaRealAgenda, setAlturaRealAgenda] = useState(0)
   const [alturaAgendaOverride, setAlturaAgendaOverride] = useState<number>(0)
   useEffect(() => {
     const update = () => { if (gridRef.current) setContainerWidth(gridRef.current.offsetWidth) }
@@ -456,12 +458,30 @@ export default function Dashboard() {
     return () => ro.disconnect()
   }, [])
 
+  // Medir altura real da agenda via ResizeObserver
+  useEffect(() => {
+    if (!agendaRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const h = entry.contentRect.height
+        if (h > 100) setAlturaRealAgenda(Math.round(h))
+      }
+    })
+    ro.observe(agendaRef.current)
+    return () => ro.disconnect()
+  }, [])
+
   // Sincronizar altura da agenda com a do calendário
   useEffect(() => {
     if (alturaRealCalendario > 100) {
       setAlturaAgendaOverride(alturaRealCalendario)
     }
   }, [alturaRealCalendario])
+
+  // Altura real da primeira linha = max entre calendário e agenda medidos
+  const alturaRealLinhaTopo = (alturaRealCalendario > 100 && alturaRealAgenda > 100)
+    ? Math.max(alturaRealCalendario, alturaRealAgenda)
+    : 0
 
   // Block customization
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
@@ -598,19 +618,24 @@ export default function Dashboard() {
     return final
   }, [blocksCloud, containerWidth, alturaLinhaCalendario])
 
-  // Atualizar altura dos blocos quando alturaLinhaCalendario muda
+  // Atualizar altura e posição dos blocos quando a altura real muda (view mode)
+  // Em edit mode, manter alturaLinhaCalendario (teórica) para permitir resize manual
   useEffect(() => {
-    if (!containerWidth || alturaLinhaCalendario === 0) return
+    if (!containerWidth) return
+    const alturaFonte = (!editMode && alturaRealLinhaTopo > 0)
+      ? alturaRealLinhaTopo
+      : alturaLinhaCalendario
+    if (alturaFonte === 0) return
     const blocoAgenda = blocks.find(b => b.id === 'agenda_semanal')
     const blocoCalendario = blocks.find(b => b.id === 'calendario')
-    const agendaDiferente = blocoAgenda && Math.abs(blocoAgenda.h - alturaLinhaCalendario) > 10
-    const calendarioDiferente = blocoCalendario && Math.abs(blocoCalendario.h - alturaLinhaCalendario) > 10
+    const agendaDiferente = blocoAgenda && Math.abs(blocoAgenda.h - alturaFonte) > 10
+    const calendarioDiferente = blocoCalendario && Math.abs(blocoCalendario.h - alturaFonte) > 10
     if (!agendaDiferente && !calendarioDiferente) return
-    const alturaAntiga = blocoAgenda?.h ?? alturaLinhaCalendario
-    const diff = alturaLinhaCalendario - alturaAntiga
+    const alturaAntiga = blocoAgenda?.h ?? alturaFonte
+    const diff = alturaFonte - alturaAntiga
     const novosBlocks = blocks.map(b => {
       if (b.id === 'agenda_semanal' || b.id === 'calendario') {
-        return { ...b, h: alturaLinhaCalendario }
+        return { ...b, h: alturaFonte }
       }
       if (b.y > alturaAntiga / 2) {
         return { ...b, y: b.y + diff }
@@ -618,7 +643,7 @@ export default function Dashboard() {
       return b
     })
     salvarBlocks(novosBlocks)
-  }, [alturaLinhaCalendario, containerWidth])
+  }, [alturaLinhaCalendario, alturaRealLinhaTopo, containerWidth, editMode])
 
 
   // Vendas por forma de pagamento
@@ -683,13 +708,15 @@ export default function Dashboard() {
   }
 
   const renderAgendaSemanal = () => (
-    <AgendaSemanal
-      diasDaSemana={diasDaSemana}
-      agendamentosDaSemana={agendamentosDaSemana}
-      semanaOffset={semanaOffset}
-      onSemanaChange={setSemanaOffset}
-      horaFinal={horaFinalAgenda}
-    />
+    <div ref={agendaRef} className="h-full">
+      <AgendaSemanal
+        diasDaSemana={diasDaSemana}
+        agendamentosDaSemana={agendamentosDaSemana}
+        semanaOffset={semanaOffset}
+        onSemanaChange={setSemanaOffset}
+        horaFinal={horaFinalAgenda}
+      />
+    </div>
   )
 
   const renderVendasPagamento = () => (
