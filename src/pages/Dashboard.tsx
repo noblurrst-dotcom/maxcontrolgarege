@@ -701,69 +701,75 @@ export default function Dashboard() {
 
   const renderAgendaSemanal = () => (
     <Card destino="/agenda">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <CalendarPlus size={20} className="text-primary-600" />
-            <div>
-              <h3 className="text-base font-bold text-gray-900">Agenda semanal</h3>
-              <p className="text-[11px] text-gray-400">
-                {format(diasDaSemana[0], "d MMM", { locale: ptBR })} — {format(diasDaSemana[6], "d MMM yyyy", { locale: ptBR })}
-              </p>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+        {/* Header fixo */}
+        <div style={{ flexShrink: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <CalendarPlus size={20} className="text-primary-600" />
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Agenda semanal</h3>
+                <p className="text-[11px] text-gray-400">
+                  {format(diasDaSemana[0], "d MMM", { locale: ptBR })} — {format(diasDaSemana[6], "d MMM yyyy", { locale: ptBR })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s - 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <ChevronLeft size={18} className="text-gray-500" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSemanaOffset(0) }}
+                className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                Hoje
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s + 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <ChevronRight size={18} className="text-gray-500" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s - 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-              <ChevronLeft size={18} className="text-gray-500" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setSemanaOffset(0) }}
-              className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-            >
-              Hoje
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s + 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-              <ChevronRight size={18} className="text-gray-500" />
-            </button>
+
+          {/* Header dos dias da semana */}
+          <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2">
+                <div />
+                {diasDaSemana.map((dia) => {
+                  const ehHoje = isToday(dia)
+                  return (
+                    <div key={dia.toISOString()} className="text-center">
+                      <p className={`text-[10px] font-semibold uppercase tracking-wider ${ehHoje ? 'text-primary-600' : 'text-gray-400'}`}>
+                        {format(dia, 'EEE', { locale: ptBR })}
+                      </p>
+                      <p className={`text-lg font-bold mt-0.5 leading-none ${
+                        ehHoje ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center' : 'text-gray-700'
+                      }`}>
+                        {format(dia, 'd')}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Grid semanal estilo Google Calendar */}
-        <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5 flex-1 flex flex-col min-h-0">
-          <div className="min-w-[640px] flex-1 flex flex-col min-h-0">
-            {/* Header com dias da semana */}
-            <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
-              <div /> {/* espaço para coluna de horários */}
-              {diasDaSemana.map((dia) => {
-                const ehHoje = isToday(dia)
+        {/* Grid de horas — ocupa todo o espaço disponível */}
+        <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+          <div className="overflow-x-auto h-full -mx-3 sm:-mx-5 px-3 sm:px-5">
+            <div className="min-w-[640px] h-full">
+              {(() => {
+                const HORA_INICIO = AGENDA_HORA_INICIO
+                const TOTAL_HORAS = horaFinalAgenda - HORA_INICIO
+                const defaultEventColor = '#4285F4'
                 return (
-                  <div key={dia.toISOString()} className="text-center">
-                    <p className={`text-[10px] font-semibold uppercase tracking-wider ${ehHoje ? 'text-primary-600' : 'text-gray-400'}`}>
-                      {format(dia, 'EEE', { locale: ptBR })}
-                    </p>
-                    <p className={`text-lg font-bold mt-0.5 leading-none ${
-                      ehHoje ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center' : 'text-gray-700'
-                    }`}>
-                      {format(dia, 'd')}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Time slots — Google Calendar style */}
-            {(() => {
-              const ROW_H = AGENDA_ROW_H
-              const HORA_INICIO = AGENDA_HORA_INICIO
-              const TOTAL_HORAS = horaFinalAgenda - HORA_INICIO
-              const gridH = ROW_H * TOTAL_HORAS
-              const defaultEventColor = '#4285F4'
-              return (
-                <div style={{ flex: 1, minHeight: gridH, overflow: 'visible' }}>
-                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: '100%', minHeight: gridH }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: '100%' }}>
                     {/* Coluna de horários */}
                     <div className="relative">
                       {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
-                        <div key={hora} className="text-[10px] font-medium text-gray-400 pr-2 text-right -mt-1.5 select-none" style={{ height: ROW_H, paddingTop: 2 }}>
+                        <div key={hora} className="text-[10px] font-medium text-gray-400 pr-2 text-right -mt-1.5 select-none" style={{ height: `${100 / TOTAL_HORAS}%`, paddingTop: 2 }}>
                           {`${String(hora).padStart(2, '0')}:00`}
                         </div>
                       ))}
@@ -785,15 +791,15 @@ export default function Dashboard() {
                         <div key={dia.toISOString()} className={`relative ${ehHoje ? 'bg-primary-50/30' : ''}`}>
                           {/* Grid lines */}
                           {Array.from({ length: TOTAL_HORAS }, (_, i) => (
-                            <div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />
+                            <div key={i} className="border-t border-l border-gray-100 absolute w-full" style={{ top: `${(i / TOTAL_HORAS) * 100}%`, height: `${100 / TOTAL_HORAS}%` }} />
                           ))}
                           {ehHoje && (() => {
                             const agora = new Date()
                             const horaAtual = agora.getHours() + agora.getMinutes() / 60
                             if (horaAtual < HORA_INICIO || horaAtual > HORA_INICIO + TOTAL_HORAS) return null
-                            const topAtual = (horaAtual - HORA_INICIO) * ROW_H
+                            const topPct = ((horaAtual - HORA_INICIO) / TOTAL_HORAS) * 100
                             return (
-                              <div style={{ position: 'absolute', top: topAtual, left: 0, right: 0, height: 2, background: '#ef4444', zIndex: 40, pointerEvents: 'none', borderRadius: 1 }}>
+                              <div style={{ position: 'absolute', top: `${topPct}%`, left: 0, right: 0, height: 2, background: '#ef4444', zIndex: 40, pointerEvents: 'none', borderRadius: 1 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', position: 'absolute', left: -4, top: -3, boxShadow: '0 0 6px rgba(239,68,68,0.6)' }} />
                               </div>
                             )
@@ -820,9 +826,9 @@ export default function Dashboard() {
                               effStart = BIZ_START
                               effEnd = BIZ_END
                             }
-                            const top = Math.max((effStart - HORA_INICIO) * ROW_H, 0)
-                            const bottom = Math.min((effEnd - HORA_INICIO) * ROW_H, TOTAL_HORAS * ROW_H)
-                            const height = Math.max(bottom - top, ROW_H * 0.5)
+                            const topPct = Math.max(((effStart - HORA_INICIO) / TOTAL_HORAS) * 100, 0)
+                            const bottomPct = Math.min(((effEnd - HORA_INICIO) / TOTAL_HORAS) * 100, 100)
+                            const heightPct = Math.max(bottomPct - topPct, (0.5 / TOTAL_HORAS) * 100)
                             const eventColor = ag.cor || defaultEventColor
                             const ehCancelado = ag.status === 'cancelado'
                             const horaIni = format(inicio, 'HH:mm')
@@ -846,7 +852,7 @@ export default function Dashboard() {
                                 }}
                                 className="absolute left-0.5 right-0.5"
                                 style={{
-                                  top, height, zIndex: 10 + idx,
+                                  top: `${topPct}%`, height: `${heightPct}%`, zIndex: 10 + idx,
                                   background: ehCancelado
                                     ? 'repeating-linear-gradient(45deg, rgba(120,120,120,0.25) 0px, rgba(120,120,120,0.25) 2px, rgba(80,80,80,0.15) 2px, rgba(80,80,80,0.15) 10px)'
                                     : gerarGradienteEvento(eventColor),
@@ -864,7 +870,7 @@ export default function Dashboard() {
                                   <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.82)', margin: '1px 0 0', lineHeight: 1.2 }}>
                                     {isFirstDay ? horaIni : `${BIZ_START}:00`} – {isLastDay || !isMultiDay ? horaFim : `${BIZ_END}:00`}
                                   </p>
-                                  {height > 52 && ag.servico && (
+                                  {heightPct > (1.1 / TOTAL_HORAS) * 100 && ag.servico && (
                                     <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)', margin: '3px 0 0', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
                                       {ag.servico}
                                     </p>
@@ -877,27 +883,31 @@ export default function Dashboard() {
                       )
                     })}
                   </div>
-                </div>
-              )
-            })()}
+                )
+              })()}
+            </div>
           </div>
         </div>
 
-        {/* Legenda de status */}
-        <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
-          {[
-            { label: 'Pendente', color: 'bg-amber-300' },
-            { label: 'Confirmado', color: 'bg-blue-300' },
-            { label: 'Em andamento', color: 'bg-primary-400' },
-            { label: 'Concluído', color: 'bg-emerald-300' },
-            { label: 'Cancelado', color: 'bg-red-300' },
-          ].map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${s.color}`} />
-              <span className="text-[10px] text-gray-400">{s.label}</span>
-            </div>
-          ))}
+        {/* Legenda de status — fixo no rodapé */}
+        <div style={{ flexShrink: 0 }}>
+          <div className="flex flex-wrap gap-3 pt-3 border-t border-gray-100 mt-1">
+            {[
+              { label: 'Pendente', color: 'bg-amber-300' },
+              { label: 'Confirmado', color: 'bg-blue-300' },
+              { label: 'Em andamento', color: 'bg-primary-400' },
+              { label: 'Concluído', color: 'bg-emerald-300' },
+              { label: 'Cancelado', color: 'bg-red-300' },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                <span className="text-[10px] text-gray-400">{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
+      </div>
     </Card>
   )
 
@@ -1274,9 +1284,11 @@ export default function Dashboard() {
             const by = livePos[block.id]?.y ?? block.y
             const bw = liveW[block.id] ?? block.w
             const bhRaw = liveH[block.id] ?? block.h
-            const bh = !editMode && block.id === 'agenda_semanal' && alturaAgendaOverride > 0
-              ? alturaAgendaOverride
-              : bhRaw
+            const bh = !editMode && block.id === 'calendario'
+              ? 'auto' as any
+              : !editMode && block.id === 'agenda_semanal' && alturaAgendaOverride > 0
+                ? alturaAgendaOverride
+                : bhRaw
             return (
               <div
                 key={block.id}
