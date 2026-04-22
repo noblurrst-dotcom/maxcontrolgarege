@@ -854,7 +854,13 @@ export default function Agenda() {
               <ClientePicker
                 value={form.nome_cliente}
                 telefone={form.telefone_cliente}
-                onChange={(nome, tel) => setForm({ ...form, nome_cliente: nome, telefone_cliente: tel || form.telefone_cliente })}
+                onChange={(nome, tel, veiculo, placa) => setForm(prev => ({
+                  ...prev,
+                  nome_cliente: nome,
+                  telefone_cliente: tel || prev.telefone_cliente,
+                  veiculo: veiculo || prev.veiculo,
+                  placa: placa || prev.placa,
+                }))}
               />
 
               {/* Título */}

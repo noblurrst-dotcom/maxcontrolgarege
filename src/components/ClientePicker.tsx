@@ -1,17 +1,18 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { UserPlus, Search, ChevronDown, X } from 'lucide-react'
-import type { Cliente } from '../types'
+import type { Cliente, Veiculo } from '../types'
 import { uid } from '../lib/utils'
 import { useCloudSync } from '../hooks/useCloudSync'
 
 interface Props {
   value: string
   telefone?: string
-  onChange: (nome: string, telefone?: string) => void
+  onChange: (nome: string, telefone?: string, veiculo?: string, placa?: string) => void
 }
 
 export default function ClientePicker({ value, onChange }: Props) {
   const { data: clientes, save: salvarClientes } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
+  const { data: veiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [aberto, setAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [novoCliente, setNovoCliente] = useState(false)
@@ -111,7 +112,9 @@ export default function ClientePicker({ value, onChange }: Props) {
                   key={c.id}
                   type="button"
                   onClick={() => {
-                    onChange(c.nome, c.telefone)
+                    const veiculosCliente = veiculos.filter(v => v.cliente_id === c.id)
+                    const v1 = veiculosCliente[0]
+                    onChange(c.nome, c.telefone, v1 ? `${v1.marca} ${v1.modelo}`.trim() : c.veiculo || undefined, v1 ? v1.placa : c.placa || undefined)
                     setAberto(false)
                     setBusca('')
                   }}
