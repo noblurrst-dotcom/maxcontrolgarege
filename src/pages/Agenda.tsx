@@ -828,6 +828,28 @@ export default function Agenda() {
                 </div>
               </div>
 
+              {/* Data saída + Hora saída */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Data saída</label>
+                  <input type="date" value={form.data_hora_fim ? form.data_hora_fim.split('T')[0] : ''}
+                    onChange={(e) => {
+                      const time = form.data_hora_fim ? form.data_hora_fim.split('T')[1] || '' : ''
+                      setForm({ ...form, data_hora_fim: time ? `${e.target.value}T${time}` : e.target.value })
+                    }}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Hora saída</label>
+                  <input type="time" value={form.data_hora_fim ? form.data_hora_fim.split('T')[1]?.slice(0, 5) || '' : ''}
+                    onChange={(e) => {
+                      const date = form.data_hora_fim ? form.data_hora_fim.split('T')[0] : (form.data_hora ? form.data_hora.split('T')[0] : new Date().toISOString().split('T')[0])
+                      setForm({ ...form, data_hora_fim: `${date}T${e.target.value}` })
+                    }}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+              </div>
+
               {/* Cliente */}
               <ClientePicker
                 value={form.nome_cliente}
@@ -912,7 +934,6 @@ export default function Agenda() {
                 <p className="text-[11px] text-gray-400 mb-3">Selecione mais campos para preenchimento</p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { key: 'data_fim', label: 'Data/hora final', icon: Clock },
                     { key: 'desconto', label: 'Desconto', icon: DollarSign },
                     { key: 'descricao', label: 'Descrição', icon: FileText },
                     { key: 'pagamento', label: 'Pagamento', icon: DollarSign },
@@ -931,29 +952,6 @@ export default function Agenda() {
               </div>
 
               {/* Campos opcionais visíveis */}
-              {camposOpcionais.has('data_fim') && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Data final</label>
-                    <input type="date" value={form.data_hora_fim ? form.data_hora_fim.split('T')[0] : ''}
-                      onChange={(e) => {
-                        const time = form.data_hora_fim ? form.data_hora_fim.split('T')[1] || '' : ''
-                        setForm({ ...form, data_hora_fim: time ? `${e.target.value}T${time}` : e.target.value })
-                      }}
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Hora final</label>
-                    <input type="time" value={form.data_hora_fim ? form.data_hora_fim.split('T')[1]?.slice(0, 5) || '' : ''}
-                      onChange={(e) => {
-                        const date = form.data_hora_fim ? form.data_hora_fim.split('T')[0] : (form.data_hora ? form.data_hora.split('T')[0] : new Date().toISOString().split('T')[0])
-                        setForm({ ...form, data_hora_fim: `${date}T${e.target.value}` })
-                      }}
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
-                  </div>
-                </div>
-              )}
-
               {camposOpcionais.has('desconto') && (
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Desconto (R$)</label>
