@@ -8,6 +8,7 @@ import { useCloudSync } from '../hooks/useCloudSync'
 import { supabase, garantirBucketFotosVeiculos } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import { validarArquivo } from '../lib/validarArquivo'
 import ChecklistEmbutido from '../components/ChecklistEmbutido'
 
 const initForm = () => ({ nome: '', telefone: '', email: '', cpf_cnpj: '', veiculo: '', placa: '', endereco: '', aniversario: '', observacoes: '' })
@@ -252,6 +253,8 @@ export default function Clientes() {
     file: File
   ) => {
     if (!user) return
+    const erroArquivo = validarArquivo(file)
+    if (erroArquivo) { toast.error(erroArquivo); return }
     setUploadingFaceVeiculo(`${veiculo.id}-${face}`)
     try {
       const campo = `foto_${face}` as keyof Veiculo

@@ -5,6 +5,7 @@ import { CHECKLIST_ITENS_PADRAO } from '../types'
 import type { Servico } from '../types'
 import { Camera, X, ChevronDown, ChevronUp, ClipboardCheck, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { validarArquivo } from '../lib/validarArquivo'
 
 interface ItemForm {
   item_tipo: string
@@ -85,7 +86,12 @@ export default function ChecklistEmbutido({ nomeCliente, placa, telefone, onSalv
   const handleFotoAdd = (index: number, files: FileList | null) => {
     if (!files) return
     const newItens = [...itens]
-    const novosArquivos = Array.from(files)
+    const novosArquivos = Array.from(files).filter(f => {
+      const erro = validarArquivo(f)
+      if (erro) { toast.error(erro); return false }
+      return true
+    })
+    if (novosArquivos.length === 0) return
     const novosPreviews = novosArquivos.map((f) => URL.createObjectURL(f))
     newItens[index].fotos = [...newItens[index].fotos, ...novosArquivos]
     newItens[index].previews = [...newItens[index].previews, ...novosPreviews]

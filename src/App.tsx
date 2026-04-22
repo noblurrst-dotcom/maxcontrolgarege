@@ -4,8 +4,9 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { SubUsuarioProvider } from './contexts/SubUsuarioContext'
+import { SubUsuarioProvider, useSubUsuario } from './contexts/SubUsuarioContext'
 import { SupportViewProvider } from './contexts/SupportViewContext'
+import type { ModuloId } from './types'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -34,6 +35,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
   if (!user) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function ModuloProtegido({ modulo, children }: { modulo: ModuloId; children: React.ReactNode }) {
+  const { podeVer } = useSubUsuario()
+  if (!podeVer(modulo)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-gray-500 font-medium">Acesso não autorizado</p>
+          <p className="text-gray-400 text-sm mt-1">Você não tem permissão para acessar este módulo</p>
+        </div>
+      </div>
+    )
+  }
   return <>{children}</>
 }
 
@@ -67,14 +83,14 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/vendas" element={<Vendas />} />
-              <Route path="/agenda" element={<Agenda />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/servicos" element={<Servicos />} />
-              <Route path="/financeiro" element={<Financeiro />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
-              <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/" element={<ModuloProtegido modulo="dashboard"><Dashboard /></ModuloProtegido>} />
+              <Route path="/vendas" element={<ModuloProtegido modulo="vendas"><Vendas /></ModuloProtegido>} />
+              <Route path="/agenda" element={<ModuloProtegido modulo="agenda"><Agenda /></ModuloProtegido>} />
+              <Route path="/clientes" element={<ModuloProtegido modulo="clientes"><Clientes /></ModuloProtegido>} />
+              <Route path="/servicos" element={<ModuloProtegido modulo="servicos"><Servicos /></ModuloProtegido>} />
+              <Route path="/financeiro" element={<ModuloProtegido modulo="financeiro"><Financeiro /></ModuloProtegido>} />
+              <Route path="/configuracoes" element={<ModuloProtegido modulo="configuracoes"><Configuracoes /></ModuloProtegido>} />
+              <Route path="/usuarios" element={<ModuloProtegido modulo="usuarios"><Usuarios /></ModuloProtegido>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
