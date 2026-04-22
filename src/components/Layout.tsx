@@ -11,6 +11,7 @@ import {
   X,
   DollarSign,
   Briefcase,
+  BarChart2,
   MoreHorizontal,
   Settings,
   Moon,
@@ -115,6 +116,7 @@ export default function Layout() {
     { path: '/clientes', label: 'Clientes', icon: Users, modulo: 'clientes' as ModuloId },
     { path: '/financeiro', label: 'Financeiro', icon: DollarSign, modulo: 'financeiro' as ModuloId },
     { path: '/servicos', label: 'Serviços', icon: Briefcase, modulo: 'servicos' as ModuloId },
+    { path: '/relatorios', label: 'Relatórios', icon: BarChart2, modulo: 'financeiro' as ModuloId },
   ]
   const navItems = allNavItems.filter(i => podeVer(i.modulo))
 
@@ -133,6 +135,7 @@ export default function Layout() {
   const moreItems = [
     { path: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: 'financeiro' as ModuloId },
     { path: '/servicos', icon: Briefcase, label: 'Serviços', modulo: 'servicos' as ModuloId },
+    { path: '/relatorios', icon: BarChart2, label: 'Relatórios', modulo: 'financeiro' as ModuloId },
   ].filter(i => podeVer(i.modulo))
 
   const isMoreActive = moreItems.some(i => location.pathname === i.path)

@@ -17,6 +17,7 @@ const Servicos = lazy(() => import('./pages/Servicos'))
 const Financeiro = lazy(() => import('./pages/Financeiro'))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
+const Relatorios = lazy(() => import('./pages/Relatorios'))
 const Layout = lazy(() => import('./components/Layout'))
 const AdminSuporte = lazy(() => import('./pages/AdminSuporte'))
 
@@ -91,6 +92,7 @@ function App() {
               <Route path="/financeiro" element={<ModuloProtegido modulo="financeiro"><Financeiro /></ModuloProtegido>} />
               <Route path="/configuracoes" element={<ModuloProtegido modulo="configuracoes"><Configuracoes /></ModuloProtegido>} />
               <Route path="/usuarios" element={<ModuloProtegido modulo="usuarios"><Usuarios /></ModuloProtegido>} />
+              <Route path="/relatorios" element={<ModuloProtegido modulo="financeiro"><Relatorios /></ModuloProtegido>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
