@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   X,
   Wand2,
+  FileText,
 } from 'lucide-react'
 import { useBrand } from '../contexts/BrandContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
@@ -374,7 +375,7 @@ function ResumoFinanceiro({ entradas, saidas, saldo }: { entradas: number; saida
 }
 
 
-type BlockId = 'calendario' | 'grafico_vendas' | 'resumo_financeiro' | 'agenda_semanal' | 'vendas_pagamento' | 'top_clientes' | 'sua_empresa'
+type BlockId = 'calendario' | 'grafico_vendas' | 'resumo_financeiro' | 'agenda_semanal' | 'vendas_pagamento' | 'top_clientes' | 'sua_empresa' | 'agendamentos_hoje'
 
 interface BlockConfig {
   id: BlockId
@@ -388,7 +389,6 @@ interface BlockConfig {
 
 function getDefaultBlocks(cw: number): BlockConfig[] {
   const half = Math.floor((cw - 8) / 2)
-  const full = cw
   return [
     { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,        y: 0,    w: half, h: 480 },
     { id: 'grafico_vendas',    label: 'Gráfico de Vendas',    visible: true, x: half + 8, y: 0,    w: half, h: 480 },
@@ -396,7 +396,8 @@ function getDefaultBlocks(cw: number): BlockConfig[] {
     { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: half + 8, y: 488,  w: half, h: 320 },
     { id: 'vendas_pagamento',  label: 'Vendas por Pagamento', visible: true, x: 0,        y: 816,  w: half, h: 280 },
     { id: 'top_clientes',      label: 'Top Clientes',         visible: true, x: half + 8, y: 816,  w: half, h: 280 },
-    { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,        y: 1104, w: full, h: 160 },
+    { id: 'sua_empresa',       label: 'Sua Empresa',          visible: true, x: 0,        y: 1104, w: half, h: 160 },
+    { id: 'agendamentos_hoje',  label: 'Agendamentos Hoje',    visible: true, x: half + 8, y: 1104, w: half, h: 160 },
   ]
 }
 const DEFAULT_BLOCKS = getDefaultBlocks(1200)
@@ -473,6 +474,7 @@ export default function Dashboard() {
   const { data: agendamentos } = useCloudSync<any>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: clientes } = useCloudSync<any>({ table: 'clientes', storageKey: 'clientes' })
   const { data: financeiro } = useCloudSync<any>({ table: 'financeiro', storageKey: 'financeiro' })
+  const { data: preVendas } = useCloudSync<any>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
   
   // Métricas financeiras do período
   const vendasMes = useMemo(() => vendas.filter((v: any) => isInRange(v.data_venda)).reduce((a: number, v: any) => a + (v.valor || 0), 0), [vendas, isInRange])
@@ -530,6 +532,28 @@ export default function Dashboard() {
     return agendamentos.filter((a: any) => (a.data_hora || '').startsWith(dStr)).length
   }
 
+  // Métricas rápidas
+  const agendamentosHoje = useMemo(() => {
+    const hojeStr = format(new Date(), 'yyyy-MM-dd')
+    return agendamentos.filter((a: any) => (a.data_hora || '').startsWith(hojeStr) && a.status !== 'cancelado').length
+  }, [agendamentos])
+
+  const vendasMesAtual = useMemo(() => {
+    const inicio = format(startOfMonth(new Date()), 'yyyy-MM-dd')
+    const fim = format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    return vendas.filter((v: any) => v.data_venda >= inicio && v.data_venda <= fim).reduce((a: number, v: any) => a + (v.valor_total || v.valor || 0), 0)
+  }, [vendas])
+
+  const orcamentosPendentes = useMemo(() => (preVendas || []).filter((pv: any) => pv.status === 'pendente').length, [preVendas])
+
+  const agendamentosDeHoje = useMemo(() => {
+    const hojeStr = format(new Date(), 'yyyy-MM-dd')
+    return agendamentos
+      .filter((a: any) => (a.data_hora || '').startsWith(hojeStr))
+      .sort((a: any, b: any) => a.data_hora.localeCompare(b.data_hora))
+      .slice(0, 5)
+  }, [agendamentos])
+
 
 
 
@@ -544,6 +568,7 @@ export default function Dashboard() {
       case 'vendas_pagamento': return renderVendasPagamento()
       case 'top_clientes': return renderTopClientes()
       case 'sua_empresa': return renderEmpresa()
+      case 'agendamentos_hoje': return renderAgendamentosHoje()
       default: return null
     }
   }
@@ -823,19 +848,97 @@ export default function Dashboard() {
     </Card>
   )
 
-  const renderEmpresa = () => (
+  const renderAgendamentosHoje = () => (
     <Card>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
-            <Building2 size={20} className="text-primary-600" />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
+            <CalendarPlus size={16} className="text-blue-600" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-gray-900">Sua empresa</h4>
-            <p className="text-xs text-gray-400">{clientes.length} clientes • {vendas.length} vendas • {agendamentos.length} agendamentos</p>
+            <h4 className="text-sm font-bold text-gray-900">Hoje</h4>
+            <p className="text-[10px] text-gray-400">
+              {agendamentosDeHoje.length === 0 ? 'Sem agendamentos' : `${agendamentosDeHoje.length} agendamento${agendamentosDeHoje.length > 1 ? 's' : ''}`}
+            </p>
           </div>
         </div>
+        <button onClick={() => navigate('/agenda')} className="text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
+          Ver todos <ArrowRight size={12} />
+        </button>
+      </div>
+      {agendamentosDeHoje.length === 0 ? (
+        <div className="text-center py-3">
+          <p className="text-xs text-gray-400">Nenhum agendamento para hoje</p>
+          <button onClick={() => navigate('/agenda')} className="mt-2 text-xs font-bold text-primary-600 hover:text-primary-700">+ Novo agendamento</button>
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[calc(100%-80px)] overflow-y-auto">
+          {agendamentosDeHoje.map((ag: any) => {
+            const cor = ag.cor || '#4285F4'
+            return (
+              <div key={ag.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 transition-colors">
+                <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: cor }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-900 truncate">{ag.nome_cliente}</p>
+                  <p className="text-[10px] text-gray-400">
+                    {format(new Date(ag.data_hora), 'HH:mm')}
+                    {ag.servico && ` • ${ag.servico}`}
+                  </p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                  ag.status === 'confirmado' ? 'bg-blue-50 text-blue-600' :
+                  ag.status === 'em_andamento' ? 'bg-amber-50 text-amber-600' :
+                  ag.status === 'concluido' ? 'bg-emerald-50 text-emerald-600' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {ag.status === 'confirmado' ? 'Confirmado' :
+                   ag.status === 'em_andamento' ? 'Em andamento' :
+                   ag.status === 'concluido' ? 'Concluído' :
+                   'Pendente'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </Card>
   )
+
+  const renderEmpresa = () => {
+    const totalVendasHoje = vendas.filter((v: any) =>
+      (v.data_venda || '').startsWith(format(new Date(), 'yyyy-MM-dd'))
+    ).reduce((a: number, v: any) => a + (v.valor_total || v.valor || 0), 0)
+
+    return (
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          {brand.logo_url ? (
+            <img src={brand.logo_url} alt="Logo" className="w-12 h-12 rounded-xl object-contain border border-gray-100" />
+          ) : (
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: brand.cor_primaria + '20' }}>
+              <Building2 size={22} style={{ color: brand.cor_primaria }} />
+            </div>
+          )}
+          <div>
+            <h4 className="text-sm font-bold text-gray-900">{brand.nome_empresa || 'Minha Empresa'}</h4>
+            {brand.slogan && <p className="text-[11px] text-gray-400">{brand.slogan}</p>}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Clientes', value: clientes.length, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: 'Vendas hoje', value: formatCurrency(totalVendasHoje), color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Agendamentos', value: agendamentos.length, color: 'text-blue-600', bg: 'bg-blue-50' },
+          ].map(item => (
+            <div key={item.label} className={`${item.bg} rounded-xl p-2.5 text-center`}>
+              <p className="text-[9px] font-medium text-gray-500 mb-0.5">{item.label}</p>
+              <p className={`text-sm font-bold ${item.color}`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -884,6 +987,13 @@ export default function Dashboard() {
                 <CalendarPlus size={14} />
                 Agendamento
               </button>
+              <button
+                onClick={() => navigate('/vendas')}
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+              >
+                <FileText size={14} />
+                Orçamento
+              </button>
             </>
           )}
           {editMode && (
@@ -910,6 +1020,29 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Métricas rápidas */}
+      {!editMode && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Agendamentos hoje', value: agendamentosHoje, icon: CalendarPlus, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100', onClick: () => navigate('/agenda') },
+            { label: 'Vendas este mês', value: formatCurrency(vendasMesAtual), icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', onClick: () => navigate('/vendas') },
+            { label: 'Total de clientes', value: clientes.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', iconBg: 'bg-violet-100', onClick: () => navigate('/clientes') },
+            { label: 'Orçamentos pendentes', value: orcamentosPendentes, icon: FileText, color: 'text-amber-600', bg: 'bg-amber-50', iconBg: 'bg-amber-100', onClick: () => navigate('/vendas') },
+          ].map((item) => (
+            <button key={item.label} onClick={item.onClick}
+              className={`${item.bg} rounded-2xl p-4 text-left hover:brightness-95 transition-all active:scale-[0.98] border border-transparent hover:border-gray-100`}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-8 h-8 ${item.iconBg} rounded-xl flex items-center justify-center shrink-0`}>
+                  <item.icon size={16} className={item.color} />
+                </div>
+                <p className="text-[11px] font-medium text-gray-500 leading-tight">{item.label}</p>
+              </div>
+              <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filtro de período */}
       {!editMode && (
