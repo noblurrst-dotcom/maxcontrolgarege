@@ -1,7 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2, Car, DollarSign, FileText, Settings2 } from 'lucide-react'
-import { useDateRange } from '../hooks/useDateRange'
-import DateRangeFilter from '../components/DateRangeFilter'
+import { useState, useEffect, useMemo } from 'react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check } from 'lucide-react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,10 +7,10 @@ import { supabase } from '../lib/supabase'
 import type { Agendamento, Servico, Venda, Veiculo } from '../types'
 import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
-import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
+import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 import AgendaSemanal from '../components/AgendaSemanal'
-import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps, autoArranjarBlocks } from '../utils/dashboardLayout'
+import AgendaMensal from '../components/AgendaMensal'
 
 const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
   pendente: { label: 'Pendente', color: 'text-amber-600', bg: 'bg-amber-100' },
@@ -23,18 +21,6 @@ const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; 
 }
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
-
-type AgendaBlockId = 'stats' | 'calendario' | 'lista'
-interface AgendaBlock { id: AgendaBlockId; label: string; visible: boolean; x: number; y: number; w: number; h: number }
-function getDefaultAgendaBlocks(cw: number): AgendaBlock[] {
-  const half = Math.floor((cw - 8) / 2)
-  return [
-    { id: 'stats',      label: 'Estatísticas',             visible: true, x: 0,        y: 0,    w: half, h: 140 },
-    { id: 'calendario', label: 'Calendário Semanal',       visible: true, x: half + 8, y: 0,    w: half, h: 588 },
-    { id: 'lista',      label: 'Lista de Agendamentos',    visible: true, x: 0,        y: 148,  w: half, h: 440 },
-  ]
-}
-const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
 
 const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4', clienteId: '' })
 
@@ -59,47 +45,16 @@ export default function Agenda() {
   }, [])
   const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
-  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange } = useDateRange()
+  const [mesAtual, setMesAtual] = useState(new Date())
 
-  const [agendaEditMode, setAgendaEditMode] = useState(false)
-  const [showAgendaCardManager, setShowAgendaCardManager] = useState(false)
-  const agendaGridRef = useRef<HTMLDivElement>(null)
-  const [agendaContainerWidth, setAgendaContainerWidth] = useState(0)
+  // Visualização: semanal ou mensal, persistida em localStorage
+  const [visualizacao, setVisualizacao] = useState<'semanal' | 'mensal'>(() => {
+    const saved = localStorage.getItem('agenda_visualizacao')
+    return saved === 'mensal' ? 'mensal' : 'semanal'
+  })
   useEffect(() => {
-    const update = () => { if (agendaGridRef.current) setAgendaContainerWidth(agendaGridRef.current.offsetWidth) }
-    update()
-    const ro = new ResizeObserver(update)
-    if (agendaGridRef.current) ro.observe(agendaGridRef.current)
-    return () => ro.disconnect()
-  }, [])
-  const getAgendaContainerWidth = () => agendaGridRef.current?.clientWidth ?? agendaContainerWidth ?? 0
-  const { data: agendaBlocksCloud, save: salvarAgendaBlocksCloud } = useCloudSyncSingle<{ blocks: AgendaBlock[] }>({ table: 'agenda_blocks', storageKey: 'agenda_blocks', defaultValue: { blocks: DEFAULT_AGENDA_BLOCKS }, dataField: 'blocks' })
-  const salvarAgendaBlocks = (b: AgendaBlock[]) => { salvarAgendaBlocksCloud(b as any) }
-  const agendaBlocks = useMemo(() => {
-    const cw = agendaContainerWidth || window.innerWidth - 80
-    const saved = (agendaBlocksCloud as any) as AgendaBlock[] | undefined
-    const raw: AgendaBlock[] = Array.isArray(saved) && saved.length > 0
-      ? DEFAULT_AGENDA_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as AgendaBlock })
-      : [...getDefaultAgendaBlocks(cw)]
-    const seen = new Set<string>()
-    const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
-    const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
-    if (temSobreposicao && agendaContainerWidth > 0) {
-      setTimeout(() => salvarAgendaBlocks(getDefaultAgendaBlocks(agendaContainerWidth)), 0)
-      return getDefaultAgendaBlocks(agendaContainerWidth)
-    }
-    return final
-  }, [agendaBlocksCloud, agendaContainerWidth])
-  const toggleAgBlock = (id: AgendaBlockId) => salvarAgendaBlocks(agendaBlocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
-  const resetAgendaBlocks = () => salvarAgendaBlocks([...getDefaultAgendaBlocks(getAgendaContainerWidth() || window.innerWidth)])
-  const agendaResizeDataRef = useRef<{ id: AgendaBlockId; startClientX: number; startClientY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
-  const agendaDragDataRef = useRef<{ id: AgendaBlockId; offsetX: number; offsetY: number; curX: number; curY: number } | null>(null)
-  const [agendaLiveW, setAgendaLiveW] = useState<Partial<Record<AgendaBlockId, number>>>({})
-  const [agendaLiveH, setAgendaLiveH] = useState<Partial<Record<AgendaBlockId, number>>>({})
-  const [agendaLivePos, setAgendaLivePos] = useState<Partial<Record<AgendaBlockId, { x: number; y: number }>>>({})
-  const [agendaSnapLines, setAgendaSnapLines] = useState<{ x?: number; y?: number }>({})
-  const [agendaDragActiveId, setAgendaDragActiveId] = useState<AgendaBlockId | null>(null)
-  const [agendaResizeActiveId, setAgendaResizeActiveId] = useState<AgendaBlockId | null>(null)
+    localStorage.setItem('agenda_visualizacao', visualizacao)
+  }, [visualizacao])
 
   const inicioSemana = useMemo(() => {
     const base = startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -175,309 +130,194 @@ export default function Agenda() {
     window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
+  // Agendamentos filtrados por busca (para a lista na vista semanal)
   const filtradas = useMemo(() => lista.filter((a) => {
     const t = buscaDebounced.toLowerCase()
-    const matchBusca = a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
-    const matchData = isInRange((a.data_hora || '').slice(0, 10))
-    return matchBusca && matchData
-  }), [lista, buscaDebounced, isInRange])
+    return a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
+  }), [lista, buscaDebounced])
 
-  const hojeStr = format(hoje, 'yyyy-MM-dd')
-  const agendHoje = useMemo(() => lista.filter(a => (a.data_hora || '').startsWith(hojeStr)).length, [lista, hojeStr])
+  // Agendamentos do período visível (mês em mensal, semana em semanal)
+  const agendamentosPeriodo = useMemo(() => {
+    if (visualizacao === 'mensal') {
+      const mesStr = format(mesAtual, 'yyyy-MM')
+      return lista.filter(a => a.data_hora && a.data_hora.startsWith(mesStr))
+    }
+    return agendamentosDaSemana
+  }, [lista, visualizacao, mesAtual, agendamentosDaSemana])
+
+  // Chips de status
+  const chips = useMemo(() => {
+    const aprovados = agendamentosPeriodo.filter(a => a.status === 'confirmado' || a.status === 'concluido').length
+    const pendentes = agendamentosPeriodo.filter(a => a.status === 'pendente').length
+    const cancelados = agendamentosPeriodo.filter(a => a.status === 'cancelado').length
+    // TODO: campo `importante` não existe no tipo Agendamento ainda
+    const importantes = 0
+    return { aprovados, pendentes, cancelados, importantes }
+  }, [agendamentosPeriodo])
+
+  // Resumo da agenda
+  const resumo = useMemo(() => {
+    const total = agendamentosPeriodo.length
+    const concluidos = agendamentosPeriodo.filter(a => a.status === 'concluido')
+    const pendentes = agendamentosPeriodo.filter(a => a.status === 'pendente')
+    const cancelados = agendamentosPeriodo.filter(a => a.status === 'cancelado')
+    const somaValor = (arr: Agendamento[]) => arr.reduce((s, a) => s + Math.max((a.valor || 0) - (a.desconto || 0), 0), 0)
+    return {
+      total,
+      concluidos: concluidos.length, valorConcluidos: somaValor(concluidos),
+      pendentes: pendentes.length, valorPendentes: somaValor(pendentes),
+      cancelados: cancelados.length, valorCancelados: somaValor(cancelados),
+      valorTotal: somaValor(agendamentosPeriodo),
+    }
+  }, [agendamentosPeriodo])
+
+  // Abrir modal com data preenchida (clique em célula do mensal)
+  const abrirModalComData = (dataISO: string) => {
+    setForm({ ...initForm(), data_hora: `${dataISO}T09:00` })
+    setModal(true)
+  }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-          <p className="text-sm text-gray-400 mt-0.5 capitalize">{format(hoje, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowAgendaCardManager(!showAgendaCardManager)}
-            title="Gerenciar cards"
-            className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => setAgendaEditMode(v => !v)}
-            title={agendaEditMode ? 'Concluir edição' : 'Editar painel'}
-            className={`p-2 rounded-xl transition-colors ${agendaEditMode ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'}`}
-          >
-            {agendaEditMode ? <Check size={16} /> : <Pencil size={16} />}
-          </button>
-          {agendaEditMode && (
-            <>
-              <button
-                onClick={() => {
-                  const cw = getAgendaContainerWidth()
-                  if (cw === 0) return
-                  salvarAgendaBlocks(autoArranjarBlocks(agendaBlocks, cw))
-                }}
-                title="Organizar cards"
-                className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
-              >
-                <Wand2 size={16} />
-              </button>
-              <button onClick={resetAgendaBlocks} title="Resetar layout" className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200">
-                <RotateCcw size={16} />
-              </button>
-            </>
-          )}
-          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+    <div className="space-y-4 pb-20 md:pb-6">
+      {/* Header: título + tabs + botão */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+            <p className="text-sm text-gray-400 mt-0.5 capitalize">{format(hoje, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+          </div>
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm self-start md:self-auto">
             <Plus size={16} /> Novo Agendamento
           </button>
         </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 self-start">
+          <button
+            onClick={() => setVisualizacao('semanal')}
+            aria-selected={visualizacao === 'semanal'}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+              visualizacao === 'semanal' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <CalendarDays size={14} /> Agenda
+          </button>
+          <button
+            onClick={() => setVisualizacao('mensal')}
+            aria-selected={visualizacao === 'mensal'}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+              visualizacao === 'mensal' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Calendar size={14} /> Calendário
+          </button>
+        </div>
       </div>
 
+      {/* Chips de status */}
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+          {chips.aprovados} aprovados
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+          {chips.pendentes} pendentes
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+          {chips.cancelados} cancelados
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
+          {chips.importantes} importantes
+        </span>
+      </div>
 
-      {/* Card manager panel */}
-      {showAgendaCardManager && (
-        <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold text-gray-700">Cards da agenda</p>
-            <button onClick={() => setShowAgendaCardManager(false)} className="text-gray-400 hover:text-gray-600">
-              <X size={14} />
-            </button>
+      {/* Card Resumo da agenda */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-gray-900 mb-3">Resumo da agenda</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-gray-900">{resumo.total}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Total</p>
+            <p className="text-xs font-semibold text-gray-500">{fmt(resumo.valorTotal)}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {agendaBlocks.map(b => (
-              <button
-                key={b.id}
-                onClick={() => toggleAgBlock(b.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
-                  b.visible
-                    ? 'bg-primary-50 border-primary-200 text-primary-700'
-                    : 'bg-gray-50 border-gray-200 text-gray-400'
-                }`}
-              >
-                {b.visible ? <Eye size={11} /> : <EyeOff size={11} />}
-                {b.label}
-              </button>
-            ))}
+          <div className="text-center">
+            <p className="text-2xl font-bold text-emerald-600">{resumo.concluidos}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Concluídos</p>
+            <p className="text-xs font-semibold text-emerald-500">{fmt(resumo.valorConcluidos)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-amber-600">{resumo.pendentes}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Pendentes</p>
+            <p className="text-xs font-semibold text-amber-500">{fmt(resumo.valorPendentes)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-red-500">{resumo.cancelados}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Cancelados</p>
+            <p className="text-xs font-semibold text-red-400">{fmt(resumo.valorCancelados)}</p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Filtro de período — fora do grid, igual ao Dashboard */}
-      {!agendaEditMode && (
-        <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
-          <DateRangeFilter
-            preset={preset}
-            onChange={setPreset}
-            customInicio={customInicio}
-            customFim={customFim}
-            onCustomInicioChange={setCustomInicio}
-            onCustomFimChange={setCustomFim}
+      {/* Conteúdo: vista semanal ou mensal */}
+      {visualizacao === 'semanal' ? (
+        <div className="space-y-4">
+          <AgendaSemanal
+            diasDaSemana={diasDaSemana}
+            agendamentosDaSemana={agendamentosDaSemana}
+            semanaOffset={semanaOffset}
+            onSemanaChange={setSemanaOffset}
+            onEventoClick={setAgDetalhe}
           />
-        </div>
-      )}
-
-      {/* Grid de blocos */}
-      <div
-        ref={agendaGridRef}
-        className="relative w-full"
-        style={{ height: calcularAlturaTotal(agendaBlocks.filter(b => b.visible || agendaEditMode), agendaLivePos, agendaLiveH) }}
-      >
-        {agendaEditMode && agendaSnapLines.x !== undefined && (
-          <div style={{ position: 'absolute', left: agendaSnapLines.x, top: 0, bottom: 0, width: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
-        )}
-        {agendaEditMode && agendaSnapLines.y !== undefined && (
-          <div style={{ position: 'absolute', top: agendaSnapLines.y, left: 0, right: 0, height: 1, background: 'rgba(207,255,4,0.4)', pointerEvents: 'none', zIndex: 100 }} />
-        )}
-        {agendaBlocks.map((block) => {
-          if (!block.visible && !agendaEditMode) return null
-          let content: React.ReactNode = null
-
-          if (block.id === 'stats') {
-            content = (
-              <div className="grid grid-cols-2 gap-3 h-full">
-                {[
-                  { label: 'Hoje', value: agendHoje, Icon: CalendarDays, color: 'text-primary-600', iconBg: 'bg-primary-100' },
-                  { label: 'No período', value: filtradas.length, Icon: Clock, color: 'text-violet-600', iconBg: 'bg-violet-100' },
-                ].map((item) => (
-                  <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex flex-col justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                      <div className={`w-8 h-8 sm:w-9 sm:h-9 ${item.iconBg} rounded-xl flex items-center justify-center`}><item.Icon size={16} className={item.color} /></div>
-                      <p className="text-[10px] sm:text-xs font-medium text-gray-400">{item.label}</p>
-                    </div>
-                    <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            )
-          } else if (block.id === 'calendario') {
-            content = (
-              <AgendaSemanal
-                diasDaSemana={diasDaSemana}
-                agendamentosDaSemana={agendamentosDaSemana}
-                semanaOffset={semanaOffset}
-                onSemanaChange={setSemanaOffset}
-                onEventoClick={setAgDetalhe}
-              />
-            )
-          } else if (block.id === 'lista') {
-            content = (
-              <div className="flex flex-col h-full gap-4">
-                <div className="relative shrink-0">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente, serviço ou título..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
-                </div>
-                {filtradas.length === 0 ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-                    <CalendarDays size={48} className="text-gray-200 mx-auto mb-4" />
-                    <p className="text-gray-900 font-semibold text-lg">{busca ? 'Nenhum resultado' : 'Nenhum agendamento'}</p>
-                    <p className="text-gray-400 text-sm mt-1">{busca ? 'Tente outro termo' : 'Crie um novo agendamento'}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 flex-1 min-h-0 overflow-y-auto">
-                    {filtradas.map((a) => {
-                      const st = STATUS_MAP[a.status]
-                      const dataInicio = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
-                      const dataFim = a.data_hora_fim ? new Date(a.data_hora_fim).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
-                      return (
-                        <div key={a.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 ${a.status === 'cancelado' ? 'opacity-50' : ''}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                              <div className={`w-8 h-8 ${st.bg} rounded-lg flex items-center justify-center shrink-0`}><Clock size={16} className={st.color} /></div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{a.titulo || a.nome_cliente}</p>
-                                <p className="text-[11px] sm:text-xs text-gray-400 truncate">{a.titulo ? `${a.nome_cliente} · ` : ''}{a.servico}{a.servico ? ' · ' : ''}{dataInicio}{dataFim ? ` → ${dataFim}` : ''}{a.valor ? ` · ${fmt(a.valor - (a.desconto || 0))}` : ''}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
-                              <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}>{st.label}</span>
-                              {a.telefone_cliente && <button onClick={() => enviarWhatsApp(a)} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
-                              <button onClick={() => remover(a.id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                            </div>
-                          </div>
-                          {a.observacoes && <p className="text-[10px] text-gray-400 mt-1 pl-[42px] sm:pl-11 truncate">Obs: {a.observacoes}</p>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          }
-
-          if (!content) return null
-
-          const bx = agendaLivePos[block.id]?.x ?? block.x
-          const by = agendaLivePos[block.id]?.y ?? block.y
-          const bw = agendaLiveW[block.id] ?? block.w
-          const bh = agendaLiveH[block.id] ?? block.h
-          return (
-            <div
-              key={block.id}
-              style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 50 : 1, transition: agendaDragActiveId === block.id || agendaResizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(agendaEditMode ? { touchAction: 'none' } : {}) }}
-              className={`flex flex-col ${agendaEditMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : ''} ${agendaEditMode && agendaDragActiveId !== block.id && agendaResizeActiveId !== block.id ? 'animate-wiggle' : ''} ${agendaEditMode && !block.visible ? 'opacity-40' : ''}`}
-              onPointerDown={agendaEditMode ? (e) => {
-                e.preventDefault()
-                ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                setAgendaDragActiveId(block.id)
-                agendaDragDataRef.current = { id: block.id, offsetX: e.clientX - bx, offsetY: e.clientY - by, curX: bx, curY: by }
-              } : undefined}
-              onPointerMove={agendaEditMode ? (e) => {
-                if (!agendaDragDataRef.current || agendaDragDataRef.current.id !== block.id) return
-                const cw = getAgendaContainerWidth()
-                if (cw === 0) return
-                const cands = getSnapCandidates(block.id, agendaBlocks, cw)
-                let newX = snapValue(Math.max(0, e.clientX - agendaDragDataRef.current.offsetX), cands.x)
-                let newY = snapValue(Math.max(0, e.clientY - agendaDragDataRef.current.offsetY), cands.y)
-                newX = Math.max(0, Math.min(newX, cw - (agendaLiveW[block.id] ?? block.w)))
-                newY = Math.max(0, newY)
-                const curW = agendaLiveW[block.id] ?? block.w
-                const curH = agendaLiveH[block.id] ?? block.h
-                const prevX = agendaLivePos[block.id]?.x ?? block.x
-                const prevY = agendaLivePos[block.id]?.y ?? block.y
-                const others = agendaBlocks.filter(o => o.id !== block.id && o.visible)
-                const testXY = { ...block, x: newX, y: newY, w: curW, h: curH }
-                if (others.some(o => overlaps(testXY, o))) {
-                  const testXOnly = { ...block, x: newX, y: prevY, w: curW, h: curH }
-                  const testYOnly = { ...block, x: prevX, y: newY, w: curW, h: curH }
-                  if (others.some(o => overlaps(testXOnly, o))) newX = prevX
-                  if (others.some(o => overlaps(testYOnly, o))) newY = prevY
-                }
-                agendaDragDataRef.current.curX = newX
-                agendaDragDataRef.current.curY = newY
-                setAgendaLivePos(prev => ({ ...prev, [block.id]: { x: newX, y: newY } }))
-                setAgendaSnapLines({ x: newX !== (e.clientX - agendaDragDataRef.current.offsetX) ? newX : undefined, y: newY !== (e.clientY - agendaDragDataRef.current.offsetY) ? newY : undefined })
-              } : undefined}
-              onPointerUp={agendaEditMode ? (e) => {
-                ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                setAgendaDragActiveId(null)
-                const ddata = agendaDragDataRef.current
-                if (ddata && ddata.id === block.id) {
-                  const cw2 = getAgendaContainerWidth() || 9999
-                  const finalBlocks = agendaBlocks.map(b => clampBlock({ ...b, x: agendaLivePos[b.id]?.x ?? b.x, y: agendaLivePos[b.id]?.y ?? b.y, w: agendaLiveW[b.id] ?? b.w, h: agendaLiveH[b.id] ?? b.h }, cw2))
-                  salvarAgendaBlocks(finalBlocks)
-                  setAgendaLivePos({}); setAgendaLiveW({}); setAgendaLiveH({}); setAgendaSnapLines({})
-                  agendaDragDataRef.current = null
-                }
-              } : undefined}
-            >
-              <div className="flex-1 min-h-0 overflow-auto">
-                {content}
-              </div>
-              {agendaEditMode && (
-                <div
-                  className="absolute bottom-1 right-1 w-9 h-9 bg-gray-900/80 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-nwse-resize z-30 select-none"
-                  style={{ touchAction: 'none' }}
-                  title="Arrastar para redimensionar"
-                  onPointerDown={(e) => {
-                    e.preventDefault(); e.stopPropagation()
-                    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-                    setAgendaResizeActiveId(block.id)
-                    agendaResizeDataRef.current = { id: block.id, startClientX: e.clientX, startClientY: e.clientY, startW: bw, startH: bh, curW: bw, curH: bh }
-                  }}
-                  onPointerMove={(e) => {
-                    if (!agendaResizeDataRef.current || agendaResizeDataRef.current.id !== block.id) return
-                    const cw = getAgendaContainerWidth()
-                    if (cw === 0) return
-                    const rawW = Math.max(200, agendaResizeDataRef.current.startW + (e.clientX - agendaResizeDataRef.current.startClientX))
-                    const rawH = Math.max(120, agendaResizeDataRef.current.startH + (e.clientY - agendaResizeDataRef.current.startClientY))
-                    const cands = getSnapCandidates(block.id, agendaBlocks, cw)
-                    let newW = Math.max(200, snapValue(block.x + rawW, cands.x) - block.x)
-                    let newH = Math.max(120, snapValue(block.y + rawH, cands.y) - block.y)
-                    newW = Math.min(newW, cw - block.x)
-                    const prevW = agendaLiveW[block.id] ?? block.w
-                    const prevH = agendaLiveH[block.id] ?? block.h
-                    const others = agendaBlocks.filter(o => o.id !== block.id && o.visible)
-                    const testWH = { ...block, w: newW, h: newH }
-                    if (others.some(o => overlaps(testWH, o))) {
-                      const testWOnly = { ...block, w: newW, h: prevH }
-                      const testHOnly = { ...block, w: prevW, h: newH }
-                      if (others.some(o => overlaps(testWOnly, o))) newW = prevW
-                      if (others.some(o => overlaps(testHOnly, o))) newH = prevH
-                    }
-                    agendaResizeDataRef.current.curW = newW
-                    agendaResizeDataRef.current.curH = newH
-                    setAgendaLiveW(prev => ({ ...prev, [block.id]: newW }))
-                    setAgendaLiveH(prev => ({ ...prev, [block.id]: newH }))
-                  }}
-                  onPointerUp={(e) => {
-                    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-                    setAgendaResizeActiveId(null)
-                    setAgendaSnapLines({})
-                    const rdata = agendaResizeDataRef.current
-                    if (rdata && rdata.id === block.id) {
-                      const cw2 = getAgendaContainerWidth() || 9999
-                      const finalBlocks = agendaBlocks.map(b => clampBlock({ ...b, x: agendaLivePos[b.id]?.x ?? b.x, y: agendaLivePos[b.id]?.y ?? b.y, w: agendaLiveW[b.id] ?? b.w, h: agendaLiveH[b.id] ?? b.h }, cw2))
-                      salvarAgendaBlocks(finalBlocks)
-                      setAgendaLivePos({}); setAgendaLiveW({}); setAgendaLiveH({})
-                      agendaResizeDataRef.current = null
-                    }
-                  }}
-                >
-                  <GripVertical size={12} className="text-white/70 -rotate-90" />
-                </div>
-              )}
+          {/* Lista de agendamentos com busca */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+            <div className="relative mb-3">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente, serviço ou título..." className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
             </div>
-          )
-        })}
-      </div>
+            {filtradas.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarDays size={40} className="text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-900 font-semibold">{busca ? 'Nenhum resultado' : 'Nenhum agendamento'}</p>
+                <p className="text-gray-400 text-sm mt-1">{busca ? 'Tente outro termo' : 'Crie um novo agendamento'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                {filtradas.map((a) => {
+                  const st = STATUS_MAP[a.status]
+                  const dataInicio = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+                  const dataFim = a.data_hora_fim ? new Date(a.data_hora_fim).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
+                  return (
+                    <div key={a.id} onClick={() => setAgDetalhe(a)} className={`rounded-xl border border-gray-100 p-3 sm:p-4 cursor-pointer hover:border-gray-200 transition-colors ${a.status === 'cancelado' ? 'opacity-50' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                          <div className={`w-8 h-8 ${st.bg} rounded-lg flex items-center justify-center shrink-0`}><Clock size={16} className={st.color} /></div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{a.titulo || a.nome_cliente}</p>
+                            <p className="text-[11px] sm:text-xs text-gray-400 truncate">{a.titulo ? `${a.nome_cliente} · ` : ''}{a.servico}{a.servico ? ' · ' : ''}{dataInicio}{dataFim ? ` → ${dataFim}` : ''}{a.valor ? ` · ${fmt(a.valor - (a.desconto || 0))}` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
+                          <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}>{st.label}</span>
+                          {a.telefone_cliente && <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
+                          <button onClick={(e) => { e.stopPropagation(); remover(a.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      {a.observacoes && <p className="text-[10px] text-gray-400 mt-1 pl-[42px] sm:pl-11 truncate">Obs: {a.observacoes}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <AgendaMensal
+          mesAtual={mesAtual}
+          setMesAtual={setMesAtual}
+          agendamentos={lista}
+          onDiaClick={abrirModalComData}
+          onAgendamentoClick={setAgDetalhe}
+        />
+      )}
 
       {agDetalhe && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAgDetalhe(null)}>
