@@ -682,6 +682,19 @@ export default function Agenda() {
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_MAP[agDetalhe.status].bg} ${STATUS_MAP[agDetalhe.status].color}`}>{STATUS_MAP[agDetalhe.status].label}</span>
               </div>
+              <div className="flex flex-wrap gap-2">
+                {CORES_AGENDA.map((c) => (
+                  <button key={c} type="button"
+                    onClick={() => {
+                      const atualizado = { ...agDetalhe, cor: c }
+                      salvar(lista.map(a => a.id === agDetalhe.id ? atualizado : a))
+                      setAgDetalhe(atualizado)
+                    }}
+                    className={`w-7 h-7 rounded-full transition-all ${agDetalhe.cor === c || (!agDetalhe.cor && c === '#4285F4') ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-110'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cliente</p>
                 <div className="flex items-center gap-3">
