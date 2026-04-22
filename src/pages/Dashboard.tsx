@@ -46,11 +46,8 @@ const formatCurrency = formatCurrencyUtil
 // Constantes da Agenda Semanal
 const AGENDA_ROW_H = 48
 const AGENDA_HORA_INICIO = 7
-const AGENDA_TOTAL_HORAS = 14
-const AGENDA_GRID_H = AGENDA_ROW_H * AGENDA_TOTAL_HORAS
-const AGENDA_CARD_MIN_H = AGENDA_GRID_H + 180
 
-const DASHBOARD_VERSION = 2
+const DASHBOARD_VERSION = 3
 
 // Card wrapper reutilizável estilo Omie
 function Card({ children, className = '', destino }: { children: React.ReactNode; className?: string; destino?: string }) {
@@ -414,9 +411,9 @@ interface BlockConfig {
   h: number
 }
 
-function getDefaultBlocks(cw: number): BlockConfig[] {
+function getDefaultBlocks(cw: number, agendaH: number = 852): BlockConfig[] {
   const half = Math.floor((cw - 8) / 2)
-  const agH = AGENDA_CARD_MIN_H
+  const agH = agendaH
   return [
     { id: 'calendario',        label: 'Calendário',           visible: true, x: 0,        y: 0,             w: half, h: agH },
     { id: 'agenda_semanal',    label: 'Agenda Semanal',       visible: true, x: half + 8, y: 0,             w: half, h: agH },
@@ -451,29 +448,12 @@ export default function Dashboard() {
   const [showCardManager, setShowCardManager] = useState(false)
 
   const salvarBlocks = (b: BlockConfig[]) => { salvarBlocksCloud([...b, { _version: DASHBOARD_VERSION }] as any) }
-  const blocks = useMemo(() => {
-    const cw = containerWidth || window.innerWidth - 80
-    const saved = (blocksCloud as any) as BlockConfig[] | undefined
-    const savedVersion = Array.isArray(saved) ? (saved as any[]).find((b: any) => b._version)?._version : undefined
-    if (!Array.isArray(saved) || saved.length === 0 || savedVersion !== DASHBOARD_VERSION) {
-      return getDefaultBlocks(cw)
-    }
-    const raw: BlockConfig[] = DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
-    const seen = new Set<string>()
-    const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
-    const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
-    if (temSobreposicao && containerWidth > 0) {
-      setTimeout(() => salvarBlocks(getDefaultBlocks(containerWidth)), 0)
-      return getDefaultBlocks(containerWidth)
-    }
-    return final
-  }, [blocksCloud, containerWidth])
 
   const toggleVisible = (id: BlockId) => {
     salvarBlocks(blocks.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
-  const resetBlocks = () => salvarBlocks([...getDefaultBlocks(getContainerWidth() || window.innerWidth)])
+  const resetBlocks = () => salvarBlocks([...getDefaultBlocks(getContainerWidth() || window.innerWidth, alturaCardAgenda)])
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -544,6 +524,74 @@ export default function Dashboard() {
       return inicio < semFim && fim > semIni
     })
   }, [agendamentos, diasDaSemana])
+
+  // Hora final dinâmica da agenda baseada nos agendamentos da semana
+  const horaFinalAgenda = useMemo(() => {
+    const HORA_MIN = 18
+    const HORA_MAX = 22
+    if (agendamentosDaSemana.length === 0) return HORA_MIN
+    let maiorHora = HORA_MIN
+    agendamentosDaSemana.forEach((a: any) => {
+      let horaFim: number
+      if (a.data_hora_fim) {
+        const fim = new Date(a.data_hora_fim)
+        horaFim = fim.getHours() + fim.getMinutes() / 60
+      } else {
+        const inicio = new Date(a.data_hora)
+        const durMin = a.duracao_min || 60
+        const fim = new Date(inicio.getTime() + durMin * 60000)
+        horaFim = fim.getHours() + fim.getMinutes() / 60
+      }
+      maiorHora = Math.max(maiorHora, Math.ceil(horaFim) + 1)
+    })
+    return Math.min(maiorHora, HORA_MAX)
+  }, [agendamentosDaSemana])
+
+  const alturaCardAgenda = useMemo(() => {
+    const totalHoras = horaFinalAgenda - AGENDA_HORA_INICIO
+    const gridH = AGENDA_ROW_H * totalHoras
+    return gridH + 180
+  }, [horaFinalAgenda])
+
+  const blocks = useMemo(() => {
+    const cw = containerWidth || window.innerWidth - 80
+    const saved = (blocksCloud as any) as BlockConfig[] | undefined
+    const savedVersion = Array.isArray(saved) ? (saved as any[]).find((b: any) => b._version)?._version : undefined
+    if (!Array.isArray(saved) || saved.length === 0 || savedVersion !== DASHBOARD_VERSION) {
+      return getDefaultBlocks(cw, alturaCardAgenda)
+    }
+    const raw: BlockConfig[] = DEFAULT_BLOCKS.map(d => { const s = (saved as any[]).find((b: any) => b.id === d.id); if (!s) return d; return { ...d, visible: s.visible ?? d.visible, x: s.x ?? d.x, y: s.y ?? d.y, w: s.w ?? d.w, h: s.h ?? d.h } as BlockConfig })
+    const seen = new Set<string>()
+    const final = raw.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true }).map(b => clampBlock(b, cw))
+    const temSobreposicao = final.some((a, i) => final.slice(i + 1).some(b => a.visible && b.visible && overlaps(a, b)))
+    if (temSobreposicao && containerWidth > 0) {
+      setTimeout(() => salvarBlocks(getDefaultBlocks(containerWidth, alturaCardAgenda)), 0)
+      return getDefaultBlocks(containerWidth, alturaCardAgenda)
+    }
+    return final
+  }, [blocksCloud, containerWidth, alturaCardAgenda])
+
+  // Atualizar altura dos blocos quando alturaCardAgenda muda
+  useEffect(() => {
+    if (!containerWidth || alturaCardAgenda === 0) return
+    const blocoAgenda = blocks.find(b => b.id === 'agenda_semanal')
+    const blocoCalendario = blocks.find(b => b.id === 'calendario')
+    const agendaDesatualizada = blocoAgenda && Math.abs(blocoAgenda.h - alturaCardAgenda) > 10
+    const calendarioDesatualizado = blocoCalendario && Math.abs(blocoCalendario.h - alturaCardAgenda) > 10
+    if (agendaDesatualizada || calendarioDesatualizado) {
+      const diffAltura = alturaCardAgenda - (blocoAgenda?.h || alturaCardAgenda)
+      const novosBlocks = blocks.map(b => {
+        if (b.id === 'agenda_semanal' || b.id === 'calendario') {
+          return { ...b, h: alturaCardAgenda }
+        }
+        if (b.y > 0) {
+          return { ...b, y: b.y + diffAltura }
+        }
+        return b
+      })
+      salvarBlocks(novosBlocks)
+    }
+  }, [alturaCardAgenda, containerWidth])
 
 
   // Vendas por forma de pagamento
@@ -658,11 +706,12 @@ export default function Dashboard() {
             {(() => {
               const ROW_H = AGENDA_ROW_H
               const HORA_INICIO = AGENDA_HORA_INICIO
-              const TOTAL_HORAS = AGENDA_TOTAL_HORAS
+              const TOTAL_HORAS = horaFinalAgenda - HORA_INICIO
+              const gridH = ROW_H * TOTAL_HORAS
               const defaultEventColor = '#4285F4'
               return (
-                <div style={{ height: AGENDA_GRID_H, overflow: 'visible' }}>
-                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: AGENDA_GRID_H }}>
+                <div style={{ height: gridH, overflow: 'visible' }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: gridH }}>
                     {/* Coluna de horários */}
                     <div className="relative">
                       {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
