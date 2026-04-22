@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, ChevronLeft, ChevronRight, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2, Car, DollarSign, FileText, Settings2 } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, GripVertical, Eye, EyeOff, Pencil, Check, RotateCcw, LayoutGrid, Wand2, Car, DollarSign, FileText, Settings2 } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
-import { format, startOfWeek, addDays, isToday } from 'date-fns'
+import { format, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -11,6 +11,7 @@ import { uid, fmt, sanitizePhone } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync, useCloudSyncSingle } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
+import AgendaSemanal from '../components/AgendaSemanal'
 import { snapValue, getSnapCandidates, calcularAlturaTotal, clampBlock, overlaps, autoArranjarBlocks } from '../utils/dashboardLayout'
 
 const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
@@ -37,65 +38,6 @@ const DEFAULT_AGENDA_BLOCKS = getDefaultAgendaBlocks(1200)
 
 const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4', clienteId: '' })
 
-interface EventLayout { top: number; height: number; left: string; width: string; zIndex: number }
-
-function gerarGradienteEvento(cor: string): string {
-  const hex = cor.replace('#', '')
-  const r = parseInt(hex.slice(0, 2), 16)
-  const g = parseInt(hex.slice(2, 4), 16)
-  const b = parseInt(hex.slice(4, 6), 16)
-  const darken = (v: number, pct: number) => Math.max(0, Math.round(v * (1 - pct)))
-  const r2 = darken(r, 0.35), g2 = darken(g, 0.35), b2 = darken(b, 0.35)
-  const r3 = darken(r, 0.55), g3 = darken(g, 0.55), b3 = darken(b, 0.55)
-  return `linear-gradient(150deg, ${cor} 0%, rgb(${r2},${g2},${b2}) 55%, rgb(${r3},${g3},${b3}) 100%)`
-}
-
-function gerarSombraEvento(cor: string): string {
-  const hex = cor.replace('#', '')
-  const r = parseInt(hex.slice(0, 2), 16)
-  const g = parseInt(hex.slice(2, 4), 16)
-  const b = parseInt(hex.slice(4, 6), 16)
-  return `0 4px 16px rgba(${r},${g},${b},0.35), inset 0 1px 0 rgba(255,255,255,0.18)`
-}
-
-function calcularLayoutEventos(
-  eventos: Array<{ inicio: number; fim: number; id: string }>,
-  ROW_H: number,
-  HORA_INICIO: number
-): Map<string, EventLayout> {
-  const result = new Map<string, EventLayout>()
-  const sorted = [...eventos].sort((a, b) => a.inicio - b.inicio)
-  const clusters: Array<typeof sorted> = []
-  let currentCluster: typeof sorted = []
-
-  for (const ev of sorted) {
-    if (currentCluster.length === 0) {
-      currentCluster.push(ev)
-    } else {
-      const colide = currentCluster.some(c => ev.inicio < c.fim && ev.fim > c.inicio)
-      if (colide) {
-        currentCluster.push(ev)
-      } else {
-        clusters.push(currentCluster)
-        currentCluster = [ev]
-      }
-    }
-  }
-  if (currentCluster.length > 0) clusters.push(currentCluster)
-
-  for (const cluster of clusters) {
-    const n = cluster.length
-    cluster.forEach((ev, colIdx) => {
-      const top = Math.max((ev.inicio - HORA_INICIO) * ROW_H, 0)
-      const height = Math.max((ev.fim - ev.inicio) * ROW_H, ROW_H * 0.5)
-      const colWidth = n === 1 ? 100 : Math.min(80, 100 / n + 15)
-      const colLeft = n === 1 ? 0 : (colIdx * (100 - colWidth)) / Math.max(n - 1, 1)
-      result.set(ev.id, { top, height, left: `${colLeft}%`, width: `${colWidth}%`, zIndex: 10 + colIdx })
-    })
-  }
-
-  return result
-}
 
 export default function Agenda() {
   const { user } = useAuth()
@@ -367,147 +309,13 @@ export default function Agenda() {
             )
           } else if (block.id === 'calendario') {
             content = (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <CalendarDays size={20} className="text-primary-600" />
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900">Agenda semanal</h3>
-                      <p className="text-[11px] text-gray-400">
-                        {format(diasDaSemana[0], "d MMM", { locale: ptBR })} — {format(diasDaSemana[6], "d MMM yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setSemanaOffset(s => s - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronLeft size={18} className="text-gray-500" /></button>
-                    <button onClick={() => setSemanaOffset(0)} className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">Hoje</button>
-                    <button onClick={() => setSemanaOffset(s => s + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronRight size={18} className="text-gray-500" /></button>
-                  </div>
-                </div>
-                <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5 flex-1 min-h-0 flex flex-col">
-                  <div className="min-w-[640px]">
-                    <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
-                      <div />
-                      {diasDaSemana.map((dia) => {
-                        const ehHoje = isToday(dia)
-                        return (
-                          <div key={dia.toISOString()} className="text-center">
-                            <p className={`text-[10px] font-semibold uppercase tracking-wider ${ehHoje ? 'text-primary-600' : 'text-gray-400'}`}>{format(dia, 'EEE', { locale: ptBR })}</p>
-                            <p className={`text-lg font-bold mt-0.5 leading-none ${ehHoje ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center' : 'text-gray-700'}`}>{format(dia, 'd')}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {(() => {
-                      const ROW_H = 48; const HORA_INICIO = 7; const TOTAL_HORAS = 14; const defaultEventColor = '#4285F4'
-                      return (
-                        <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                          <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ minHeight: ROW_H * TOTAL_HORAS }}>
-                            <div className="relative">
-                              {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
-                                <div key={hora} className="text-[10px] font-medium text-gray-400 pr-2 text-right -mt-1.5 select-none" style={{ height: ROW_H, paddingTop: 2 }}>{`${String(hora).padStart(2, '0')}:00`}</div>
-                              ))}
-                            </div>
-                            {diasDaSemana.map((dia) => {
-                              const dStr = format(dia, 'yyyy-MM-dd'); const ehHoje = isToday(dia)
-                              const diaStart = new Date(`${dStr}T00:00:00`); const diaEnd = new Date(diaStart.getTime() + 86400000)
-                              const BIZ_START = 8, BIZ_END = 18
-                              const eventsDia = agendamentosDaSemana.filter((a) => { const ini = new Date(a.data_hora); const durM = a.duracao_min || 60; const fim = a.data_hora_fim ? new Date(a.data_hora_fim) : new Date(ini.getTime() + durM * 60000); return ini < diaEnd && fim > diaStart })
-                              return (
-                                <div key={dia.toISOString()} className={`relative ${ehHoje ? 'bg-primary-50/30' : ''}`}>
-                                  {Array.from({ length: TOTAL_HORAS }, (_, i) => (<div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />))}
-                                  {ehHoje && (() => {
-                                    const agora = new Date()
-                                    const horaAtual = agora.getHours() + agora.getMinutes() / 60
-                                    if (horaAtual < HORA_INICIO || horaAtual > HORA_INICIO + TOTAL_HORAS) return null
-                                    const topAtual = (horaAtual - HORA_INICIO) * ROW_H
-                                    return (
-                                      <div style={{ position: 'absolute', top: topAtual, left: 0, right: 0, height: 2, background: '#ef4444', zIndex: 40, pointerEvents: 'none', borderRadius: 1 }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', position: 'absolute', left: -4, top: -3, boxShadow: '0 0 6px rgba(239,68,68,0.6)' }} />
-                                      </div>
-                                    )
-                                  })()}
-                                  {(() => {
-                                    const eventosComTempo = eventsDia.map(ag => {
-                                      const inicio = new Date(ag.data_hora)
-                                      const durMin = ag.duracao_min || 60
-                                      const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
-                                      const isMultiDay = inicio.toDateString() !== fim.toDateString()
-                                      const isFirstDay = inicio.toDateString() === diaStart.toDateString()
-                                      const isLastDay = fim.toDateString() === diaStart.toDateString()
-                                      let effStart: number, effEnd: number
-                                      if (!isMultiDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = fim.getHours() + fim.getMinutes() / 60 }
-                                      else if (isFirstDay) { effStart = inicio.getHours() + inicio.getMinutes() / 60; effEnd = BIZ_END }
-                                      else if (isLastDay) { effStart = BIZ_START; effEnd = fim.getHours() + fim.getMinutes() / 60 }
-                                      else { effStart = BIZ_START; effEnd = BIZ_END }
-                                      return { id: ag.id, inicio: effStart, fim: effEnd }
-                                    })
-                                    const layouts = calcularLayoutEventos(eventosComTempo, ROW_H, HORA_INICIO)
-                                    return eventsDia.map((ag) => {
-                                      const layout = layouts.get(ag.id)
-                                      if (!layout) return null
-                                      const eventColor = ag.cor || defaultEventColor
-                                      const ehCancelado = ag.status === 'cancelado'
-                                      return (
-                                        <div key={ag.id} title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
-                                          onClick={() => setAgDetalhe(ag)}
-                                          onMouseEnter={(e) => {
-                                            if (ehCancelado) return
-                                            const el = e.currentTarget as HTMLElement
-                                            el.style.filter = 'brightness(1.12)'
-                                            el.style.transform = 'scale(1.015)'
-                                            el.style.boxShadow = gerarSombraEvento(eventColor).replace('0.35', '0.55')
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            const el = e.currentTarget as HTMLElement
-                                            el.style.filter = ''
-                                            el.style.transform = ''
-                                            el.style.boxShadow = ehCancelado ? 'none' : gerarSombraEvento(eventColor)
-                                          }}
-                                          className="absolute"
-                                          style={{
-                                            top: layout.top, height: layout.height, left: layout.left, width: layout.width, zIndex: layout.zIndex,
-                                            background: ehCancelado
-                                              ? 'repeating-linear-gradient(45deg, rgba(120,120,120,0.25) 0px, rgba(120,120,120,0.25) 2px, rgba(80,80,80,0.15) 2px, rgba(80,80,80,0.15) 10px)'
-                                              : gerarGradienteEvento(eventColor),
-                                            boxShadow: ehCancelado ? 'none' : gerarSombraEvento(eventColor),
-                                            border: ehCancelado ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.12)',
-                                            borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                                            opacity: ehCancelado ? 0.45 : 1,
-                                            transition: 'filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-                                          }}>
-                                          <div style={{ padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-                                            <p style={{ fontSize: 10, fontWeight: 700, color: ehCancelado ? 'rgba(255,255,255,0.5)' : 'white', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: ehCancelado ? 'none' : '0 1px 2px rgba(0,0,0,0.25)' }}>
-                                              {ag.nome_cliente || 'Agendamento'}
-                                            </p>
-                                            <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.82)', margin: '1px 0 0', lineHeight: 1.2 }}>
-                                              {format(new Date(ag.data_hora), 'HH:mm')}{ag.data_hora_fim ? ` – ${format(new Date(ag.data_hora_fim), 'HH:mm')}` : ''}
-                                            </p>
-                                            {layout.height > 52 && ag.servico && (
-                                              <p style={{ fontSize: 9, color: ehCancelado ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)', margin: '3px 0 0', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
-                                                {ag.servico}
-                                              </p>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )
-                                    })
-                                  })()}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
-                  {[{ label: 'Pendente', color: 'bg-amber-300' }, { label: 'Confirmado', color: 'bg-blue-300' }, { label: 'Em andamento', color: 'bg-primary-400' }, { label: 'Concluído', color: 'bg-emerald-300' }, { label: 'Cancelado', color: 'bg-red-300' }].map((s) => (
-                    <div key={s.label} className="flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${s.color}`} /><span className="text-[10px] text-gray-400">{s.label}</span></div>
-                  ))}
-                </div>
-              </div>
+              <AgendaSemanal
+                diasDaSemana={diasDaSemana}
+                agendamentosDaSemana={agendamentosDaSemana}
+                semanaOffset={semanaOffset}
+                onSemanaChange={setSemanaOffset}
+                onEventoClick={setAgDetalhe}
+              />
             )
           } else if (block.id === 'lista') {
             content = (
