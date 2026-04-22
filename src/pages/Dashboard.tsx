@@ -447,7 +447,10 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [mesAtual, setMesAtual] = useState(new Date())
   const gridRef = useRef<HTMLDivElement>(null)
+  const calendarioRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [alturaRealCalendario, setAlturaRealCalendario] = useState(0)
+  const [alturaAgendaOverride, setAlturaAgendaOverride] = useState<number>(0)
   useEffect(() => {
     const update = () => { if (gridRef.current) setContainerWidth(gridRef.current.offsetWidth) }
     update()
@@ -456,6 +459,26 @@ export default function Dashboard() {
     return () => ro.disconnect()
   }, [])
   const getContainerWidth = () => gridRef.current?.clientWidth ?? containerWidth ?? 0
+
+  // Medir altura real do calendário via ResizeObserver
+  useEffect(() => {
+    if (!calendarioRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const h = entry.contentRect.height
+        if (h > 100) setAlturaRealCalendario(Math.round(h))
+      }
+    })
+    ro.observe(calendarioRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  // Sincronizar altura da agenda com a do calendário
+  useEffect(() => {
+    if (alturaRealCalendario > 100) {
+      setAlturaAgendaOverride(alturaRealCalendario)
+    }
+  }, [alturaRealCalendario])
 
   // Block customization
   const { data: blocksCloud, save: salvarBlocksCloud } = useCloudSyncSingle<{ blocks: BlockConfig[] }>({ table: 'dashboard_blocks', storageKey: 'dashboard_blocks', defaultValue: { blocks: DEFAULT_BLOCKS }, dataField: 'blocks' })
@@ -660,7 +683,11 @@ export default function Dashboard() {
   // Render a block by ID
   const renderBlock = (id: BlockId) => {
     switch (id) {
-      case 'calendario': return <Calendario mesAtual={mesAtual} setMesAtual={setMesAtual} agendamentosNoDia={agendamentosNoDia} />
+      case 'calendario': return (
+        <div ref={calendarioRef} className="h-full">
+          <Calendario mesAtual={mesAtual} setMesAtual={setMesAtual} agendamentosNoDia={agendamentosNoDia} />
+        </div>
+      )
       case 'grafico_vendas': return <GraficoVendas vendasMes={vendasMes} />
       case 'resumo_financeiro': return <ResumoFinanceiro entradas={vendasMes + entradasMes} saidas={saidasMes} saldo={saldoMes} />
       case 'agenda_semanal': return renderAgendaSemanal()
@@ -701,8 +728,8 @@ export default function Dashboard() {
         </div>
 
         {/* Grid semanal estilo Google Calendar */}
-        <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5">
-          <div className="min-w-[640px]">
+        <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5 flex-1 flex flex-col min-h-0">
+          <div className="min-w-[640px] flex-1 flex flex-col min-h-0">
             {/* Header com dias da semana */}
             <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 mb-0">
               <div /> {/* espaço para coluna de horários */}
@@ -731,8 +758,8 @@ export default function Dashboard() {
               const gridH = ROW_H * TOTAL_HORAS
               const defaultEventColor = '#4285F4'
               return (
-                <div style={{ height: gridH, overflow: 'visible' }}>
-                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: gridH }}>
+                <div style={{ flex: 1, minHeight: gridH, overflow: 'visible' }}>
+                  <div className="grid grid-cols-[50px_repeat(7,1fr)]" style={{ height: '100%', minHeight: gridH }}>
                     {/* Coluna de horários */}
                     <div className="relative">
                       {Array.from({ length: TOTAL_HORAS }, (_, i) => i + HORA_INICIO).map((hora) => (
@@ -1246,10 +1273,14 @@ export default function Dashboard() {
             const bx = livePos[block.id]?.x ?? block.x
             const by = livePos[block.id]?.y ?? block.y
             const bw = liveW[block.id] ?? block.w
-            const bh = liveH[block.id] ?? block.h
+            const bhRaw = liveH[block.id] ?? block.h
+            const bh = !editMode && block.id === 'agenda_semanal' && alturaAgendaOverride > 0
+              ? alturaAgendaOverride
+              : bhRaw
             return (
               <div
                 key={block.id}
+                data-block-id={block.id}
                 style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: block.id === 'agenda_semanal' ? 'visible' : 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
                 className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : BLOCK_NAVEGACAO[block.id] ? 'cursor-pointer' : ''} ${editMode && dragActiveId !== block.id && resizeActiveId !== block.id ? 'animate-wiggle' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
                 onClick={!editMode && BLOCK_NAVEGACAO[block.id] ? () => navigate(BLOCK_NAVEGACAO[block.id]!) : undefined}
