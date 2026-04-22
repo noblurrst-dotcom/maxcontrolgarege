@@ -44,10 +44,17 @@ function getSaudacao() {
 const formatCurrency = formatCurrencyUtil
 
 // Card wrapper reutilizável estilo Omie
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Card({ children, className = '', destino }: { children: React.ReactNode; className?: string; destino?: string }) {
   return (
-    <div className={`card-responsive ${className}`}>
+    <div className={`card-responsive relative group ${className}`}>
       {children}
+      {destino && (
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors">
+            <ArrowRight size={12} className="text-gray-400" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -174,20 +181,20 @@ function Calendario({
   }, [feriados, mesAtual.getMonth()])
 
   return (
-    <Card>
+    <Card destino="/agenda">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-bold text-gray-900 capitalize">
           {format(mesAtual, "MMMM yyyy", { locale: ptBR })}
         </h3>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setMesAtual(subMonths(mesAtual, 1))}
+            onClick={(e) => { e.stopPropagation(); setMesAtual(subMonths(mesAtual, 1)) }}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronLeft size={18} className="text-gray-500" />
           </button>
           <button
-            onClick={() => setMesAtual(addMonths(mesAtual, 1))}
+            onClick={(e) => { e.stopPropagation(); setMesAtual(addMonths(mesAtual, 1)) }}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ChevronRight size={18} className="text-gray-500" />
@@ -285,7 +292,7 @@ function GraficoVendas({ vendasMes }: { vendasMes: number }) {
   ]
 
   return (
-    <Card>
+    <Card destino="/vendas">
       <div className="flex items-center justify-between mb-1">
         <CardTitle>Resumo das vendas</CardTitle>
         <span className="text-sm font-bold text-primary-600">
@@ -324,7 +331,7 @@ function GraficoVendas({ vendasMes }: { vendasMes: number }) {
 // Componente do Resumo Financeiro
 function ResumoFinanceiro({ entradas, saidas, saldo }: { entradas: number; saidas: number; saldo: number }) {
   return (
-    <Card>
+    <Card destino="/financeiro">
       <div className="flex items-center justify-between mb-4">
         <CardTitle>Resumo financeiro</CardTitle>
         <span className="text-xs text-gray-400">Este mês</span>
@@ -376,6 +383,17 @@ function ResumoFinanceiro({ entradas, saidas, saldo }: { entradas: number; saida
 
 
 type BlockId = 'calendario' | 'grafico_vendas' | 'resumo_financeiro' | 'agenda_semanal' | 'vendas_pagamento' | 'top_clientes' | 'sua_empresa' | 'agendamentos_hoje'
+
+const BLOCK_NAVEGACAO: Partial<Record<BlockId, string>> = {
+  calendario:        '/agenda',
+  grafico_vendas:    '/vendas',
+  resumo_financeiro: '/financeiro',
+  agenda_semanal:    '/agenda',
+  vendas_pagamento:  '/vendas',
+  top_clientes:      '/clientes',
+  sua_empresa:       '/configuracoes',
+  agendamentos_hoje: '/agenda',
+}
 
 interface BlockConfig {
   id: BlockId
@@ -574,7 +592,7 @@ export default function Dashboard() {
   }
 
   const renderAgendaSemanal = () => (
-    <Card>
+    <Card destino="/agenda">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <CalendarPlus size={20} className="text-primary-600" />
@@ -586,16 +604,16 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setSemanaOffset(s => s - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s - 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronLeft size={18} className="text-gray-500" />
             </button>
             <button
-              onClick={() => setSemanaOffset(0)}
+              onClick={(e) => { e.stopPropagation(); setSemanaOffset(0) }}
               className="px-2.5 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
             >
               Hoje
             </button>
-            <button onClick={() => setSemanaOffset(s => s + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); setSemanaOffset(s => s + 1) }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronRight size={18} className="text-gray-500" />
             </button>
           </div>
@@ -775,7 +793,7 @@ export default function Dashboard() {
   )
 
   const renderVendasPagamento = () => (
-    <Card>
+    <Card destino="/vendas">
         <div className="flex items-center justify-between mb-4">
           <CardTitle>Vendas por pagamento</CardTitle>
           <span className="text-xs text-gray-400">{periodoLabel}</span>
@@ -807,7 +825,7 @@ export default function Dashboard() {
   )
 
   const renderTopClientes = () => (
-    <Card>
+    <Card destino="/clientes">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
@@ -837,7 +855,7 @@ export default function Dashboard() {
             <Users size={36} className="text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400">Nenhuma venda registrada ainda</p>
             <button
-              onClick={() => navigate('/vendas')}
+              onClick={(e) => { e.stopPropagation(); navigate('/vendas') }}
               className="mt-3 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-semibold transition-colors"
             >
               Registrar primeira venda
@@ -849,7 +867,7 @@ export default function Dashboard() {
   )
 
   const renderAgendamentosHoje = () => (
-    <Card>
+    <Card destino="/agenda">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -862,14 +880,14 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        <button onClick={() => navigate('/agenda')} className="text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
+        <button onClick={(e) => { e.stopPropagation(); navigate('/agenda') }} className="text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
           Ver todos <ArrowRight size={12} />
         </button>
       </div>
       {agendamentosDeHoje.length === 0 ? (
         <div className="text-center py-3">
           <p className="text-xs text-gray-400">Nenhum agendamento para hoje</p>
-          <button onClick={() => navigate('/agenda')} className="mt-2 text-xs font-bold text-primary-600 hover:text-primary-700">+ Novo agendamento</button>
+          <button onClick={(e) => { e.stopPropagation(); navigate('/agenda') }} className="mt-2 text-xs font-bold text-primary-600 hover:text-primary-700">+ Novo agendamento</button>
         </div>
       ) : (
         <div className="space-y-2 max-h-[calc(100%-80px)] overflow-y-auto">
@@ -910,7 +928,7 @@ export default function Dashboard() {
     ).reduce((a: number, v: any) => a + (v.valor_total || v.valor || 0), 0)
 
     return (
-      <Card>
+      <Card destino="/configuracoes">
         <div className="flex items-center gap-3 mb-4">
           {brand.logo_url ? (
             <img src={brand.logo_url} alt="Logo" className="w-12 h-12 rounded-xl object-contain border border-gray-100" />
@@ -1098,7 +1116,8 @@ export default function Dashboard() {
               <div
                 key={block.id}
                 style={{ height: bh }}
-                className={`relative flex flex-col ${editMode ? 'pt-5' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                className={`relative flex flex-col ${editMode ? 'pt-5' : ''} ${!editMode && BLOCK_NAVEGACAO[block.id] ? 'cursor-pointer' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                onClick={!editMode && BLOCK_NAVEGACAO[block.id] ? () => navigate(BLOCK_NAVEGACAO[block.id]!) : undefined}
               >
                 {editMode && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 py-1 shadow-xl whitespace-nowrap">
@@ -1150,7 +1169,8 @@ export default function Dashboard() {
               <div
                 key={block.id}
                 style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, overflow: 'hidden', zIndex: dragActiveId === block.id || resizeActiveId === block.id ? 50 : 1, transition: dragActiveId === block.id || resizeActiveId === block.id ? 'none' : 'left 0.15s ease, top 0.15s ease', ...(editMode ? { touchAction: 'none' } : {}) }}
-                className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : ''} ${editMode && dragActiveId !== block.id && resizeActiveId !== block.id ? 'animate-wiggle' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                className={`flex flex-col ${editMode ? 'cursor-grab active:cursor-grabbing select-none ring-2 ring-dashed ring-primary-400/40 rounded-2xl' : BLOCK_NAVEGACAO[block.id] ? 'cursor-pointer' : ''} ${editMode && dragActiveId !== block.id && resizeActiveId !== block.id ? 'animate-wiggle' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
+                onClick={!editMode && BLOCK_NAVEGACAO[block.id] ? () => navigate(BLOCK_NAVEGACAO[block.id]!) : undefined}
                 onPointerDown={editMode ? (e) => {
                   e.preventDefault()
                   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
