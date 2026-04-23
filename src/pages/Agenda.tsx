@@ -12,14 +12,6 @@ import ClientePicker from '../components/ClientePicker'
 import AgendaSemanal from '../components/AgendaSemanal'
 import AgendaMensal from '../components/AgendaMensal'
 
-const STATUS_MAP: Record<Agendamento['status'], { label: string; color: string; bg: string }> = {
-  pendente: { label: 'Pendente', color: 'text-amber-600', bg: 'bg-amber-100' },
-  confirmado: { label: 'Confirmado', color: 'text-blue-600', bg: 'bg-blue-100' },
-  em_andamento: { label: 'Em andamento', color: 'text-primary-600', bg: 'bg-primary-100' },
-  concluido: { label: 'Concluído', color: 'text-emerald-600', bg: 'bg-emerald-100' },
-  cancelado: { label: 'Cancelado', color: 'text-red-500', bg: 'bg-red-100' },
-}
-
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
 const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', veiculo: '', servico: '', servicoSelecionado: '', titulo: '', data_hora: '', data_hora_fim: '', valor: '', desconto: '', observacoes: '', vendaId: '', cor: '#4285F4', clienteId: '' })
@@ -136,41 +128,6 @@ export default function Agenda() {
     return a.nome_cliente.toLowerCase().includes(t) || a.servico.toLowerCase().includes(t) || (a.titulo || '').toLowerCase().includes(t)
   }), [lista, buscaDebounced])
 
-  // Agendamentos do período visível (mês em mensal, semana em semanal)
-  const agendamentosPeriodo = useMemo(() => {
-    if (visualizacao === 'mensal') {
-      const mesStr = format(mesAtual, 'yyyy-MM')
-      return lista.filter(a => a.data_hora && a.data_hora.startsWith(mesStr))
-    }
-    return agendamentosDaSemana
-  }, [lista, visualizacao, mesAtual, agendamentosDaSemana])
-
-  // Chips de status
-  const chips = useMemo(() => {
-    const aprovados = agendamentosPeriodo.filter(a => a.status === 'confirmado' || a.status === 'concluido').length
-    const pendentes = agendamentosPeriodo.filter(a => a.status === 'pendente').length
-    const cancelados = agendamentosPeriodo.filter(a => a.status === 'cancelado').length
-    // TODO: campo `importante` não existe no tipo Agendamento ainda
-    const importantes = 0
-    return { aprovados, pendentes, cancelados, importantes }
-  }, [agendamentosPeriodo])
-
-  // Resumo da agenda
-  const resumo = useMemo(() => {
-    const total = agendamentosPeriodo.length
-    const concluidos = agendamentosPeriodo.filter(a => a.status === 'concluido')
-    const pendentes = agendamentosPeriodo.filter(a => a.status === 'pendente')
-    const cancelados = agendamentosPeriodo.filter(a => a.status === 'cancelado')
-    const somaValor = (arr: Agendamento[]) => arr.reduce((s, a) => s + Math.max((a.valor || 0) - (a.desconto || 0), 0), 0)
-    return {
-      total,
-      concluidos: concluidos.length, valorConcluidos: somaValor(concluidos),
-      pendentes: pendentes.length, valorPendentes: somaValor(pendentes),
-      cancelados: cancelados.length, valorCancelados: somaValor(cancelados),
-      valorTotal: somaValor(agendamentosPeriodo),
-    }
-  }, [agendamentosPeriodo])
-
   // Abrir modal com data preenchida (clique em célula do mensal)
   const abrirModalComData = (dataISO: string) => {
     setForm({ ...initForm(), data_hora: `${dataISO}T09:00` })
@@ -214,49 +171,6 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Chips de status */}
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-          {chips.aprovados} aprovados
-        </span>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-          {chips.pendentes} pendentes
-        </span>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-          {chips.cancelados} cancelados
-        </span>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
-          {chips.importantes} importantes
-        </span>
-      </div>
-
-      {/* Card Resumo da agenda */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
-        <h3 className="text-sm font-bold text-gray-900 mb-3">Resumo da agenda</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900">{resumo.total}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Total</p>
-            <p className="text-xs font-semibold text-gray-500">{fmt(resumo.valorTotal)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-600">{resumo.concluidos}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Concluídos</p>
-            <p className="text-xs font-semibold text-emerald-500">{fmt(resumo.valorConcluidos)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-amber-600">{resumo.pendentes}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Pendentes</p>
-            <p className="text-xs font-semibold text-amber-500">{fmt(resumo.valorPendentes)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-red-500">{resumo.cancelados}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Cancelados</p>
-            <p className="text-xs font-semibold text-red-400">{fmt(resumo.valorCancelados)}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Conteúdo: vista semanal ou mensal */}
       {visualizacao === 'semanal' ? (
         <div className="space-y-4">
@@ -282,21 +196,19 @@ export default function Agenda() {
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                 {filtradas.map((a) => {
-                  const st = STATUS_MAP[a.status]
                   const dataInicio = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
                   const dataFim = a.data_hora_fim ? new Date(a.data_hora_fim).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
                   return (
                     <div key={a.id} onClick={() => setAgDetalhe(a)} className={`rounded-xl border border-gray-100 p-3 sm:p-4 cursor-pointer hover:border-gray-200 transition-colors ${a.status === 'cancelado' ? 'opacity-50' : ''}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                          <div className={`w-8 h-8 ${st.bg} rounded-lg flex items-center justify-center shrink-0`}><Clock size={16} className={st.color} /></div>
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center shrink-0"><Clock size={16} className="text-gray-500" /></div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-gray-900 truncate">{a.titulo || a.nome_cliente}</p>
                             <p className="text-[11px] sm:text-xs text-gray-400 truncate">{a.titulo ? `${a.nome_cliente} · ` : ''}{a.servico}{a.servico ? ' · ' : ''}{dataInicio}{dataFim ? ` → ${dataFim}` : ''}{a.valor ? ` · ${fmt(a.valor - (a.desconto || 0))}` : ''}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
-                          <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}>{st.label}</span>
                           {a.telefone_cliente && <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
                           <button onClick={(e) => { e.stopPropagation(); remover(a.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                         </div>
@@ -330,9 +242,6 @@ export default function Agenda() {
               <button onClick={() => setAgDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_MAP[agDetalhe.status].bg} ${STATUS_MAP[agDetalhe.status].color}`}>{STATUS_MAP[agDetalhe.status].label}</span>
-              </div>
               <div className="flex flex-wrap gap-2">
                 {CORES_AGENDA.map((c) => (
                   <button key={c} type="button"
