@@ -1,11 +1,13 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { SubUsuarioProvider, useSubUsuario } from './contexts/SubUsuarioContext'
 import { SupportViewProvider } from './contexts/SupportViewContext'
+import { useIsSuperAdmin } from './hooks/useIsSuperAdmin'
 import type { ModuloId } from './types'
 
 const Login = lazy(() => import('./pages/Login'))
@@ -20,6 +22,10 @@ const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Relatorios = lazy(() => import('./pages/Relatorios'))
 const Layout = lazy(() => import('./components/Layout'))
 const AdminSuporte = lazy(() => import('./pages/AdminSuporte'))
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminContas = lazy(() => import('./pages/admin/AdminContas'))
+const AdminContaDetalhe = lazy(() => import('./pages/admin/AdminContaDetalhe'))
 
 function Loading() {
   return (
@@ -36,6 +42,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
   if (!user) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
+  const { isSuperAdmin, loading: saLoading } = useIsSuperAdmin()
+  const toastShown = useRef(false)
+
+  useEffect(() => {
+    if (!authLoading && !saLoading && user && !isSuperAdmin && !toastShown.current) {
+      toastShown.current = true
+      toast.error('Acesso negado')
+    }
+  }, [authLoading, saLoading, user, isSuperAdmin])
+
+  if (authLoading || saLoading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isSuperAdmin) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -77,6 +101,11 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/admin/suporte" element={<ProtectedRoute><AdminSuporte /></ProtectedRoute>} />
+            <Route element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/contas" element={<AdminContas />} />
+              <Route path="/admin/contas/:userId" element={<AdminContaDetalhe />} />
+            </Route>
             <Route
               element={
                 <ProtectedRoute>

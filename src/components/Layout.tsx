@@ -32,7 +32,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import FloatingHelpButton from './FloatingHelpButton'
-import { SUPER_ADMIN_IDS } from '../pages/AdminSuporte'
+import { useIsSuperAdmin } from '../hooks/useIsSuperAdmin'
 import { useSupportView } from '../contexts/SupportViewContext'
 import type { ModuloId } from '../types'
 
@@ -75,7 +75,7 @@ export default function Layout() {
   }
 
   const nomeUsuario = brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
-  const isSuperAdmin = user && SUPER_ADMIN_IDS.includes(user.id)
+  const { isSuperAdmin } = useIsSuperAdmin()
 
   const generateSupportCode = useCallback(async () => {
     if (!user || !isSupabaseConfigured) {
@@ -389,6 +389,17 @@ export default function Layout() {
                   </button>
                 )
               })}
+              {isSuperAdmin && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className={`relative flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-colors rounded-t-lg ml-auto ${
+                    location.pathname.startsWith('/admin') ? 'text-amber-400' : 'text-amber-400/50 hover:text-amber-400/80'
+                  }`}
+                >
+                  <Shield size={14} />
+                  <span>Superadmin</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
