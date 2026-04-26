@@ -158,12 +158,12 @@ export default function Layout() {
                 <img
                   src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
                   alt="A.T.A Gestão"
-                  className="h-24 w-auto hidden sm:block"
+                  className="h-12 w-auto hidden sm:block"
                 />
                 <img
                   src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
                   alt="A.T.A Gestão"
-                  className="h-14 w-auto sm:hidden"
+                  className="h-10 w-auto sm:hidden"
                 />
               </div>
 
