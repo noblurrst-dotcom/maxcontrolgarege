@@ -151,18 +151,30 @@ export default function Layout() {
         <div className="container-responsive">
           <div className="h-14 flex items-center gap-3">
 
-            {/* Logo */}
-            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>
-              {brand.logo_url ? (
-                <img src={brand.logo_url} alt="Logo" className="w-8 h-8 rounded-xl object-contain" />
-              ) : (
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                  <Car className="w-4 h-4" style={{ color: brand.cor_secundaria }} />
-                </div>
-              )}
-              <span className="text-base font-bold text-white tracking-tight hidden sm:block">
-                {brand.nome_empresa || <>estética<span className="text-primary-400">natã</span></>}
-              </span>
+            {/* Logo A.T.A + Divisor + Logo Cliente */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Logo A.T.A Gestão (plataforma) */}
+              <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
+                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-7 w-auto hidden sm:block" />
+                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-7 w-7 sm:hidden" />
+              </div>
+
+              {/* Divisor */}
+              <div className="w-px h-6 bg-white/20" aria-hidden="true" />
+
+              {/* Logo + nome do cliente */}
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
+                {brand.logo_url ? (
+                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-8 h-8 rounded-xl object-contain" />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
+                    <Car className="w-4 h-4" style={{ color: brand.cor_secundaria }} />
+                  </div>
+                )}
+                <span className="text-sm font-semibold text-white tracking-tight hidden md:block max-w-[180px] truncate">
+                  {brand.nome_empresa || 'Minha empresa'}
+                </span>
+              </div>
             </div>
 
             {/* Busca global — centro */}

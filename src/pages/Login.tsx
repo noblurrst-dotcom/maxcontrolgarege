@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Car, LogIn, UserPlus, Eye, EyeOff, AlertTriangle, ArrowLeft, Mail } from 'lucide-react'
+import { LogIn, UserPlus, Eye, EyeOff, AlertTriangle, ArrowLeft, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const BRAND = '#3657a3'
@@ -82,18 +82,16 @@ export default function Login() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-white/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
         <div className="relative z-10 text-center px-12 max-w-lg">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-white/10 backdrop-blur-sm rounded-3xl mb-8 border border-white/20">
-            <Car className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Max Control</h1>
-          <p className="text-white/70 mt-3 text-lg">Estética Automotiva</p>
+          <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-16 w-auto mx-auto mb-8" />
+          <h1 className="text-4xl font-bold text-white tracking-tight">A.T.A Gestão</h1>
+          <p className="text-white/70 mt-3 text-lg">Plataforma de gestão para estética automotiva</p>
           <div className="mt-8 flex items-center gap-3 justify-center">
             <div className="w-12 h-1 rounded-full bg-white/30" />
             <div className="w-12 h-1 rounded-full bg-white/60" />
             <div className="w-12 h-1 rounded-full bg-white/30" />
           </div>
           <p className="text-white/40 mt-8 text-sm leading-relaxed">
-            Gerencie agendamentos, clientes, vendas e serviços em um só lugar. Tudo que sua estética precisa.
+            Gerencie agendamentos, clientes, vendas e serviços em um só lugar.
           </p>
         </div>
       </div>
@@ -107,11 +105,9 @@ export default function Login() {
           style={{ background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%)` }}
         >
           <div className="pt-8 pb-2 flex flex-col items-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/15 backdrop-blur-sm border border-white/20 mb-3">
-              <Car className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Max Control</h1>
-            <p className="text-white/60 text-xs mt-0.5">Estética Automotiva</p>
+            <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="w-14 h-14 mb-3" />
+            <h1 className="text-xl font-bold text-white tracking-tight">A.T.A Gestão</h1>
+            <p className="text-white/60 text-xs mt-0.5">Plataforma de gestão</p>
           </div>
         </div>
 
