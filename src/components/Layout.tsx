@@ -153,10 +153,18 @@ export default function Layout() {
 
             {/* Logo A.T.A + Divisor + Logo Cliente */}
             <div className="flex items-center gap-3 shrink-0">
-              {/* Logo A.T.A Gestão (plataforma) */}
+              {/* Logo A.T.A Gestão (plataforma) — adaptativo claro/escuro */}
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
-                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-24 w-auto hidden sm:block" />
-                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-20 w-20 sm:hidden" />
+                <img
+                  src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
+                  alt="A.T.A Gestão"
+                  className="h-24 w-auto hidden sm:block"
+                />
+                <img
+                  src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
+                  alt="A.T.A Gestão"
+                  className="h-14 w-auto sm:hidden"
+                />
               </div>
 
               {/* Divisor */}
