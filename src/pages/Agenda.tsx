@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check, CreditCard, AlertCircle } from 'lucide-react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,6 +11,7 @@ import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 import AgendaSemanal from '../components/AgendaSemanal'
 import AgendaMensal from '../components/AgendaMensal'
+import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
@@ -38,6 +39,37 @@ export default function Agenda() {
   const [semanaOffset, setSemanaOffset] = useState(0)
   const hoje = new Date()
   const [mesAtual, setMesAtual] = useState(new Date())
+
+  // Pagamento modal
+  const [pagModal, setPagModal] = useState(false)
+  const [pagAgendamento, setPagAgendamento] = useState<Agendamento | null>(null)
+  const [pagVenda, setPagVenda] = useState<Venda | null>(null)
+
+  const STATUS_FLOW: Agendamento['status'][] = ['pendente', 'confirmado', 'em_andamento', 'concluido', 'cancelado']
+  const STATUS_LABELS: Record<Agendamento['status'], string> = { pendente: 'Pendente', confirmado: 'Confirmado', em_andamento: 'Em andamento', concluido: 'Concluído', cancelado: 'Cancelado' }
+  const STATUS_COLORS: Record<Agendamento['status'], string> = { pendente: 'bg-amber-100 text-amber-700', confirmado: 'bg-blue-100 text-blue-700', em_andamento: 'bg-purple-100 text-purple-700', concluido: 'bg-emerald-100 text-emerald-700', cancelado: 'bg-red-100 text-red-700' }
+
+  const mudarStatus = (ag: Agendamento, novoStatus: Agendamento['status']) => {
+    const atualizado = { ...ag, status: novoStatus }
+    salvar(lista.map(a => a.id === ag.id ? atualizado : a))
+    setAgDetalhe(atualizado)
+  }
+
+  const abrirCapturarPagamento = (ag: Agendamento) => {
+    const vendaAssociada = ag.venda_id ? vendas.find(v => v.id === ag.venda_id) : undefined
+    setPagAgendamento(ag)
+    setPagVenda(vendaAssociada || null)
+    setPagModal(true)
+  }
+
+  const onPagamentoSuccess = (vendaId: string, _pagamentoId: string) => {
+    // Atualizar o venda_id no agendamento local se ainda não tinha
+    if (agDetalhe && !agDetalhe.venda_id && vendaId) {
+      const atualizado = { ...agDetalhe, venda_id: vendaId }
+      salvar(lista.map(a => a.id === agDetalhe.id ? atualizado : a))
+      setAgDetalhe(atualizado)
+    }
+  }
 
   // Visualização: semanal ou mensal, persistida em localStorage
   const [visualizacao, setVisualizacao] = useState<'semanal' | 'mensal'>(() => {
@@ -324,6 +356,94 @@ export default function Agenda() {
                   )}
                 </div>
               )}
+              {/* Status */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Status</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUS_FLOW.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => mudarStatus(agDetalhe, s)}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                        agDetalhe.status === s
+                          ? STATUS_COLORS[s] + ' ring-2 ring-offset-1 ring-gray-300'
+                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                      }`}
+                    >
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pagamento */}
+              {(() => {
+                const vendaAssociada = agDetalhe.venda_id ? vendas.find(v => v.id === agDetalhe.venda_id) : undefined
+                const statusPag = vendaAssociada?.status_pagamento
+                const STATUS_PAG_COLORS: Record<string, string> = {
+                  pendente: 'bg-amber-100 text-amber-700',
+                  parcial: 'bg-blue-100 text-blue-700',
+                  pago: 'bg-emerald-100 text-emerald-700',
+                  cortesia: 'bg-gray-100 text-gray-500',
+                  cancelada: 'bg-red-100 text-red-600',
+                }
+                const STATUS_PAG_LABELS: Record<string, string> = {
+                  pendente: 'Pendente',
+                  parcial: 'Parcial',
+                  pago: 'Pago',
+                  cortesia: 'Cortesia',
+                  cancelada: 'Cancelada',
+                }
+                return (
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</p>
+                      {statusPag && (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${STATUS_PAG_COLORS[statusPag] || ''}`}>
+                          {STATUS_PAG_LABELS[statusPag] || statusPag}
+                        </span>
+                      )}
+                    </div>
+                    {vendaAssociada && (
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">Total</span>
+                          <span className="font-bold">{fmt(vendaAssociada.valor_total)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">Pago</span>
+                          <span className="font-bold text-emerald-600">{fmt(vendaAssociada.valor_pago || 0)}</span>
+                        </div>
+                        {vendaAssociada.valor_total - (vendaAssociada.valor_pago || 0) > 0 && (
+                          <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
+                            <span className="text-gray-500 font-bold">Restante</span>
+                            <span className="font-bold text-amber-600">{fmt(vendaAssociada.valor_total - (vendaAssociada.valor_pago || 0))}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* CTA: capturar pagamento */}
+                    {((!vendaAssociada && agDetalhe.status === 'concluido') ||
+                      (vendaAssociada && (statusPag === 'pendente' || statusPag === 'parcial'))) && (
+                      <button
+                        onClick={() => abrirCapturarPagamento(agDetalhe)}
+                        className="w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <CreditCard size={14} />
+                        {vendaAssociada ? 'Adicionar pagamento' : 'Capturar pagamento'}
+                      </button>
+                    )}
+                    {/* Banner: agendamento concluído sem pagamento e sem venda */}
+                    {!vendaAssociada && agDetalhe.status === 'concluido' && (
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-amber-700">Esse atendimento ainda não tem pagamento registrado.</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {agDetalhe.observacoes && (
                 <div className="bg-amber-50 rounded-xl p-4">
                   <p className="text-xs font-bold text-amber-700 mb-1">Observações</p>
@@ -624,6 +744,15 @@ export default function Agenda() {
           </div>
         </div>
       )}
+
+      {/* Modal capturar pagamento */}
+      <CapturarPagamentoModal
+        open={pagModal}
+        onClose={() => setPagModal(false)}
+        agendamento={pagAgendamento || undefined}
+        venda={pagVenda || undefined}
+        onSuccess={onPagamentoSuccess}
+      />
     </div>
   )
 }
