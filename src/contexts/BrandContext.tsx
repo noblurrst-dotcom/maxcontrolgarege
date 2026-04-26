@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext'
 
 const DEFAULT_BRAND: BrandConfig = {
   nome_usuario: '',
-  nome_empresa: 'Estética Automotiva',
+  nome_empresa: '',
   slogan: '',
   cnpj: '',
   telefone: '',

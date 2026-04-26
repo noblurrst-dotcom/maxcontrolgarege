@@ -1,6 +1,6 @@
-# Estética Automotiva
+# A.T.A Gestão
 
-Sistema web completo para gerenciar estética automotiva com agendamentos, vendas, clientes e serviços.
+Plataforma completa de gestão para estética automotiva — agendamentos, vendas, clientes e serviços.
 
 ## 🚀 Deploy no Render
 
@@ -66,7 +66,7 @@ npm run preview
 ## 📁 Estrutura do Projeto
 
 ```
-estetica-automotiva/
+ata-gestao/
 ├── src/
 │   ├── components/     # Componentes reutilizáveis
 │   ├── pages/          # Páginas principais
@@ -104,7 +104,7 @@ estetica-automotiva/
 
 ## 🌐 URLs do Deploy
 
-- **Render**: `https://estetica-automotiva.onrender.com`
+- **Render**: (configurar URL do deploy)
 - **Supabase**: Configure no painel do Supabase
 
 ## 📝 Notas Importantes

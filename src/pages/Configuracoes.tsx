@@ -76,7 +76,7 @@ export default function Configuracoes() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">Nome da empresa *</label>
-            <input type="text" value={brand.nome_empresa} onChange={(e) => updateBrand({ nome_empresa: e.target.value })} placeholder="Minha Estética Automotiva" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+            <input type="text" value={brand.nome_empresa} onChange={(e) => updateBrand({ nome_empresa: e.target.value })} placeholder="Nome da sua empresa" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-500 mb-1 block">Slogan</label>
