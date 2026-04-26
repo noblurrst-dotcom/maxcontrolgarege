@@ -12,6 +12,7 @@ import ClientePicker from '../components/ClientePicker'
 import AgendaSemanal from '../components/AgendaSemanal'
 import AgendaMensal from '../components/AgendaMensal'
 import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
+import toast from 'react-hot-toast'
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
@@ -442,6 +443,26 @@ export default function Agenda() {
                       >
                         <CreditCard size={14} />
                         {vendaAssociada ? 'Adicionar pagamento' : 'Capturar pagamento'}
+                      </button>
+                    )}
+                    {/* Cortesia: só aparece quando concluído e sem pagamento ou com venda pendente */}
+                    {((!vendaAssociada && agDetalhe.status === 'concluido') ||
+                      (vendaAssociada && (statusPag === 'pendente' || statusPag === 'parcial'))) && (
+                      <button
+                        onClick={async () => {
+                          if (vendaAssociada) {
+                            if (!confirm('Marcar como cortesia? Pagamentos existentes serão removidos.')) return
+                            const { error } = await supabase.rpc('marcar_cortesia', { p_venda_id: vendaAssociada.id })
+                            if (error) { toast.error('Erro: ' + error.message); return }
+                            toast.success('Marcado como cortesia')
+                          } else {
+                            toast.success('Atendimento liberado como cortesia')
+                          }
+                          setAgDetalhe(null)
+                        }}
+                        className="w-full py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 rounded-xl text-[11px] font-bold transition-colors"
+                      >
+                        Marcar como cortesia
                       </button>
                     )}
                     {/* Banner: agendamento concluído sem pagamento e sem venda */}

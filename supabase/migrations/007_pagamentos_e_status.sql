@@ -288,3 +288,77 @@ AS $$
       AND user_id = auth.uid()
     ORDER BY data_pagamento DESC;
 $$;
+
+-- 6) RPC: marcar venda como cortesia
+CREATE OR REPLACE FUNCTION public.marcar_cortesia(p_venda_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Usuário não autenticado';
+  END IF;
+
+  -- Excluir pagamentos existentes e suas entradas no financeiro
+  DELETE FROM public.financeiro
+    WHERE id IN (
+      SELECT financeiro_id FROM public.pagamentos
+        WHERE venda_id = p_venda_id AND user_id = v_user_id AND financeiro_id IS NOT NULL
+    ) AND user_id = v_user_id;
+
+  DELETE FROM public.pagamentos
+    WHERE venda_id = p_venda_id AND user_id = v_user_id;
+
+  -- Marcar como cortesia
+  UPDATE public.vendas
+    SET status_pagamento = 'cortesia',
+        valor_pago = 0
+    WHERE id = p_venda_id AND user_id = v_user_id;
+
+  RETURN jsonb_build_object('venda_id', p_venda_id, 'status_pagamento', 'cortesia');
+END;
+$$;
+
+-- 7) RPC: cancelar venda com limpeza cascateada
+CREATE OR REPLACE FUNCTION public.cancelar_venda(p_venda_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Usuário não autenticado';
+  END IF;
+
+  -- Excluir entradas no financeiro dos pagamentos
+  DELETE FROM public.financeiro
+    WHERE id IN (
+      SELECT financeiro_id FROM public.pagamentos
+        WHERE venda_id = p_venda_id AND user_id = v_user_id AND financeiro_id IS NOT NULL
+    ) AND user_id = v_user_id;
+
+  -- Excluir pagamentos
+  DELETE FROM public.pagamentos
+    WHERE venda_id = p_venda_id AND user_id = v_user_id;
+
+  -- Marcar venda como cancelada
+  UPDATE public.vendas
+    SET status_pagamento = 'cancelada',
+        valor_pago = 0
+    WHERE id = p_venda_id AND user_id = v_user_id;
+
+  -- Desvincular agendamentos
+  UPDATE public.agendamentos
+    SET venda_id = NULL
+    WHERE venda_id = p_venda_id AND user_id = v_user_id;
+
+  RETURN jsonb_build_object('venda_id', p_venda_id, 'status_pagamento', 'cancelada');
+END;
+$$;

@@ -888,6 +888,39 @@ export default function Vendas() {
                   <MessageCircle size={14} /> WhatsApp
                 </button>
               </div>
+              {/* Ações especiais: cortesia + cancelar */}
+              {detalhe.status_pagamento !== 'cortesia' && detalhe.status_pagamento !== 'cancelada' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Marcar esta venda como cortesia? Pagamentos existentes serão removidos.')) return
+                      const { error } = await supabase.rpc('marcar_cortesia', { p_venda_id: detalhe.id })
+                      if (error) { toast.error('Erro: ' + error.message); return }
+                      const atualizada = { ...detalhe, status_pagamento: 'cortesia' as const, valor_pago: 0 }
+                      salvar(vendas.map(v => v.id === detalhe.id ? atualizada : v))
+                      setDetalhe(atualizada)
+                      toast.success('Venda marcada como cortesia')
+                    }}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-500 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    Cortesia
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Cancelar esta venda? Pagamentos e lançamentos financeiros serão removidos.')) return
+                      const { error } = await supabase.rpc('cancelar_venda', { p_venda_id: detalhe.id })
+                      if (error) { toast.error('Erro: ' + error.message); return }
+                      const atualizada = { ...detalhe, status_pagamento: 'cancelada' as const, valor_pago: 0 }
+                      salvar(vendas.map(v => v.id === detalhe.id ? atualizada : v))
+                      setDetalhe(atualizada)
+                      toast.success('Venda cancelada')
+                    }}
+                    className="flex-1 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    Cancelar venda
+                  </button>
+                </div>
+              )}
               <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Venda
               </button>
