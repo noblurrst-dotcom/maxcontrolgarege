@@ -155,8 +155,8 @@ export default function Layout() {
             <div className="flex items-center gap-3 shrink-0">
               {/* Logo A.T.A Gestão (plataforma) */}
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
-                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-[72px] w-auto hidden sm:block" />
-                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-[72px] w-[72px] sm:hidden" />
+                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-24 w-auto hidden sm:block" />
+                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-20 w-20 sm:hidden" />
               </div>
 
               {/* Divisor */}
