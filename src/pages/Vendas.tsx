@@ -134,7 +134,8 @@ export default function Vendas() {
     const nova: Venda = {
       id: uid(), user_id: '', cliente_id: null, nome_cliente: pv.nome_cliente,
       descricao: descItens, valor: pv.valor_total,
-      desconto: 0, valor_total: pv.valor_total, forma_pagamento: 'pix',
+      desconto: 0, valor_total: pv.valor_total, valor_pago: 0,
+      forma_pagamento: null, status_pagamento: 'pendente',
       data_venda: convData, status: 'aberta',
       parcelas: 1, funcionario: '', observacoes: `Convertido de pré-venda. ${pv.observacoes}`,
       created_at: new Date().toISOString(),
@@ -236,7 +237,10 @@ export default function Vendas() {
     const nova: Venda = {
       id: vendaId, user_id: '', cliente_id: null, nome_cliente: form.nome_cliente,
       descricao: form.descricao, valor, desconto, valor_total: valorTotal,
-      forma_pagamento: form.forma_pagamento, data_venda: form.data_venda,
+      valor_pago: form.forma_pagamento ? valorTotal : 0,
+      forma_pagamento: form.forma_pagamento || null,
+      status_pagamento: form.forma_pagamento ? 'pago' : 'pendente',
+      data_venda: form.data_venda,
       data_agendamento: form.data_agendamento || undefined,
       hora_agendamento: form.data_agendamento ? form.hora_agendamento : undefined,
       status: 'fechada', parcelas: parseInt(form.parcelas),
@@ -686,7 +690,7 @@ export default function Vendas() {
                       onClick={() => setEditDetalhe({
                         valor: String(detalhe.valor),
                         desconto: String(detalhe.desconto || 0),
-                        forma_pagamento: detalhe.forma_pagamento,
+                        forma_pagamento: detalhe.forma_pagamento || 'pix',
                         parcelas: String(detalhe.parcelas || 1),
                         descontoTipo: 'valor',
                       })}

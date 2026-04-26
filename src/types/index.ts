@@ -107,6 +107,8 @@ export interface BrandConfig {
 
 export type FormaPagamento = 'debito' | 'credito' | 'pix' | 'dinheiro' | 'boleto' | 'transferencia'
 
+export type StatusPagamento = 'pendente' | 'parcial' | 'pago' | 'cortesia' | 'cancelada'
+
 export interface Venda {
   id: string;
   user_id: string;
@@ -115,7 +117,9 @@ export interface Venda {
   valor: number;
   desconto: number;
   valor_total: number;
-  forma_pagamento: FormaPagamento;
+  valor_pago: number;
+  forma_pagamento: FormaPagamento | null;
+  status_pagamento: StatusPagamento;
   descricao: string;
   data_venda: string;
   data_agendamento?: string;
@@ -124,6 +128,19 @@ export interface Venda {
   parcelas: number;
   funcionario: string;
   observacoes: string;
+  created_at: string;
+}
+
+export interface Pagamento {
+  id: string;
+  user_id: string;
+  venda_id: string;
+  valor: number;
+  forma_pagamento: FormaPagamento;
+  parcelas: number;
+  data_pagamento: string;
+  observacoes: string;
+  financeiro_id: string | null;
   created_at: string;
 }
 
