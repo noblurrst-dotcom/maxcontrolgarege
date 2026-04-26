@@ -212,6 +212,7 @@ export default function Agenda() {
             semanaOffset={semanaOffset}
             onSemanaChange={setSemanaOffset}
             onEventoClick={setAgDetalhe}
+            vendas={vendas}
           />
           {/* Lista de agendamentos com busca */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
@@ -236,7 +237,17 @@ export default function Agenda() {
                         <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center shrink-0"><Clock size={16} className="text-gray-500" /></div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{a.titulo || a.nome_cliente}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{a.titulo || a.nome_cliente}</p>
+                              {(() => {
+                                const v = a.venda_id ? vendas.find(x => x.id === a.venda_id) : undefined
+                                const sp = v?.status_pagamento
+                                if (a.status === 'concluido' && !v) return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 shrink-0">$ Pendente</span>
+                                if (sp === 'pendente') return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 shrink-0">$ Pendente</span>
+                                if (sp === 'parcial') return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600 shrink-0">$ Parcial</span>
+                                return null
+                              })()}
+                            </div>
                             <p className="text-[11px] sm:text-xs text-gray-400 truncate">{a.titulo ? `${a.nome_cliente} · ` : ''}{a.servico}{a.servico ? ' · ' : ''}{dataInicio}{dataFim ? ` → ${dataFim}` : ''}{a.valor ? ` · ${fmt(a.valor - (a.desconto || 0))}` : ''}</p>
                           </div>
                         </div>

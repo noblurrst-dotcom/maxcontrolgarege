@@ -755,17 +755,27 @@ export default function Dashboard() {
                     {ag.servico && ` • ${ag.servico}`}
                   </p>
                 </div>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                  ag.status === 'confirmado' ? 'bg-blue-50 text-blue-600' :
-                  ag.status === 'em_andamento' ? 'bg-amber-50 text-amber-600' :
-                  ag.status === 'concluido' ? 'bg-emerald-50 text-emerald-600' :
-                  'bg-gray-100 text-gray-500'
-                }`}>
-                  {ag.status === 'confirmado' ? 'Confirmado' :
-                   ag.status === 'em_andamento' ? 'Em andamento' :
-                   ag.status === 'concluido' ? 'Concluído' :
-                   'Pendente'}
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {(() => {
+                    const v = ag.venda_id ? vendas.find((x: any) => x.id === ag.venda_id) : undefined
+                    const sp = v?.status_pagamento
+                    if (ag.status === 'concluido' && !v) return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">$</span>
+                    if (sp === 'pendente') return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">$</span>
+                    if (sp === 'parcial') return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">½</span>
+                    return null
+                  })()}
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    ag.status === 'confirmado' ? 'bg-blue-50 text-blue-600' :
+                    ag.status === 'em_andamento' ? 'bg-amber-50 text-amber-600' :
+                    ag.status === 'concluido' ? 'bg-emerald-50 text-emerald-600' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {ag.status === 'confirmado' ? 'Confirmado' :
+                     ag.status === 'em_andamento' ? 'Em andamento' :
+                     ag.status === 'concluido' ? 'Concluído' :
+                     'Pendente'}
+                  </span>
+                </div>
               </div>
             )
           })}

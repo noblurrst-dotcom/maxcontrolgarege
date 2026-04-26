@@ -2,7 +2,7 @@ import { format, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fmt } from '../lib/utils'
-import type { Agendamento } from '../types'
+import type { Agendamento, Venda } from '../types'
 
 // ── Funções de estilo dos eventos ─────────────────────────────────────────────
 function gerarGradienteEvento(cor: string): string {
@@ -60,6 +60,7 @@ interface AgendaSemanalProps {
   onSemanaChange: (offset: number) => void
   onEventoClick?: (ag: Agendamento) => void
   horaFinal?: number
+  vendas?: Venda[]
 }
 
 const STATUS_LEGENDA = [
@@ -78,7 +79,10 @@ export default function AgendaSemanal({
   onSemanaChange,
   onEventoClick,
   horaFinal = 18,
+  vendas = [],
 }: AgendaSemanalProps) {
+  // Mapa venda_id → venda para lookup rápido
+  const vendaMap = new Map(vendas.map(v => [v.id, v]))
   const ROW_H = 48
   const HORA_INICIO = 7
   const TOTAL_HORAS = Math.max(horaFinal - HORA_INICIO, 4)
@@ -314,6 +318,19 @@ export default function AgendaSemanal({
                                   {ag.servico}
                                 </p>
                               )}
+                              {/* Badge de pagamento */}
+                              {(() => {
+                                if (ehCancelado) return null
+                                const venda = ag.venda_id ? vendaMap.get(ag.venda_id) : undefined
+                                const sp = venda?.status_pagamento
+                                if (ag.status === 'concluido' && !venda) {
+                                  return <span style={{ position: 'absolute', top: 3, right: 4, fontSize: 8, fontWeight: 800, color: '#fbbf24', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>$</span>
+                                }
+                                if (sp === 'pendente' || sp === 'parcial') {
+                                  return <span style={{ position: 'absolute', top: 3, right: 4, fontSize: 8, fontWeight: 800, color: sp === 'pendente' ? '#fbbf24' : '#60a5fa', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{sp === 'pendente' ? '$' : '½'}</span>
+                                }
+                                return null
+                              })()}
                             </div>
                           </div>
                         )
