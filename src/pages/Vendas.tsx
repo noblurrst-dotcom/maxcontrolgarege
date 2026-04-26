@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, Loader2 } from 'lucide-react'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, Loader2, CreditCard } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
@@ -14,6 +14,7 @@ import ChecklistEmbutido from '../components/ChecklistEmbutido'
 import toast from 'react-hot-toast'
 import { exportarOrcamentoPDF } from '../lib/exportarOrcamentoPDF'
 import DiagramaDefeitos from '../components/DiagramaDefeitos'
+import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
@@ -42,6 +43,7 @@ export default function Vendas() {
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'aberta' | 'fechada'>('todas')
+  const [filtroPagamento, setFiltroPagamento] = useState<'todos' | 'pendente' | 'parcial' | 'pago' | 'cortesia' | 'cancelada'>('todos')
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Venda | null>(null)
   const [editDetalhe, setEditDetalhe] = useState<{ valor: string; desconto: string; forma_pagamento: FormaPagamento; parcelas: string; descontoTipo: 'valor' | 'percentual' } | null>(null)
@@ -49,6 +51,7 @@ export default function Vendas() {
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
   const [mostrarChecklist, setMostrarChecklist] = useState(false)
   const [checklistSalvo, setChecklistSalvo] = useState(false)
+  const [vendaPagModal, setVendaPagModal] = useState(false)
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
   // Load services from Supabase
@@ -299,19 +302,45 @@ export default function Vendas() {
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
-  const filtradas = useMemo(() => vendas.filter((v) => {
-    const t = buscaDebounced.toLowerCase()
-    const matchBusca = v.nome_cliente.toLowerCase().includes(t) || v.descricao.toLowerCase().includes(t)
-    const matchStatus = filtroStatus === 'todas' || v.status === filtroStatus
-    return matchBusca && matchStatus && isInRange(v.data_venda)
-  }), [vendas, buscaDebounced, filtroStatus, isInRange])
+  const filtradas = useMemo(() => {
+    const result = vendas.filter((v) => {
+      const t = buscaDebounced.toLowerCase()
+      const matchBusca = v.nome_cliente.toLowerCase().includes(t) || v.descricao.toLowerCase().includes(t)
+      const matchStatus = filtroStatus === 'todas' || v.status === filtroStatus
+      const matchPag = filtroPagamento === 'todos' || (v.status_pagamento || 'pago') === filtroPagamento
+      return matchBusca && matchStatus && matchPag && isInRange(v.data_venda)
+    })
+    // Sort: pendentes → parciais → resto por data desc
+    const ORDER: Record<string, number> = { pendente: 0, parcial: 1, pago: 2, cortesia: 3, cancelada: 4 }
+    result.sort((a, b) => {
+      const oa = ORDER[a.status_pagamento || 'pago'] ?? 2
+      const ob = ORDER[b.status_pagamento || 'pago'] ?? 2
+      if (oa !== ob) return oa - ob
+      return new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime()
+    })
+    return result
+  }, [vendas, buscaDebounced, filtroStatus, filtroPagamento, isInRange])
 
-  const { totalHoje, totalPeriodo, abertas } = useMemo(() => {
+  // Contadores de status_pagamento (no período)
+  const contagensPag = useMemo(() => {
+    const base = vendas.filter(v => isInRange(v.data_venda))
+    return {
+      todos: base.length,
+      pendente: base.filter(v => (v.status_pagamento || 'pago') === 'pendente').length,
+      parcial: base.filter(v => v.status_pagamento === 'parcial').length,
+      pago: base.filter(v => (v.status_pagamento || 'pago') === 'pago').length,
+      cortesia: base.filter(v => v.status_pagamento === 'cortesia').length,
+      cancelada: base.filter(v => v.status_pagamento === 'cancelada').length,
+    }
+  }, [vendas, isInRange])
+
+  const { totalHoje, totalPeriodo, abertas, totalPendente } = useMemo(() => {
     const hoje = new Date().toISOString().split('T')[0]
     return {
       totalHoje: vendas.filter((v) => v.data_venda === hoje).reduce((a, v) => a + (v.valor_total || v.valor), 0),
       totalPeriodo: vendas.filter((v) => isInRange(v.data_venda)).reduce((a, v) => a + (v.valor_total || v.valor), 0),
       abertas: vendas.filter(v => v.status === 'aberta').length,
+      totalPendente: vendas.filter(v => isInRange(v.data_venda) && (v.status_pagamento === 'pendente' || v.status_pagamento === 'parcial')).reduce((a, v) => a + ((v.valor_total || v.valor) - (v.valor_pago || 0)), 0),
     }
   }, [vendas, isInRange])
 
@@ -359,24 +388,50 @@ export default function Vendas() {
       </div>
 
       {tab === 'vendas' && (<>
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente ou descrição..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
+      {/* Filtros: busca + status venda + chips pagamento */}
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente ou descrição..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
+          </div>
+          <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+            <option value="todas">Todas</option>
+            <option value="aberta">Abertas</option>
+            <option value="fechada">Fechadas</option>
+          </select>
         </div>
-        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-          <option value="todas">Todas</option>
-          <option value="aberta">Abertas</option>
-          <option value="fechada">Fechadas</option>
-        </select>
+        {/* Chips de status de pagamento */}
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            { key: 'todos', label: 'Todas', count: contagensPag.todos, color: 'bg-gray-100 text-gray-700' },
+            { key: 'pendente', label: 'Pendentes', count: contagensPag.pendente, color: 'bg-amber-100 text-amber-700' },
+            { key: 'parcial', label: 'Parciais', count: contagensPag.parcial, color: 'bg-blue-100 text-blue-700' },
+            { key: 'pago', label: 'Pagas', count: contagensPag.pago, color: 'bg-emerald-100 text-emerald-700' },
+            { key: 'cortesia', label: 'Cortesia', count: contagensPag.cortesia, color: 'bg-gray-100 text-gray-500' },
+            { key: 'cancelada', label: 'Canceladas', count: contagensPag.cancelada, color: 'bg-red-100 text-red-600' },
+          ] as const).map(chip => (
+            <button
+              key={chip.key}
+              onClick={() => setFiltroPagamento(chip.key)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                filtroPagamento === chip.key
+                  ? chip.color + ' ring-2 ring-offset-1 ring-gray-300'
+                  : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+              }`}
+            >
+              {chip.label}{chip.count > 0 ? ` (${chip.count})` : ''}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Total hoje', value: fmt(totalHoje), color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
           { label: periodoLabel, value: fmt(totalPeriodo), color: 'text-primary-600', iconBg: 'bg-primary-100' },
+          { label: 'A receber', value: fmt(totalPendente), color: 'text-amber-600', iconBg: 'bg-amber-100' },
           { label: 'No período', value: filtradas.length, color: 'text-violet-600', iconBg: 'bg-violet-100' },
-          { label: 'Abertas', value: abertas, color: 'text-amber-600', iconBg: 'bg-amber-100' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
@@ -800,6 +855,31 @@ export default function Vendas() {
                 {detalhe.funcionario && <div className="flex justify-between text-xs"><span className="text-gray-500">Funcionário</span><span>{detalhe.funcionario}</span></div>}
                 {detalhe.observacoes && <div className="text-xs text-gray-500 mt-2"><span className="font-medium">Obs:</span> {detalhe.observacoes}</div>}
               </div>
+              {/* Status de pagamento + CTA */}
+              {detalhe.status_pagamento && detalhe.status_pagamento !== 'pago' && detalhe.status_pagamento !== 'cortesia' && detalhe.status_pagamento !== 'cancelada' && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</p>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${detalhe.status_pagamento === 'pendente' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {detalhe.status_pagamento === 'pendente' ? 'Pendente' : 'Parcial'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Pago</span>
+                    <span className="font-bold text-emerald-600">{fmt(detalhe.valor_pago || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
+                    <span className="text-gray-500 font-bold">Restante</span>
+                    <span className="font-bold text-amber-600">{fmt((detalhe.valor_total || detalhe.valor) - (detalhe.valor_pago || 0))}</span>
+                  </div>
+                  <button
+                    onClick={() => setVendaPagModal(true)}
+                    className="w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <CreditCard size={14} /> Capturar pagamento
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={() => { toggleStatus(detalhe.id); setDetalhe({ ...detalhe, status: detalhe.status === 'aberta' ? 'fechada' : 'aberta' }) }} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${detalhe.status === 'aberta' ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}>
                   {detalhe.status === 'aberta' ? 'Fechar venda' : 'Reabrir venda'}
@@ -1168,6 +1248,26 @@ export default function Vendas() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal capturar pagamento (a partir de uma venda) */}
+      {detalhe && (
+        <CapturarPagamentoModal
+          open={vendaPagModal}
+          onClose={() => setVendaPagModal(false)}
+          venda={detalhe}
+          onSuccess={(vendaId, _pagId) => {
+            // Recarregar venda atualizada localmente
+            // A RPC atualiza o banco, mas o useCloudSync local precisa refletir
+            // Buscar dados atualizados do Supabase
+            supabase.from('vendas').select('*').eq('id', vendaId).single().then(({ data }) => {
+              if (data) {
+                salvar(vendas.map(v => v.id === vendaId ? data as Venda : v))
+                setDetalhe(data as Venda)
+              }
+            })
+          }}
+        />
       )}
     </div>
   )
