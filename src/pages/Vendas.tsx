@@ -29,7 +29,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: 'pix' as FormaPagamento, data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: '' as FormaPagamento | '', data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
@@ -294,7 +294,8 @@ export default function Vendas() {
   const toggleStatus = (id: string) => salvar(vendas.map((v) => v.id === id ? { ...v, status: v.status === 'aberta' ? 'fechada' as const : 'aberta' as const } : v))
 
   const enviarWhatsApp = (v: Venda) => {
-    const texto = `*Venda* - ${v.nome_cliente}\n${v.descricao}\nValor: ${fmt(v.valor_total || v.valor)}\nPagamento: ${FORMAS.find(f => f.value === v.forma_pagamento)?.label}\nData: ${new Date(v.data_venda).toLocaleDateString('pt-BR')}${v.parcelas > 1 ? `\nParcelas: ${v.parcelas}x` : ''}${v.desconto ? `\nDesconto: ${fmt(v.desconto)}` : ''}`
+    const formaPagLabel = v.forma_pagamento ? FORMAS.find(f => f.value === v.forma_pagamento)?.label : 'Pendente'
+    const texto = `*Venda* - ${v.nome_cliente}\n${v.descricao}\nValor: ${fmt(v.valor_total || v.valor)}\nPagamento: ${formaPagLabel}\nData: ${new Date(v.data_venda).toLocaleDateString('pt-BR')}${v.parcelas > 1 ? `\nParcelas: ${v.parcelas}x` : ''}${v.desconto ? `\nDesconto: ${fmt(v.desconto)}` : ''}`
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
@@ -408,8 +409,18 @@ export default function Vendas() {
                       <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${v.status === 'aberta' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                         {v.status === 'aberta' ? 'Aberta' : 'Fechada'}
                       </span>
+                      {v.status_pagamento && v.status_pagamento !== 'pago' && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          v.status_pagamento === 'pendente' ? 'bg-amber-100 text-amber-700' :
+                          v.status_pagamento === 'parcial' ? 'bg-blue-100 text-blue-700' :
+                          v.status_pagamento === 'cortesia' ? 'bg-gray-100 text-gray-500' :
+                          v.status_pagamento === 'cancelada' ? 'bg-red-100 text-red-600' : ''
+                        }`}>
+                          {v.status_pagamento === 'pendente' ? '$ Pendente' : v.status_pagamento === 'parcial' ? '$ Parcial' : v.status_pagamento === 'cortesia' ? 'Cortesia' : v.status_pagamento === 'cancelada' ? 'Cancelada' : ''}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[11px] sm:text-xs text-gray-400 truncate">{v.descricao} · {FORMAS.find((f) => f.value === v.forma_pagamento)?.label} · {new Date(v.data_venda).toLocaleDateString('pt-BR')}{v.parcelas > 1 ? ` · ${v.parcelas}x` : ''}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-400 truncate">{v.descricao}{v.forma_pagamento ? ` · ${FORMAS.find((f) => f.value === v.forma_pagamento)?.label}` : ''} · {new Date(v.data_venda).toLocaleDateString('pt-BR')}{v.parcelas > 1 ? ` · ${v.parcelas}x` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
@@ -498,7 +509,8 @@ export default function Vendas() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Pagamento</label>
-                  <select value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value as FormaPagamento })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                  <select value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value as FormaPagamento | '' })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                    <option value="">Sem pagamento agora</option>
                     {FORMAS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
                 </div>
@@ -782,7 +794,7 @@ export default function Vendas() {
                     <div className="flex justify-between text-xs"><span className="text-gray-500">Subtotal</span><span>{fmt(detalhe.valor)}</span></div>
                     {detalhe.desconto > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="text-red-500">-{fmt(detalhe.desconto)}</span></div>}
                     <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Valor total</span><span className="text-emerald-600">{fmt(detalhe.valor_total || detalhe.valor)}</span></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">Pagamento</span><span>{FORMAS.find(f => f.value === detalhe.forma_pagamento)?.label}{detalhe.parcelas > 1 ? ` · ${detalhe.parcelas}x` : ''}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Pagamento</span><span>{detalhe.forma_pagamento ? FORMAS.find(f => f.value === detalhe.forma_pagamento)?.label : 'Pendente'}{detalhe.parcelas > 1 ? ` · ${detalhe.parcelas}x` : ''}</span></div>
                   </>
                 )}
                 {detalhe.funcionario && <div className="flex justify-between text-xs"><span className="text-gray-500">Funcionário</span><span>{detalhe.funcionario}</span></div>}
