@@ -63,9 +63,9 @@ export default function MensagensDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => { setOpen(!open); setSelected(null) }}
-        className="relative p-2 text-white/60 hover:text-white transition-colors"
+        className="relative p-2.5 text-white/60 hover:text-white transition-colors"
       >
-        <Bell size={18} />
+        <Bell size={22} />
         {naoLidas > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
             {naoLidas > 9 ? '9+' : naoLidas}

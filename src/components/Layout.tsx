@@ -149,29 +149,29 @@ export default function Layout() {
 
         {/* LINHA 1 — Logo + Busca + Perfil */}
         <div className="container-responsive">
-          <div className="h-14 flex items-center gap-3">
+          <div className="h-16 flex items-center gap-3">
 
             {/* Logo A.T.A + Divisor + Logo Cliente */}
             <div className="flex items-center gap-3 shrink-0">
               {/* Logo A.T.A Gestão (plataforma) */}
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
-                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-7 w-auto hidden sm:block" />
-                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-7 w-7 sm:hidden" />
+                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-10 w-auto hidden sm:block" />
+                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-9 w-9 sm:hidden" />
               </div>
 
               {/* Divisor */}
-              <div className="w-px h-6 bg-white/20" aria-hidden="true" />
+              <div className="w-px h-8 bg-white/25" aria-hidden="true" />
 
               {/* Logo + nome do cliente */}
               <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
                 {brand.logo_url ? (
-                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-8 h-8 rounded-xl object-contain" />
+                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-10 h-10 rounded-xl object-contain" />
                 ) : (
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                    <Car className="w-4 h-4" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
+                    <Car className="w-5 h-5" style={{ color: brand.cor_secundaria }} />
                   </div>
                 )}
-                <span className="text-sm font-semibold text-white tracking-tight hidden md:block max-w-[180px] truncate">
+                <span className="text-base font-semibold text-white tracking-tight hidden md:block max-w-[200px] truncate">
                   {brand.nome_empresa || 'Minha empresa'}
                 </span>
               </div>
@@ -179,9 +179,9 @@ export default function Layout() {
 
             {/* Busca global — centro */}
             <div className="flex-1 max-w-md mx-auto relative">
-              <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2 transition-colors cursor-text"
+              <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2.5 transition-colors cursor-text"
                 onClick={() => { setBuscaAberta(true); buscaRef.current?.focus() }}>
-                <Search size={15} className="text-white/50 shrink-0" />
+                <Search size={16} className="text-white/50 shrink-0" />
                 <input
                   ref={buscaRef}
                   type="text"
@@ -190,7 +190,7 @@ export default function Layout() {
                   onFocus={() => setBuscaAberta(true)}
                   onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
                   placeholder="Buscar tela ou função..."
-                  className="flex-1 bg-transparent text-white placeholder-white/40 text-sm outline-none min-w-0"
+                  className="flex-1 bg-transparent text-white placeholder-white/40 text-base outline-none min-w-0"
                 />
               </div>
 
@@ -222,23 +222,23 @@ export default function Layout() {
 
               {/* Toggle dark mode */}
               <button onClick={toggleTheme}
-                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex"
+                className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex"
                 title={isDark ? 'Modo claro' : 'Modo noturno'}>
-                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                {isDark ? <Sun size={22} /> : <Moon size={22} />}
               </button>
 
               {/* Perfil dropdown */}
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                   title={nomeUsuario}
                 >
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
                     style={{ backgroundColor: brand.cor_primaria }}>
-                    <UserCircle className="w-5 h-5" style={{ color: brand.cor_secundaria }} />
+                    <UserCircle className="w-6 h-6" style={{ color: brand.cor_secundaria }} />
                   </div>
-                  <span className="text-sm font-medium text-white hidden sm:block max-w-[100px] truncate">
+                  <span className="text-base font-medium text-white hidden sm:block max-w-[120px] truncate">
                     {subUsuarioAtivo ? subUsuarioAtivo.nome : nomeUsuario}
                   </span>
                 </button>
@@ -375,7 +375,7 @@ export default function Layout() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-1.5 text-white/60 hover:text-white transition-colors"
               >
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function Layout() {
         {/* LINHA 2 — Navegação horizontal com ícone + label (apenas desktop) */}
         <div className="hidden md:block border-t border-white/10" style={{ backgroundColor: brand.cor_secundaria }}>
           <div className="container-responsive">
-            <div className="flex items-center gap-0.5 h-10">
+            <div className="flex items-center gap-0.5 h-11">
               {navItems.map(item => {
                 const isActive = location.pathname === item.path
                 const Icon = item.icon
@@ -392,12 +392,12 @@ export default function Layout() {
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`relative flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-colors rounded-t-lg ${
+                    className={`relative flex items-center gap-2 px-3.5 h-full text-sm font-semibold transition-colors rounded-t-lg ${
                       isActive ? 'text-white' : 'text-white/50 hover:text-white/80'
                     }`}
                     style={isActive ? { color: brand.cor_primaria } : undefined}
                   >
-                    <Icon size={14} />
+                    <Icon size={18} />
                     <span>{item.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
@@ -409,11 +409,11 @@ export default function Layout() {
               {isSuperAdmin && (
                 <button
                   onClick={() => navigate('/admin')}
-                  className={`relative flex items-center gap-1.5 px-3 h-full text-xs font-medium transition-colors rounded-t-lg ml-auto ${
+                  className={`relative flex items-center gap-2 px-3.5 h-full text-sm font-semibold transition-colors rounded-t-lg ml-auto ${
                     location.pathname.startsWith('/admin') ? 'text-amber-400' : 'text-amber-400/50 hover:text-amber-400/80'
                   }`}
                 >
-                  <Shield size={14} />
+                  <Shield size={18} />
                   <span>Superadmin</span>
                 </button>
               )}
@@ -454,7 +454,7 @@ export default function Layout() {
 
       {/* Support Mode Banner */}
       {isSupport && (
-        <div className="sticky top-14 md:top-[96px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+        <div className="sticky top-16 md:top-[108px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
           <div className="flex items-center gap-2 min-w-0">
             <Shield size={14} className="shrink-0" />
             <p className="text-xs font-bold truncate">
@@ -537,7 +537,7 @@ export default function Layout() {
                 }`}
                 style={isActive ? { color: brand.cor_primaria } : undefined}
               >
-                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                 <span className={`mobile-text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
               </button>
             )
@@ -550,7 +550,7 @@ export default function Layout() {
             }`}
             style={isMoreActive || mobileMoreOpen ? { color: brand.cor_primaria } : undefined}
           >
-            <MoreHorizontal size={20} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} />
+            <MoreHorizontal size={22} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} />
             <span className={`mobile-text-xs ${isMoreActive || mobileMoreOpen ? 'font-bold' : 'font-medium'}`}>Mais</span>
           </button>
         </div>
