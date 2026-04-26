@@ -149,26 +149,26 @@ export default function Layout() {
 
         {/* LINHA 1 — Logo + Busca + Perfil */}
         <div className="container-responsive">
-          <div className="h-16 flex items-center gap-3">
+          <div className="h-20 flex items-center gap-3">
 
             {/* Logo A.T.A + Divisor + Logo Cliente */}
             <div className="flex items-center gap-3 shrink-0">
               {/* Logo A.T.A Gestão (plataforma) */}
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
-                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-10 w-auto hidden sm:block" />
-                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-9 w-9 sm:hidden" />
+                <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-[72px] w-auto hidden sm:block" />
+                <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="h-[72px] w-[72px] sm:hidden" />
               </div>
 
               {/* Divisor */}
-              <div className="w-px h-8 bg-white/25" aria-hidden="true" />
+              <div className="w-px h-14 bg-white/25" aria-hidden="true" />
 
               {/* Logo + nome do cliente */}
               <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
                 {brand.logo_url ? (
-                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-10 h-10 rounded-xl object-contain" />
+                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-14 h-14 rounded-xl object-contain" />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                    <Car className="w-5 h-5" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
+                    <Car className="w-7 h-7" style={{ color: brand.cor_secundaria }} />
                   </div>
                 )}
                 <span className="text-base font-semibold text-white tracking-tight hidden md:block max-w-[200px] truncate">
@@ -454,7 +454,7 @@ export default function Layout() {
 
       {/* Support Mode Banner */}
       {isSupport && (
-        <div className="sticky top-16 md:top-[108px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+        <div className="sticky top-20 md:top-[124px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
           <div className="flex items-center gap-2 min-w-0">
             <Shield size={14} className="shrink-0" />
             <p className="text-xs font-bold truncate">

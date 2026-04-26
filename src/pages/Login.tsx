@@ -82,7 +82,7 @@ export default function Login() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-white/15 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
         <div className="relative z-10 text-center px-12 max-w-lg">
-          <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-20 w-auto mx-auto mb-10" />
+          <img src="/kv/logo-compress/KV_Full_comprimido.webp" alt="A.T.A Gestão" className="h-40 w-auto mx-auto mb-10" />
           <h1 className="text-4xl font-bold text-white tracking-tight">A.T.A Gestão</h1>
           <p className="text-white/70 mt-3 text-lg">Plataforma de gestão para estética automotiva</p>
           <div className="mt-8 flex items-center gap-3 justify-center">
@@ -105,7 +105,7 @@ export default function Login() {
           style={{ background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%)` }}
         >
           <div className="pt-8 pb-2 flex flex-col items-center">
-            <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="w-[72px] h-[72px] mb-4" />
+            <img src="/kv/logo-compress/KV_Favicon_white_comprimido.webp" alt="A.T.A Gestão" className="w-36 h-36 mb-4" />
             <h1 className="text-xl font-bold text-white tracking-tight">A.T.A Gestão</h1>
             <p className="text-white/60 text-xs mt-0.5">Plataforma de gestão</p>
           </div>
