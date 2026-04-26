@@ -26,6 +26,7 @@ const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminContas = lazy(() => import('./pages/admin/AdminContas'))
 const AdminContaDetalhe = lazy(() => import('./pages/admin/AdminContaDetalhe'))
+const AdminComunicacao = lazy(() => import('./pages/admin/AdminComunicacao'))
 
 function Loading() {
   return (
@@ -105,6 +106,7 @@ function App() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/contas" element={<AdminContas />} />
               <Route path="/admin/contas/:userId" element={<AdminContaDetalhe />} />
+              <Route path="/admin/comunicacao" element={<AdminComunicacao />} />
             </Route>
             <Route
               element={

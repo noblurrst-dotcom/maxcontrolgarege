@@ -9,6 +9,7 @@ import {
   X,
   ChevronLeft,
   Headphones,
+  Megaphone,
 } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -16,6 +17,7 @@ import toast from 'react-hot-toast'
 const NAV_ITEMS = [
   { path: '/admin', label: 'Dashboard', icon: BarChart2 },
   { path: '/admin/contas', label: 'Contas', icon: Users },
+  { path: '/admin/comunicacao', label: 'Comunicação', icon: Megaphone },
   { path: '/admin/suporte', label: 'Suporte', icon: Headphones, external: true },
 ]
 

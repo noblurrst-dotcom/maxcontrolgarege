@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Users, ShoppingCart, CalendarDays, Briefcase, DollarSign,
-  Headphones, Ban, CheckCircle2, Loader2, Clock, Shield,
+  Headphones, Ban, CheckCircle2, Loader2, Clock, Shield, MessageSquare, Send,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -74,6 +74,10 @@ export default function AdminContaDetalhe() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [gerando, setGerando] = useState(false)
+  const [mensagens, setMensagens] = useState<any[]>([])
+  const [msgForm, setMsgForm] = useState({ assunto: '', corpo: '' })
+  const [msgSending, setMsgSending] = useState(false)
+  const [showMsgForm, setShowMsgForm] = useState(false)
 
   const carregar = useCallback(async () => {
     if (!userId) return
@@ -91,6 +95,40 @@ export default function AdminContaDetalhe() {
   }, [userId])
 
   useEffect(() => { carregar() }, [carregar])
+
+  const carregarMensagens = useCallback(async () => {
+    if (!userId) return
+    try {
+      const { data: result, error } = await supabase.rpc('admin_listar_mensagens_conta', { p_user_id: userId })
+      if (error) throw error
+      setMensagens((result as any[]) || [])
+    } catch { /* silent */ }
+  }, [userId])
+
+  useEffect(() => { carregarMensagens() }, [carregarMensagens])
+
+  const enviarMensagem = async () => {
+    if (!userId || !msgForm.assunto.trim()) { toast.error('Preencha o assunto'); return }
+    setMsgSending(true)
+    try {
+      const { error } = await supabase.rpc('admin_enviar_mensagem', {
+        p_target_user_id: userId,
+        p_assunto: msgForm.assunto.trim(),
+        p_corpo: msgForm.corpo.trim(),
+      })
+      if (error) throw error
+      toast.success('Mensagem enviada')
+      setMsgForm({ assunto: '', corpo: '' })
+      setShowMsgForm(false)
+      carregarMensagens()
+      carregar() // refresh audit
+    } catch (err: any) {
+      console.error(err)
+      toast.error('Erro ao enviar mensagem')
+    } finally {
+      setMsgSending(false)
+    }
+  }
 
   const suspenderReativar = async () => {
     if (!data?.conta || !userId) return
@@ -264,6 +302,67 @@ export default function AdminContaDetalhe() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mensagens */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-blue-500" />
+            <h3 className="text-sm font-bold text-gray-900">Mensagens</h3>
+            {mensagens.length > 0 && <span className="text-[10px] text-gray-400">({mensagens.length})</span>}
+          </div>
+          <button
+            onClick={() => setShowMsgForm(!showMsgForm)}
+            className="text-xs font-bold text-amber-600 hover:text-amber-700"
+          >
+            {showMsgForm ? 'Cancelar' : '+ Nova mensagem'}
+          </button>
+        </div>
+
+        {showMsgForm && (
+          <div className="mb-4 space-y-2 p-3 bg-gray-50 rounded-xl">
+            <input
+              type="text"
+              value={msgForm.assunto}
+              onChange={e => setMsgForm(f => ({ ...f, assunto: e.target.value }))}
+              placeholder="Assunto"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <textarea
+              value={msgForm.corpo}
+              onChange={e => setMsgForm(f => ({ ...f, corpo: e.target.value }))}
+              placeholder="Corpo da mensagem"
+              rows={3}
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+            />
+            <button
+              onClick={enviarMensagem}
+              disabled={msgSending}
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 disabled:opacity-40"
+            >
+              {msgSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Enviar
+            </button>
+          </div>
+        )}
+
+        {mensagens.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">Nenhuma mensagem enviada</p>
+        ) : (
+          <div className="space-y-2">
+            {mensagens.map((m: any) => (
+              <div key={m.id} className={`py-2 border-b border-gray-50 last:border-0 ${!m.lida ? 'bg-blue-50/30 -mx-2 px-2 rounded-lg' : ''}`}>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold text-gray-900">{m.assunto}</p>
+                  {!m.lida && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>}
+                </div>
+                {m.corpo && <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{m.corpo}</p>}
+                <p className="text-[10px] text-gray-300 mt-1">{m.created_at ? format(new Date(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : ''}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Audit log */}

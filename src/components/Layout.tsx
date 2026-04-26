@@ -32,6 +32,8 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import FloatingHelpButton from './FloatingHelpButton'
+import GlobalBanner from './GlobalBanner'
+import MensagensDropdown from './MensagensDropdown'
 import { useIsSuperAdmin } from '../hooks/useIsSuperAdmin'
 import { useSupportView } from '../contexts/SupportViewContext'
 import type { ModuloId } from '../types'
@@ -202,6 +204,9 @@ export default function Layout() {
 
             {/* Ações direita */}
             <div className="flex items-center gap-2 shrink-0">
+
+              {/* Mensagens */}
+              <MensagensDropdown />
 
               {/* Toggle dark mode */}
               <button onClick={toggleTheme}
@@ -492,6 +497,9 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      {/* Banner global */}
+      <GlobalBanner />
 
       {/* Main Content */}
       <main className="flex-1 container-responsive container-with-bottom-nav py-4 sm:py-6">
