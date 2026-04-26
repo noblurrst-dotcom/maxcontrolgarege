@@ -12,11 +12,17 @@
     <meta name="author" content="A.T.A Gestão" />
     
     <!-- Favicon adaptativo (preto em modo claro, branco em modo escuro) -->
-    <link rel="icon" type="image/x-icon" href="/kv/favicon_black/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_black/favicon-16x16.png" media="(prefers-color-scheme: light)" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_white/favicon-16x16.png" media="(prefers-color-scheme: dark)" />
+    <!-- 192x192 — usado em bookmarks, atalhos e new-tab pages -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/kv/favicon_black/android-chrome-192x192.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/kv/favicon_white/android-chrome-192x192.png" media="(prefers-color-scheme: dark)" />
+    <!-- 32x32 — aba do navegador (maior = mais nítido) -->
     <link rel="icon" type="image/png" sizes="32x32" href="/kv/favicon_black/favicon-32x32.png" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/png" sizes="32x32" href="/kv/favicon_white/favicon-32x32.png" media="(prefers-color-scheme: dark)" />
+    <!-- 16x16 — fallback mínimo -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_black/favicon-16x16.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_white/favicon-16x16.png" media="(prefers-color-scheme: dark)" />
+    <!-- Fallback .ico (sem media query) -->
+    <link rel="icon" type="image/x-icon" href="/kv/favicon_black/favicon.ico" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
