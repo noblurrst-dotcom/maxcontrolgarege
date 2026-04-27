@@ -832,71 +832,75 @@ export default function Dashboard() {
             Hoje é dia {dataFormatada}, {diaSemana}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setShowCardManager(!showCardManager)}
-            title="Gerenciar cards"
-            className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => setEditMode(!editMode)}
-            title={editMode ? 'Concluir edição' : 'Editar painel'}
-            className={`p-2 rounded-xl transition-colors ${
-              editMode
-                ? 'bg-success-500 hover:bg-success-600 text-white'
-                : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
-            }`}
-          >
-            {editMode ? <Check size={16} /> : <Pencil size={16} />}
-          </button>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto min-w-0">
+          {/* Ícones de gerenciamento — linha separada em mobile */}
+          <div className="flex gap-2 shrink-0 sm:order-1">
+            <button
+              onClick={() => setShowCardManager(!showCardManager)}
+              title="Gerenciar cards"
+              className="p-2 rounded-xl transition-colors bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              title={editMode ? 'Concluir edição' : 'Editar painel'}
+              className={`p-2 rounded-xl transition-colors ${
+                editMode
+                  ? 'bg-success-500 hover:bg-success-600 text-white'
+                  : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
+              }`}
+            >
+              {editMode ? <Check size={16} /> : <Pencil size={16} />}
+            </button>
+          </div>
+          {/* Ações primárias — grid 2 colunas em mobile, flex em sm+ */}
           {!editMode && (
-            <>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto min-w-0">
               <button
                 onClick={() => navigate('/vendas')}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap active:scale-95 col-span-2 sm:col-span-1 min-w-0"
               >
                 <ShoppingCart size={14} />
                 Nova Venda
               </button>
               <button
                 onClick={() => navigate('/agenda')}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <CalendarPlus size={14} />
                 Agendamento
               </button>
               <button
                 onClick={() => navigate('/vendas')}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <FileText size={14} />
                 Orçamento
               </button>
-            </>
+            </div>
           )}
           {editMode && (
-            <>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto min-w-0">
               <button
                 onClick={() => {
                   const cw = getContainerWidth()
                   if (cw === 0) return
                   salvarBlocks(autoArranjarBlocks(blocks, cw))
                 }}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <Wand2 size={14} />
                 Organizar
               </button>
               <button
                 onClick={resetBlocks}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <RotateCcw size={14} />
                 Resetar
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
