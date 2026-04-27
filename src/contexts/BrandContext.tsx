@@ -2,6 +2,17 @@ import { createContext, useContext, useState, useEffect, useLayoutEffect, useCal
 import type { BrandConfig } from '../types'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import {
+  generatePalette,
+  getReadableTextColor,
+  contrastRatio,
+  adjustForContrast,
+  isLight,
+  lightenColor,
+  darkenColor,
+  mixColors,
+  normalizeHex,
+} from '../lib/color'
 
 const DEFAULT_BRAND: BrandConfig = {
   nome_usuario: '',
@@ -23,75 +34,81 @@ const DEFAULT_BRAND: BrandConfig = {
 
 const STORAGE_KEY = 'brand_config'
 
-// --- Color palette generation ---
-function hexToHsl(hex: string): [number, number, number] {
-  let r = parseInt(hex.slice(1, 3), 16) / 255
-  let g = parseInt(hex.slice(3, 5), 16) / 255
-  let b = parseInt(hex.slice(5, 7), 16) / 255
-  const max = Math.max(r, g, b), min = Math.min(r, g, b)
-  let h = 0, s = 0
-  const l = (max + min) / 2
-  if (max !== min) {
-    const d = max - min
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
-      case g: h = ((b - r) / d + 2) / 6; break
-      case b: h = ((r - g) / d + 4) / 6; break
-    }
-  }
-  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)]
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  s /= 100; l /= 100
-  const a = s * Math.min(l, 1 - l)
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
-    return Math.round(255 * color).toString(16).padStart(2, '0')
-  }
-  return `#${f(0)}${f(8)}${f(4)}`
-}
-
-function generatePalette(hex: string): Record<string, string> {
-  const [h, s] = hexToHsl(hex)
-  return {
-    50:  hslToHex(h, Math.min(s, 100), 95),
-    100: hslToHex(h, Math.min(s, 100), 90),
-    200: hslToHex(h, Math.min(s, 100), 80),
-    300: hslToHex(h, Math.min(s, 100), 70),
-    400: hslToHex(h, Math.min(s, 100), 60),
-    500: hex,
-    600: hslToHex(h, Math.min(s, 100), 42),
-    700: hslToHex(h, Math.min(s, 100), 34),
-    800: hslToHex(h, Math.min(s, 100), 26),
-    900: hslToHex(h, Math.min(s, 100), 18),
-  }
-}
-
-function applyBrandColors(primary: string, secondary: string) {
+/**
+ * Aplica as cores de marca no :root.
+ * Deriva: paleta primary/secondary, on-primary/on-secondary (contraste
+ * automático), estados hover/active/disabled, contrast-ajustado vs surface.
+ * Reage ao modo (dark/light) para escolher surface base.
+ */
+function applyBrandColors(primary: string, secondary: string, isDark = false) {
   const root = document.documentElement
-  const palette = generatePalette(primary)
-  Object.entries(palette).forEach(([shade, color]) => {
+  const pri = normalizeHex(primary)
+  const sec = normalizeHex(secondary)
+
+  // 1. Paletas 50-900
+  const palettePri = generatePalette(pri)
+  const paletteSec = generatePalette(sec)
+  Object.entries(palettePri).forEach(([shade, color]) => {
     root.style.setProperty(`--color-primary-${shade}`, color)
   })
-  const [sh, ss] = hexToHsl(secondary)
-  root.style.setProperty('--color-dark-800', hslToHex(sh, ss, 14))
-  root.style.setProperty('--color-dark-900', hslToHex(sh, ss, 7))
+  Object.entries(paletteSec).forEach(([shade, color]) => {
+    root.style.setProperty(`--color-secondary-${shade}`, color)
+  })
+
+  // 2. Texto contrastante automático
+  const onPrimary = getReadableTextColor(pri, 4.5)
+  const onSecondary = getReadableTextColor(sec, 4.5)
+  // Se o melhor candidato (preto/branco) ainda não passa AA, ajusta iterativamente
+  const onPrimaryFinal = contrastRatio(onPrimary, pri) >= 4.5
+    ? onPrimary
+    : adjustForContrast(onPrimary, pri, 4.5)
+  const onSecondaryFinal = contrastRatio(onSecondary, sec) >= 4.5
+    ? onSecondary
+    : adjustForContrast(onSecondary, sec, 4.5)
+  root.style.setProperty('--color-on-primary', onPrimaryFinal)
+  root.style.setProperty('--color-on-secondary', onSecondaryFinal)
+
+  // 3. Estados (hover/active/disabled)
+  const priIsLight = isLight(pri)
+  const hover = priIsLight ? darkenColor(pri, 8) : lightenColor(pri, 8)
+  const active = priIsLight ? darkenColor(pri, 14) : lightenColor(pri, 14)
+  const surfaceBase = isDark ? '#1a1a2e' : '#ffffff'
+  const disabled = mixColors(pri, surfaceBase, 0.6)
+  root.style.setProperty('--color-primary-hover', hover)
+  root.style.setProperty('--color-primary-active', active)
+  root.style.setProperty('--color-primary-disabled', disabled)
+
+  // 4. Variantes contrastadas vs surface (se primary tem contraste fraco com surface,
+  //    gera --color-primary-contrast ajustada)
+  const surface1 = isDark ? '#1a1a2e' : '#ffffff'
+  const priVsSurface = contrastRatio(pri, surface1)
+  const priContrast = priVsSurface >= 3 ? pri : adjustForContrast(pri, surface1, 3)
+  root.style.setProperty('--color-primary-contrast', priContrast)
+
+  const secVsSurface = contrastRatio(sec, surface1)
+  const secContrast = secVsSurface >= 3 ? sec : adjustForContrast(sec, surface1, 3)
+  root.style.setProperty('--color-secondary-contrast', secContrast)
+
+  // 5. Legacy aliases (mantidos para compat com classes existentes que ainda usam dark-*)
+  root.style.setProperty('--color-dark-800', paletteSec['600'])
+  root.style.setProperty('--color-dark-900', paletteSec['700'])
 }
 
 // Apply saved colors immediately at module load (before React mounts)
 try {
   const saved = localStorage.getItem(STORAGE_KEY)
+  const isDarkInitial = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
   if (saved) {
     const parsed = JSON.parse(saved)
     if (parsed.cor_primaria || parsed.cor_secundaria) {
       applyBrandColors(
         parsed.cor_primaria || DEFAULT_BRAND.cor_primaria,
-        parsed.cor_secundaria || DEFAULT_BRAND.cor_secundaria
+        parsed.cor_secundaria || DEFAULT_BRAND.cor_secundaria,
+        isDarkInitial
       )
     }
+  } else {
+    applyBrandColors(DEFAULT_BRAND.cor_primaria, DEFAULT_BRAND.cor_secundaria, isDarkInitial)
   }
 } catch { /* ignore */ }
 
@@ -132,7 +149,11 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
           const cloudBrand = { ...DEFAULT_BRAND, ...rest } as BrandConfig
           setBrand(cloudBrand)
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudBrand))
-          applyBrandColors(cloudBrand.cor_primaria, cloudBrand.cor_secundaria)
+          applyBrandColors(
+            cloudBrand.cor_primaria,
+            cloudBrand.cor_secundaria,
+            document.documentElement.classList.contains('dark')
+          )
         } else {
           // No cloud data — push local up
           const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
@@ -161,9 +182,18 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     syncToCloud(brand)
   }, [brand]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Apply colors synchronously before browser paint
+  // Apply colors synchronously before browser paint.
+  // Reage também a mudanças no class `dark` do <html>.
   useLayoutEffect(() => {
-    applyBrandColors(brand.cor_primaria, brand.cor_secundaria)
+    const apply = () => applyBrandColors(
+      brand.cor_primaria,
+      brand.cor_secundaria,
+      document.documentElement.classList.contains('dark')
+    )
+    apply()
+    const observer = new MutationObserver(apply)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
   }, [brand.cor_primaria, brand.cor_secundaria])
 
   const updateBrand = (partial: Partial<BrandConfig>) => {
