@@ -336,7 +336,7 @@ export default function Financeiro() {
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Saldo inicial (R$)</label>
                 <input type="number" step="0.01" value={formBanco.saldo} onChange={(e) => setFormBanco({ ...formBanco, saldo: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
               </div>
-              <button onClick={adicionarBanco} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
+              <button onClick={adicionarBanco} className="w-full py-3 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-sm font-bold transition-colors">
                 Cadastrar Conta
               </button>
             </div>

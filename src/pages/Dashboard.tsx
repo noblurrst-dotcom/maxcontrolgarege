@@ -151,7 +151,7 @@ function Calendario({
               title={feriado ? feriado.nome : undefined}
               className={`relative text-xs sm:text-sm py-2.5 sm:py-2 rounded-xl font-medium transition-all min-h-[44px] ${
                 ehHoje
-                  ? 'bg-primary-500 text-dark-900 font-bold shadow-md shadow-primary-500/30'
+                  ? 'bg-primary-500 text-on-primary font-bold shadow-md shadow-primary-500/30'
                   : feriado?.tipo === 'nacional'
                     ? 'bg-red-50 text-red-600 font-semibold hover:bg-red-100'
                     : feriado?.tipo === 'regional'
@@ -795,8 +795,8 @@ export default function Dashboard() {
           {brand.logo_url ? (
             <img src={brand.logo_url} alt="Logo" className="w-12 h-12 rounded-xl object-contain border border-gray-100" />
           ) : (
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: brand.cor_primaria + '20' }}>
-              <Building2 size={22} style={{ color: brand.cor_primaria }} />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-primary-500/15">
+              <Building2 size={22} className="text-primary-500" />
             </div>
           )}
           <div>
@@ -855,7 +855,7 @@ export default function Dashboard() {
             <>
               <button
                 onClick={() => navigate('/vendas')}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-95"
+                className="flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-95"
               >
                 <ShoppingCart size={14} />
                 Nova Venda

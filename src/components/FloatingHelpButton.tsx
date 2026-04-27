@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { HelpCircle, X, Send } from 'lucide-react'
-import { useBrand } from '../contexts/BrandContext'
 
 export default function FloatingHelpButton() {
-  const { brand } = useBrand()
   const [open, setOpen] = useState(false)
 
   return (
@@ -12,22 +10,19 @@ export default function FloatingHelpButton() {
       {open && (
         <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[60] w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
-          <div
-            className="flex items-center justify-between px-4 py-3"
-            style={{ backgroundColor: brand.cor_secundaria }}
-          >
+          <div className="flex items-center justify-between px-4 py-3 bg-secondary-500">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                <HelpCircle size={16} style={{ color: brand.cor_secundaria }} />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary-500">
+                <HelpCircle size={16} className="text-on-primary" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Suporte</p>
-                <p className="text-[10px] text-gray-400">Estamos aqui para ajudar</p>
+                <p className="text-sm font-bold text-on-secondary">Suporte</p>
+                <p className="text-[10px] text-on-secondary opacity-70">Estamos aqui para ajudar</p>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-on-secondary opacity-60 hover:opacity-100 hover:bg-white/10 transition-all"
             >
               <X size={18} />
             </button>
@@ -54,10 +49,9 @@ export default function FloatingHelpButton() {
             />
             <button
               disabled
-              className="p-2 rounded-xl opacity-40 cursor-not-allowed"
-              style={{ backgroundColor: brand.cor_primaria }}
+              className="p-2 rounded-xl opacity-40 cursor-not-allowed bg-primary-500"
             >
-              <Send size={16} style={{ color: brand.cor_secundaria }} />
+              <Send size={16} className="text-on-primary" />
             </button>
           </div>
         </div>
@@ -66,15 +60,10 @@ export default function FloatingHelpButton() {
       {/* Floating button */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[60] w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
-        style={{ backgroundColor: brand.cor_primaria }}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[60] w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 bg-primary-500 text-on-primary"
         title="Ajuda"
       >
-        {open ? (
-          <X size={22} style={{ color: brand.cor_secundaria }} />
-        ) : (
-          <HelpCircle size={22} style={{ color: brand.cor_secundaria }} />
-        )}
+        {open ? <X size={22} /> : <HelpCircle size={22} />}
       </button>
     </>
   )

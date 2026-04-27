@@ -180,7 +180,7 @@ export default function Agenda() {
             <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
             <p className="text-sm text-gray-400 mt-0.5 capitalize">{format(hoje, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
           </div>
-          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm self-start md:self-auto">
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors shadow-sm self-start md:self-auto">
             <Plus size={16} /> Novo Agendamento
           </button>
         </div>
@@ -444,7 +444,7 @@ export default function Agenda() {
                       (vendaAssociada && (statusPag === 'pendente' || statusPag === 'parcial'))) && (
                       <button
                         onClick={() => abrirCapturarPagamento(agDetalhe)}
-                        className="w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                        className="w-full py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                       >
                         <CreditCard size={14} />
                         {vendaAssociada ? 'Adicionar pagamento' : 'Capturar pagamento'}
@@ -704,7 +704,7 @@ export default function Agenda() {
                     <button key={key} type="button" onClick={() => toggleCampo(key)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                         camposOpcionais.has(key)
-                          ? 'bg-primary-500 text-dark-900'
+                          ? 'bg-primary-500 text-on-primary'
                           : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                       }`}>
                       <Plus size={12} /> {label}

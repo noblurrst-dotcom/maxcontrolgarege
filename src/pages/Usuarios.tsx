@@ -127,7 +127,7 @@ export default function Usuarios() {
           <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
           <p className="text-sm text-gray-400 mt-0.5">Gerencie o acesso e permissões da equipe</p>
         </div>
-        <button onClick={abrirNovo} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+        <button onClick={abrirNovo} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors shadow-sm">
           <UserPlus size={16} /> Novo Usuário
         </button>
       </div>
@@ -333,7 +333,7 @@ export default function Usuarios() {
             {/* Actions */}
             <div className="flex gap-2 mt-6">
               <button onClick={() => setModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors min-h-[44px]">Cancelar</button>
-              <button onClick={salvar} disabled={!form.nome.trim() || !form.email.trim() || (!editId && !form.senha.trim())} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]">
+              <button onClick={salvar} disabled={!form.nome.trim() || !form.email.trim() || (!editId && !form.senha.trim())} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]">
                 {editId ? 'Salvar' : 'Criar Usuário'}
               </button>
             </div>

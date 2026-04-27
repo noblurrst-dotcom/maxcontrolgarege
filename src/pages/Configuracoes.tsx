@@ -121,7 +121,7 @@ export default function Configuracoes() {
           <div className="flex-1 space-y-3">
             <p className="text-xs text-gray-400">Envie a logo da sua empresa. Formatos aceitos: JPG, PNG, SVG. Tamanho máximo: 2MB.</p>
             <div className="flex gap-2">
-              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors">
+              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors">
                 <Upload size={14} /> Enviar logo
               </button>
               {brand.logo_url && (

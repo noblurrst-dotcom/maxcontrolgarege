@@ -393,7 +393,7 @@ export default function Clientes() {
           <button onClick={() => setCsvModal(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
             <Upload size={14} /> Importar CSV
           </button>
-          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors shadow-sm">
             <Plus size={16} /> Novo Cliente
           </button>
         </div>
@@ -691,7 +691,7 @@ export default function Clientes() {
                         onClick={() => toggleCampo(key)}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                           ativo
-                            ? 'bg-primary-500 text-dark-900 shadow-sm'
+                            ? 'bg-primary-500 text-on-primary shadow-sm'
                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                       >
@@ -764,7 +764,7 @@ export default function Clientes() {
               <button
                 onClick={adicionar}
                 disabled={!form.nome || !form.telefone}
-                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+                className="w-full py-3 bg-primary-500 hover:bg-primary-hover disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-on-primary rounded-xl text-sm font-bold transition-colors"
               >
                 Cadastrar Cliente
               </button>
@@ -794,7 +794,7 @@ export default function Clientes() {
                   </div>
                   <p className="text-lg font-bold text-gray-900">{csvImportados} contato{csvImportados !== 1 ? 's' : ''} importado{csvImportados !== 1 ? 's' : ''}!</p>
                   <p className="text-sm text-gray-400 mt-1">Os contatos já aparecem na sua lista.</p>
-                  <button onClick={fecharCsvModal} className="mt-5 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
+                  <button onClick={fecharCsvModal} className="mt-5 px-6 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-sm font-bold transition-colors">
                     Concluir
                   </button>
                 </div>
@@ -890,7 +890,7 @@ export default function Clientes() {
                         <button
                           onClick={importarCSV}
                           disabled={nomeIdx < 0 || comNome === 0}
-                          className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+                          className="w-full py-3 bg-primary-500 hover:bg-primary-hover disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-on-primary rounded-xl text-sm font-bold transition-colors"
                         >
                           Importar {comNome > 0 ? `${comNome} contato${comNome !== 1 ? 's' : ''}` : ''}
                         </button>
@@ -1078,7 +1078,7 @@ export default function Clientes() {
                   </div>
                   <button
                     onClick={() => { setVeiculoEditando(null); setVeiculoForm(initVeiculoForm()); setVeiculoModal(true) }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors"
                   >
                     <Plus size={13} /> Novo veículo
                   </button>
@@ -1414,7 +1414,7 @@ export default function Clientes() {
               <button
                 onClick={salvarVeiculo}
                 disabled={!veiculoForm.placa}
-                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-dark-900 rounded-xl text-sm font-bold transition-colors"
+                className="w-full py-3 bg-primary-500 hover:bg-primary-hover disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-on-primary rounded-xl text-sm font-bold transition-colors"
               >
                 {veiculoEditando ? 'Salvar alterações' : 'Adicionar veículo'}
               </button>

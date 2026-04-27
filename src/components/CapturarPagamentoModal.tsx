@@ -327,7 +327,7 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
             <button
               onClick={handleSubmit}
               disabled={loading || !valor || parseFloat(valor) <= 0}
-              className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
               Confirmar pagamento

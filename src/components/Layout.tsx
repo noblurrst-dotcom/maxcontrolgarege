@@ -145,7 +145,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 shadow-md safe-area-top" style={{ backgroundColor: brand.cor_secundaria }}>
+      <header className="sticky top-0 z-40 shadow-md safe-area-top bg-secondary-500">
 
         {/* LINHA 1 — Logo + Busca + Perfil */}
         <div className="container-responsive">
@@ -175,11 +175,11 @@ export default function Layout() {
                 {brand.logo_url ? (
                   <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl object-contain" />
                 ) : (
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                    <Car className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center bg-primary-500">
+                    <Car className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-on-primary" />
                   </div>
                 )}
-                <span className="text-sm md:text-base font-semibold text-white tracking-tight hidden md:block max-w-[200px] truncate">
+                <span className="text-sm md:text-base font-semibold text-on-secondary tracking-tight hidden md:block max-w-[200px] truncate">
                   {brand.nome_empresa || 'Minha empresa'}
                 </span>
               </div>
@@ -198,7 +198,7 @@ export default function Layout() {
                   onFocus={() => setBuscaAberta(true)}
                   onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
                   placeholder="Buscar tela ou função..."
-                  className="flex-1 bg-transparent text-white placeholder-white/40 text-sm md:text-base outline-none min-w-0"
+                  className="flex-1 bg-transparent text-on-secondary placeholder-white/40 text-sm md:text-base outline-none min-w-0"
                 />
               </div>
 
@@ -254,11 +254,10 @@ export default function Layout() {
                   className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer min-h-[44px]"
                   title={nomeUsuario}
                 >
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: brand.cor_primaria }}>
-                    <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 bg-primary-500">
+                    <UserCircle className="w-5 h-5 sm:w-6 sm:h-6 text-on-primary" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-white hidden md:block max-w-[120px] truncate">
+                  <span className="text-sm md:text-base font-medium text-on-secondary hidden md:block max-w-[120px] truncate">
                     {subUsuarioAtivo ? subUsuarioAtivo.nome : nomeUsuario}
                   </span>
                 </button>
@@ -402,7 +401,7 @@ export default function Layout() {
         </div>
 
         {/* LINHA 2 — Navegação horizontal com ícone + label (apenas desktop) */}
-        <div className="hidden md:block border-t border-white/10" style={{ backgroundColor: brand.cor_secundaria }}>
+        <div className="hidden md:block border-t border-white/10 bg-secondary-500">
           <div className="container-responsive">
             <div className="flex items-center gap-0.5 h-11">
               {navItems.map(item => {
@@ -413,15 +412,13 @@ export default function Layout() {
                     key={item.path}
                     onClick={() => navigate(item.path)}
                     className={`relative flex items-center gap-2 px-3.5 h-full text-sm font-semibold transition-colors rounded-t-lg ${
-                      isActive ? 'text-white' : 'text-white/50 hover:text-white/80'
+                      isActive ? 'text-primary-500' : 'text-on-secondary opacity-60 hover:opacity-90'
                     }`}
-                    style={isActive ? { color: brand.cor_primaria } : undefined}
                   >
                     <Icon size={18} />
                     <span>{item.label}</span>
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
-                        style={{ backgroundColor: brand.cor_primaria }} />
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary-500" />
                     )}
                   </button>
                 )
@@ -443,7 +440,7 @@ export default function Layout() {
 
         {/* Mobile search overlay */}
         {buscaAberta && (
-          <div className="sm:hidden border-t border-white/10 px-3 py-3" style={{ backgroundColor: brand.cor_secundaria }}>
+          <div className="sm:hidden border-t border-white/10 px-3 py-3 bg-secondary-500">
             <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5">
               <Search size={16} className="text-white/50 shrink-0" />
               <input
@@ -453,7 +450,7 @@ export default function Layout() {
                 onChange={e => setBusca(e.target.value)}
                 onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
                 placeholder="Buscar tela ou função..."
-                className="flex-1 bg-transparent text-white placeholder-white/40 text-sm outline-none min-w-0"
+                className="flex-1 bg-transparent text-on-secondary placeholder-white/40 text-sm outline-none min-w-0"
                 autoFocus
               />
               <button onClick={() => { setBuscaAberta(false); setBusca('') }} className="p-1 text-white/40 hover:text-white">
@@ -482,7 +479,7 @@ export default function Layout() {
 
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/5 px-3 py-2 max-h-[70vh] overflow-y-auto" style={{ backgroundColor: brand.cor_secundaria }}>
+          <div className="md:hidden border-t border-white/5 px-3 py-2 max-h-[70vh] overflow-y-auto bg-secondary-500">
             <div className="grid grid-cols-3 gap-1.5">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path
@@ -499,10 +496,9 @@ export default function Layout() {
                         ? ''
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
-                    style={isActive ? { backgroundColor: brand.cor_primaria + '1a', color: brand.cor_primaria } : undefined}
                   >
-                    <Icon size={20} />
-                    <span className="truncate w-full text-center">{item.label}</span>
+                    <Icon size={20} className={isActive ? 'text-primary-500' : ''} />
+                    <span className={`truncate w-full text-center ${isActive ? 'text-primary-500' : ''}`}>{item.label}</span>
                   </button>
                 )
               })}
@@ -535,8 +531,8 @@ export default function Layout() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 pt-6 pb-4 text-center">
-              <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria + '20' }}>
-                <HelpCircle size={28} style={{ color: brand.cor_primaria }} />
+              <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center bg-primary-500/15">
+                <HelpCircle size={28} className="text-primary-500" />
               </div>
               <h3 className="text-lg font-bold text-gray-900">Código de Suporte</h3>
               <p className="text-xs text-gray-500 mt-1">Envie este código para nossa equipe de suporte para que possamos acessar sua conta e ajudá-lo.</p>
@@ -559,8 +555,7 @@ export default function Layout() {
             <div className="px-6 pb-6">
               <button
                 onClick={() => { setSupportModal(false); setSupportCode('') }}
-                className="w-full py-2.5 rounded-xl text-sm font-bold transition-colors"
-                style={{ backgroundColor: brand.cor_primaria, color: brand.cor_secundaria }}
+                className="w-full py-2.5 rounded-xl text-sm font-bold transition-colors bg-primary-500 hover:bg-primary-hover text-on-primary"
               >
                 Entendi
               </button>
@@ -594,10 +589,9 @@ export default function Layout() {
                     ? ''
                     : 'text-gray-400'
                 }`}
-                style={isActive ? { color: brand.cor_primaria } : undefined}
               >
-                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                <span className={`mobile-text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-primary-500' : ''} />
+                <span className={`mobile-text-xs ${isActive ? 'font-bold text-primary-500' : 'font-medium'}`}>{item.label}</span>
               </button>
             )
           })}
@@ -607,10 +601,9 @@ export default function Layout() {
             className={`btn-mobile flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors ${
               isMoreActive || mobileMoreOpen ? '' : 'text-gray-400'
             }`}
-            style={isMoreActive || mobileMoreOpen ? { color: brand.cor_primaria } : undefined}
           >
-            <MoreHorizontal size={22} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} />
-            <span className={`mobile-text-xs ${isMoreActive || mobileMoreOpen ? 'font-bold' : 'font-medium'}`}>Mais</span>
+            <MoreHorizontal size={22} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} className={isMoreActive || mobileMoreOpen ? 'text-primary-500' : ''} />
+            <span className={`mobile-text-xs ${isMoreActive || mobileMoreOpen ? 'font-bold text-primary-500' : 'font-medium'}`}>Mais</span>
           </button>
         </div>
 
@@ -633,10 +626,9 @@ export default function Layout() {
                           ? ''
                           : 'text-gray-500 hover:bg-gray-50'
                       }`}
-                      style={isActive ? { backgroundColor: brand.cor_primaria + '15', color: brand.cor_primaria } : undefined}
                     >
-                      <Icon size={22} />
-                      <span className={`text-[11px] ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                      <Icon size={22} className={isActive ? 'text-primary-500' : ''} />
+                      <span className={`text-[11px] ${isActive ? 'font-bold text-primary-500' : 'font-medium'}`}>{item.label}</span>
                     </button>
                   )
                 })}

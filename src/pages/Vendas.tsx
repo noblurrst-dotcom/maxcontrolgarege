@@ -371,7 +371,7 @@ export default function Vendas() {
           <button onClick={() => { setPvModal(true); setTab('prevenda') }} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
             <FileText size={14} /> Nova Pré-Venda
           </button>
-          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-full text-xs font-bold transition-colors shadow-sm">
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors shadow-sm">
             <Plus size={16} /> Nova Venda
           </button>
         </div>
@@ -572,8 +572,8 @@ export default function Vendas() {
                   <div className="flex gap-1">
                     <input type="number" step="0.01" value={form.desconto} onChange={(e) => setForm({ ...form, desconto: e.target.value })} placeholder="0,00" className="flex-1 min-w-0 px-3 py-2.5 border border-gray-200 rounded-l-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                     <div className="flex border border-gray-200 rounded-r-xl overflow-hidden">
-                      <button type="button" onClick={() => setDescontoTipo('valor')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'valor' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400 hover:text-gray-600'}`}>R$</button>
-                      <button type="button" onClick={() => setDescontoTipo('percentual')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'percentual' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400 hover:text-gray-600'}`}>%</button>
+                      <button type="button" onClick={() => setDescontoTipo('valor')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'valor' ? 'bg-primary-500 text-on-primary' : 'bg-white text-gray-400 hover:text-gray-600'}`}>R$</button>
+                      <button type="button" onClick={() => setDescontoTipo('percentual')} className={`px-2.5 py-2.5 text-[11px] font-bold transition-colors ${descontoTipo === 'percentual' ? 'bg-primary-500 text-on-primary' : 'bg-white text-gray-400 hover:text-gray-600'}`}>%</button>
                     </div>
                   </div>
                 </div>
@@ -745,7 +745,7 @@ export default function Vendas() {
                   })()}
                 </div>
               )}
-              <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors min-h-[44px]">
+              <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-sm font-bold transition-colors min-h-[44px]">
                 Registrar Venda
               </button>
             </div>
@@ -801,8 +801,8 @@ export default function Vendas() {
                         <div className="flex gap-0.5">
                           <input type="number" step="0.01" value={editDetalhe.desconto} onChange={(e) => setEditDetalhe({ ...editDetalhe, desconto: e.target.value })} className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-l-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                           <div className="flex border border-gray-200 rounded-r-lg overflow-hidden">
-                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'valor' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'valor' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400'}`}>R$</button>
-                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'percentual' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'percentual' ? 'bg-primary-500 text-dark-900' : 'bg-white text-gray-400'}`}>%</button>
+                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'valor' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'valor' ? 'bg-primary-500 text-on-primary' : 'bg-white text-gray-400'}`}>R$</button>
+                            <button type="button" onClick={() => setEditDetalhe({ ...editDetalhe, descontoTipo: 'percentual' })} className={`px-2 py-2 text-[10px] font-bold transition-colors ${editDetalhe.descontoTipo === 'percentual' ? 'bg-primary-500 text-on-primary' : 'bg-white text-gray-400'}`}>%</button>
                           </div>
                         </div>
                       </div>
@@ -857,7 +857,7 @@ export default function Vendas() {
                           setDetalhe(atualizada)
                           setEditDetalhe(null)
                         }}
-                        className="flex-1 py-2 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-lg text-xs font-bold transition-colors"
+                        className="flex-1 py-2 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-lg text-xs font-bold transition-colors"
                       >
                         Salvar alterações
                       </button>
@@ -893,7 +893,7 @@ export default function Vendas() {
                   </div>
                   <button
                     onClick={() => setVendaPagModal(true)}
-                    className="w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                   >
                     <CreditCard size={14} /> Capturar pagamento
                   </button>
@@ -1090,7 +1090,7 @@ export default function Vendas() {
                 </button>
                 <button
                   onClick={() => { setExportPv(pvDetalhe); setExportModal(true) }}
-                  className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
                 >
                   <FileText size={14} /> Check List PDF
                 </button>
@@ -1143,7 +1143,7 @@ export default function Vendas() {
                       onClick={() => setEstadoPintura(v => v === e ? '' : e)}
                       className={`flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${
                         estadoPintura === e
-                          ? 'bg-primary-500 text-dark-900'
+                          ? 'bg-primary-500 text-on-primary'
                           : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                       }`}>
                       {e === 'otimo' ? 'Ótimo' : e.charAt(0).toUpperCase() + e.slice(1)}
@@ -1209,7 +1209,7 @@ export default function Vendas() {
                   }
                 }}
                 disabled={gerandoPDF}
-                className="w-full py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-dark-900 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 bg-primary-500 hover:bg-primary-hover disabled:opacity-50 text-on-primary rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
               >
                 {gerandoPDF
                   ? <><Loader2 size={16} className="animate-spin" /> Gerando PDF...</>

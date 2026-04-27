@@ -81,7 +81,7 @@ export default function ClientePicker({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => { setNovoCliente(true); setAberto(true) }}
-          className="px-2.5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl transition-colors shrink-0"
+          className="px-2.5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl transition-colors shrink-0"
           title="Cadastrar novo cliente"
         >
           <UserPlus size={16} />
@@ -189,7 +189,7 @@ export default function ClientePicker({ value, onChange }: Props) {
               type="button"
               onClick={salvarNovoCliente}
               disabled={!novoForm.nome.trim()}
-              className="w-full py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-dark-900 rounded-lg text-xs font-bold transition-colors"
+              className="w-full py-2 bg-primary-500 hover:bg-primary-hover disabled:opacity-40 text-on-primary rounded-lg text-xs font-bold transition-colors"
             >
               Cadastrar e selecionar
             </button>

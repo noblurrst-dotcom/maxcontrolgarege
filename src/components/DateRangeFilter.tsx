@@ -30,7 +30,7 @@ export default function DateRangeFilter({ preset, onChange, customInicio, custom
             onClick={() => onChange(p.value)}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 snap-start min-h-[36px] ${
               preset === p.value
-                ? 'bg-primary-500 text-dark-900 shadow-sm'
+                ? 'bg-primary-500 text-on-primary shadow-sm'
                 : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
             }`}
           >
