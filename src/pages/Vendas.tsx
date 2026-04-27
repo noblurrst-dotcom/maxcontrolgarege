@@ -508,12 +508,13 @@ export default function Vendas() {
 
       {/* Modal Nova Venda */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Nova Venda</h2>
-              <button onClick={() => setModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setModal(false)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Nova Venda</h2>
+              <button onClick={() => setModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <ClientePicker
                 value={form.nome_cliente}
@@ -561,7 +562,7 @@ export default function Vendas() {
                   />
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Valor (R$) *</label>
                   <input type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
@@ -577,7 +578,7 @@ export default function Vendas() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Pagamento</label>
                   <select value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value as FormaPagamento | '' })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
@@ -592,7 +593,7 @@ export default function Vendas() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Data de Pagamento *</label>
                   <input type="date" value={form.data_venda} onChange={(e) => setForm({ ...form, data_venda: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
@@ -608,7 +609,7 @@ export default function Vendas() {
                   <CalendarDays size={13} /> Agendamento (opcional)
                 </p>
                 {/* Entrada */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">Data de entrada</label>
                     <input type="date" value={form.data_agendamento}
@@ -624,7 +625,7 @@ export default function Vendas() {
                   </div>
                 </div>
                 {/* Saída */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">Data de saída</label>
                     <input type="date" value={form.data_agendamento_fim}
@@ -643,7 +644,7 @@ export default function Vendas() {
                 </div>
                 {/* Placa + Modelo */}
                 {form.data_agendamento && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
                       <input type="text" value={form.placa_agendamento}
@@ -744,9 +745,10 @@ export default function Vendas() {
                   })()}
                 </div>
               )}
-              <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
+              <button onClick={adicionar} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors min-h-[44px]">
                 Registrar Venda
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -754,12 +756,13 @@ export default function Vendas() {
 
       {/* Modal Detalhe da Venda */}
       {detalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setDetalhe(null); setEditDetalhe(null) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Venda - {detalhe.status === 'fechada' ? 'Fechada' : 'Aberta'}</h2>
-              <button onClick={() => { setDetalhe(null); setEditDetalhe(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => { setDetalhe(null); setEditDetalhe(null) }}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Venda - {detalhe.status === 'fechada' ? 'Fechada' : 'Aberta'}</h2>
+              <button onClick={() => { setDetalhe(null); setEditDetalhe(null) }} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                 <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center"><span className="text-sm font-bold text-primary-600">{detalhe.nome_cliente.slice(0,2).toUpperCase()}</span></div>
@@ -941,6 +944,7 @@ export default function Vendas() {
                 Excluir Venda
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -985,12 +989,13 @@ export default function Vendas() {
 
       {/* Modal Nova Pré-Venda */}
       {pvModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPvModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Nova Pré-Venda</h2>
-              <button onClick={() => setPvModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPvModal(false)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Nova Pré-Venda</h2>
+              <button onClick={() => setPvModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1046,18 +1051,20 @@ export default function Vendas() {
                 Criar Pré-Venda
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal Detalhe Pré-Venda */}
       {pvDetalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPvDetalhe(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Pré-Venda</h2>
-              <button onClick={() => setPvDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPvDetalhe(null)}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Pré-Venda</h2>
+              <button onClick={() => setPvDetalhe(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                 <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><span className="text-sm font-bold text-blue-600">{pvDetalhe.nome_cliente.slice(0, 2).toUpperCase()}</span></div>
@@ -1097,15 +1104,16 @@ export default function Vendas() {
                 Excluir Pré-Venda
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal Exportação Check List PDF */}
       {exportModal && exportPv && (
-        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setExportModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
 
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -1215,12 +1223,13 @@ export default function Vendas() {
 
       {/* Modal Conversão com Agendamento */}
       {convModal && convPv && (
-        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setConvModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Agendar serviço</h2>
-              <button onClick={() => setConvModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConvModal(false)}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Agendar serviço</h2>
+              <button onClick={() => setConvModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
 
             {/* Resumo da pré-venda */}
             <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
@@ -1294,6 +1303,7 @@ export default function Vendas() {
               <button onClick={confirmarConversao} disabled={!convData} className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
                 <CalendarDays size={14} /> Confirmar
               </button>
+            </div>
             </div>
           </div>
         </div>
