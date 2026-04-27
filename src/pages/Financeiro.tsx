@@ -245,12 +245,13 @@ export default function Financeiro() {
 
       {/* Modal Nova Entrada/Saída */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Nova {modal === 'entrada' ? 'Entrada' : 'Saída'}</h2>
-              <button onClick={() => setModal(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setModal(null)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Nova {modal === 'entrada' ? 'Entrada' : 'Saída'}</h2>
+              <button onClick={() => setModal(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -298,18 +299,20 @@ export default function Financeiro() {
                 Salvar {modal === 'entrada' ? 'Entrada' : 'Saída'}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal Nova Conta Bancária */}
       {modalBanco && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModalBanco(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Nova Conta Bancária</h2>
-              <button onClick={() => setModalBanco(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setModalBanco(false)}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Nova Conta Bancária</h2>
+              <button onClick={() => setModalBanco(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Nome da conta *</label>
@@ -336,6 +339,7 @@ export default function Financeiro() {
               <button onClick={adicionarBanco} className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors">
                 Cadastrar Conta
               </button>
+            </div>
             </div>
           </div>
         </div>
