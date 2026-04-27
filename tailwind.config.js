@@ -1,4 +1,8 @@
 /** @type {import('tailwindcss').Config} */
+const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+const tokenPalette = (name) =>
+  Object.fromEntries(shades.map((s) => [s, `var(--color-${name}-${s})`]))
+
 export default {
   darkMode: 'class',
   content: [
@@ -8,22 +12,44 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Marca
         primary: {
-          50: 'var(--color-primary-50)',
-          100: 'var(--color-primary-100)',
-          200: 'var(--color-primary-200)',
-          300: 'var(--color-primary-300)',
-          400: 'var(--color-primary-400)',
-          500: 'var(--color-primary-500)',
-          600: 'var(--color-primary-600)',
-          700: 'var(--color-primary-700)',
-          800: 'var(--color-primary-800)',
-          900: 'var(--color-primary-900)',
+          ...tokenPalette('primary'),
+          hover: 'var(--color-primary-hover)',
+          active: 'var(--color-primary-active)',
+          disabled: 'var(--color-primary-disabled)',
+          contrast: 'var(--color-primary-contrast)',
         },
+        secondary: {
+          ...tokenPalette('secondary'),
+          contrast: 'var(--color-secondary-contrast)',
+        },
+        // Semânticos (fixos)
+        success: tokenPalette('success'),
+        warning: tokenPalette('warning'),
+        danger: tokenPalette('danger'),
+        info: tokenPalette('info'),
+        neutral: tokenPalette('neutral'),
+        // Legacy (aliases mantidos por compat com classes existentes)
         dark: {
           800: 'var(--color-dark-800)',
           900: 'var(--color-dark-900)',
         },
+      },
+      textColor: {
+        'on-primary': 'var(--color-on-primary)',
+        'on-secondary': 'var(--color-on-secondary)',
+        'on-surface': 'var(--color-on-surface)',
+        'on-surface-muted': 'var(--color-on-surface-muted)',
+      },
+      backgroundColor: {
+        'surface-0': 'var(--surface-0)',
+        'surface-1': 'var(--surface-1)',
+        'surface-2': 'var(--surface-2)',
+        'surface-3': 'var(--surface-3)',
+      },
+      borderColor: {
+        token: 'var(--color-border)',
       },
     },
   },

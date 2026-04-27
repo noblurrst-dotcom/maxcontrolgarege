@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './styles/semantic-colors.css';
+
 :root {
+  /* Marca — primary (default neon yellow) */
   --color-primary-50: #f5ffe6;
   --color-primary-100: #e8ffbf;
   --color-primary-200: #d9ff80;
@@ -13,8 +16,53 @@
   --color-primary-700: #7d9902;
   --color-primary-800: #536602;
   --color-primary-900: #2a3301;
+
+  /* Marca — secondary (default near-black) */
+  --color-secondary-50: #e6e6f2;
+  --color-secondary-100: #ccccd9;
+  --color-secondary-200: #9999b3;
+  --color-secondary-300: #66668c;
+  --color-secondary-400: #333366;
+  --color-secondary-500: #1a1a2e;
+  --color-secondary-600: #14142a;
+  --color-secondary-700: #0d0d1a;
+  --color-secondary-800: #08080f;
+  --color-secondary-900: #04040a;
+
+  /* Texto contrastante automatizado (defaults; sobrescritos pelo BrandContext) */
+  --color-on-primary: #0d0d1a;
+  --color-on-secondary: #ffffff;
+  --color-on-surface: #0f172a;
+  --color-on-surface-muted: #475569;
+
+  /* Estados derivados da primary (defaults) */
+  --color-primary-hover: #a6cc03;
+  --color-primary-active: #7d9902;
+  --color-primary-disabled: #d9ff80;
+  --color-primary-contrast: #CFFF04;
+  --color-secondary-contrast: #1a1a2e;
+
+  /* Surfaces (claro por default) */
+  --surface-0: #f5f5f5;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f8fafc;
+  --color-border: #e5e7eb;
+
+  /* Legacy — mantidos como aliases (escolhidos por compat com Tailwind config) */
   --color-dark-800: #1a1a2e;
   --color-dark-900: #0f0f1a;
+}
+
+.dark {
+  /* Surfaces invertidas no dark mode */
+  --surface-0: #0f0f1a;
+  --surface-1: #1a1a2e;
+  --surface-2: #232340;
+  --surface-3: #2a2a4a;
+  --color-border: #2a2a4a;
+  --color-on-surface: #f1f5f9;
+  --color-on-surface-muted: #94a3b8;
 }
 
 @layer base {
