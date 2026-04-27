@@ -149,7 +149,7 @@ function Calendario({
             <button
               key={dia.toISOString()}
               title={feriado ? feriado.nome : undefined}
-              className={`relative text-sm py-2 rounded-xl font-medium transition-all ${
+              className={`relative text-xs sm:text-sm py-2.5 sm:py-2 rounded-xl font-medium transition-all min-h-[44px] ${
                 ehHoje
                   ? 'bg-primary-500 text-dark-900 font-bold shadow-md shadow-primary-500/30'
                   : feriado?.tipo === 'nacional'
@@ -832,7 +832,7 @@ export default function Dashboard() {
             Hoje é dia {dataFormatada}, {diaSemana}
           </p>
         </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setShowCardManager(!showCardManager)}
             title="Gerenciar cards"
@@ -911,14 +911,14 @@ export default function Dashboard() {
             { label: 'Orçamentos pendentes', value: orcamentosPendentes, icon: FileText, color: 'text-amber-600', bg: 'bg-amber-50', iconBg: 'bg-amber-100', onClick: () => navigate('/vendas') },
           ].map((item) => (
             <button key={item.label} onClick={item.onClick}
-              className={`${item.bg} rounded-2xl p-4 text-left hover:brightness-95 transition-all active:scale-[0.98] border border-transparent hover:border-gray-100`}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`w-8 h-8 ${item.iconBg} rounded-xl flex items-center justify-center shrink-0`}>
-                  <item.icon size={16} className={item.color} />
+              className={`${item.bg} rounded-2xl p-3 sm:p-4 text-left hover:brightness-95 transition-all active:scale-[0.98] border border-transparent hover:border-gray-100`}>
+              <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 ${item.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center shrink-0`}>
+                  <item.icon size={14} className={item.color} />
                 </div>
-                <p className="text-[11px] font-medium text-gray-500 leading-tight">{item.label}</p>
+                <p className="text-[10px] sm:text-[11px] font-medium text-gray-500 leading-tight truncate">{item.label}</p>
               </div>
-              <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
+              <p className={`text-lg sm:text-xl font-bold ${item.color}`}>{item.value}</p>
             </button>
           ))}
         </div>
@@ -968,7 +968,7 @@ export default function Dashboard() {
 
       {/* Dynamic blocks */}
       {isMobile ? (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {blocks.map((block) => {
             if (!block.visible && !editMode) return null
             const content = renderBlock(block.id)
@@ -977,7 +977,7 @@ export default function Dashboard() {
             return (
               <div
                 key={block.id}
-                style={{ height: bh }}
+                style={editMode ? { height: bh } : undefined}
                 className={`relative flex flex-col ${editMode ? 'pt-5' : ''} ${!editMode && BLOCK_NAVEGACAO[block.id] ? 'cursor-pointer' : ''} ${editMode && !block.visible ? 'opacity-40' : ''}`}
                 onClick={!editMode && BLOCK_NAVEGACAO[block.id] ? () => navigate(BLOCK_NAVEGACAO[block.id]!) : undefined}
               >
