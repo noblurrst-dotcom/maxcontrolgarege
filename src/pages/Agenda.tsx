@@ -280,15 +280,16 @@ export default function Agenda() {
       )}
 
       {agDetalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAgDetalhe(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAgDetalhe(null)}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: agDetalhe.cor || '#4285F4' }} />
-                <h2 className="text-lg font-bold text-gray-900">{agDetalhe.titulo || agDetalhe.nome_cliente}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">{agDetalhe.titulo || agDetalhe.nome_cliente}</h2>
               </div>
-              <button onClick={() => setAgDetalhe(null)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <button onClick={() => setAgDetalhe(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {CORES_AGENDA.map((c) => (
@@ -495,6 +496,7 @@ export default function Agenda() {
                 )}
                 <button onClick={() => { remover(agDetalhe.id); setAgDetalhe(null) }} className="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">Excluir</button>
               </div>
+            </div>
             </div>
           </div>
         </div>
