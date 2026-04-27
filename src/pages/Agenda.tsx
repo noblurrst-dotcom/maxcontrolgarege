@@ -22,7 +22,7 @@ const initForm = () => ({ nome_cliente: '', telefone_cliente: '', placa: '', vei
 export default function Agenda() {
   const { user } = useAuth()
   const { data: lista, save: salvar } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
-  const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: todosVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [servicos, setServicos] = useState<Servico[]>([])
   const [busca, setBusca] = useState('')
@@ -70,6 +70,10 @@ export default function Agenda() {
       salvar(lista.map(a => a.id === agDetalhe.id ? atualizado : a))
       setAgDetalhe(atualizado)
     }
+    // Refresh da venda atualizada (status_pagamento, valor_pago)
+    supabase.from('vendas').select('*').eq('id', vendaId).single().then(({ data }) => {
+      if (data) salvarVendas(vendas.map(v => v.id === vendaId ? data as Venda : v))
+    })
   }
 
   // Visualização: semanal ou mensal, persistida em localStorage
@@ -454,6 +458,7 @@ export default function Agenda() {
                             if (!confirm('Marcar como cortesia? Pagamentos existentes serão removidos.')) return
                             const { error } = await supabase.rpc('marcar_cortesia', { p_venda_id: vendaAssociada.id })
                             if (error) { toast.error('Erro: ' + error.message); return }
+                            salvarVendas(vendas.map(v => v.id === vendaAssociada.id ? { ...v, status_pagamento: 'cortesia' as const, valor_pago: 0 } : v))
                             toast.success('Marcado como cortesia')
                           } else {
                             toast.success('Atendimento liberado como cortesia')
