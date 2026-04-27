@@ -149,44 +149,44 @@ export default function Layout() {
 
         {/* LINHA 1 — Logo + Busca + Perfil */}
         <div className="container-responsive">
-          <div className="h-20 flex items-center gap-3">
+          <div className="h-14 sm:h-16 md:h-20 flex items-center gap-2 sm:gap-3">
 
             {/* Logo A.T.A + Divisor + Logo Cliente */}
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Logo A.T.A Gestão (plataforma) — adaptativo claro/escuro */}
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
                 <img
                   src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
                   alt="A.T.A Gestão"
-                  className="h-[38px] w-auto hidden sm:block"
+                  className="h-[38px] w-auto hidden md:block"
                 />
                 <img
                   src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
                   alt="A.T.A Gestão"
-                  className="h-[34px] w-auto sm:hidden"
+                  className="h-7 w-auto md:hidden"
                 />
               </div>
 
               {/* Divisor */}
-              <div className="w-px h-14 bg-white/25" aria-hidden="true" />
+              <div className="w-px h-8 sm:h-10 md:h-14 bg-white/25" aria-hidden="true" />
 
               {/* Logo + nome do cliente */}
               <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
                 {brand.logo_url ? (
-                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-14 h-14 rounded-xl object-contain" />
+                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl object-contain" />
                 ) : (
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                    <Car className="w-7 h-7" style={{ color: brand.cor_secundaria }} />
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
+                    <Car className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" style={{ color: brand.cor_secundaria }} />
                   </div>
                 )}
-                <span className="text-base font-semibold text-white tracking-tight hidden md:block max-w-[200px] truncate">
+                <span className="text-sm md:text-base font-semibold text-white tracking-tight hidden md:block max-w-[200px] truncate">
                   {brand.nome_empresa || 'Minha empresa'}
                 </span>
               </div>
             </div>
 
-            {/* Busca global — centro */}
-            <div className="flex-1 max-w-md mx-auto relative">
+            {/* Busca global — centro (hidden on mobile, icon opens overlay) */}
+            <div className="flex-1 max-w-md mx-auto relative hidden sm:block">
               <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2.5 transition-colors cursor-text"
                 onClick={() => { setBuscaAberta(true); buscaRef.current?.focus() }}>
                 <Search size={16} className="text-white/50 shrink-0" />
@@ -198,7 +198,7 @@ export default function Layout() {
                   onFocus={() => setBuscaAberta(true)}
                   onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
                   placeholder="Buscar tela ou função..."
-                  className="flex-1 bg-transparent text-white placeholder-white/40 text-base outline-none min-w-0"
+                  className="flex-1 bg-transparent text-white placeholder-white/40 text-sm md:text-base outline-none min-w-0"
                 />
               </div>
 
@@ -222,15 +222,27 @@ export default function Layout() {
               )}
             </div>
 
+            {/* Mobile: spacer to push actions right */}
+            <div className="flex-1 sm:hidden" />
+
             {/* Ações direita */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+
+              {/* Mobile search icon */}
+              <button
+                onClick={() => { setBuscaAberta(true); setTimeout(() => buscaRef.current?.focus(), 100) }}
+                className="sm:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                title="Buscar"
+              >
+                <Search size={20} />
+              </button>
 
               {/* Mensagens */}
               <MensagensDropdown />
 
               {/* Toggle dark mode */}
               <button onClick={toggleTheme}
-                className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex"
+                className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden md:flex"
                 title={isDark ? 'Modo claro' : 'Modo noturno'}>
                 {isDark ? <Sun size={22} /> : <Moon size={22} />}
               </button>
@@ -239,14 +251,14 @@ export default function Layout() {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer min-h-[44px]"
                   title={nomeUsuario}
                 >
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0"
                     style={{ backgroundColor: brand.cor_primaria }}>
-                    <UserCircle className="w-6 h-6" style={{ color: brand.cor_secundaria }} />
+                    <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: brand.cor_secundaria }} />
                   </div>
-                  <span className="text-base font-medium text-white hidden sm:block max-w-[120px] truncate">
+                  <span className="text-sm md:text-base font-medium text-white hidden md:block max-w-[120px] truncate">
                     {subUsuarioAtivo ? subUsuarioAtivo.nome : nomeUsuario}
                   </span>
                 </button>
@@ -381,7 +393,7 @@ export default function Layout() {
               {/* Menu hamburguer mobile */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-1.5 text-white/60 hover:text-white transition-colors"
+                className="md:hidden p-2 text-white/60 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
@@ -429,6 +441,45 @@ export default function Layout() {
           </div>
         </div>
 
+        {/* Mobile search overlay */}
+        {buscaAberta && (
+          <div className="sm:hidden border-t border-white/10 px-3 py-3" style={{ backgroundColor: brand.cor_secundaria }}>
+            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5">
+              <Search size={16} className="text-white/50 shrink-0" />
+              <input
+                ref={buscaRef}
+                type="text"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
+                placeholder="Buscar tela ou função..."
+                className="flex-1 bg-transparent text-white placeholder-white/40 text-sm outline-none min-w-0"
+                autoFocus
+              />
+              <button onClick={() => { setBuscaAberta(false); setBusca('') }} className="p-1 text-white/40 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+            {resultadosBusca.length > 0 && (
+              <div className="mt-2 bg-white rounded-xl shadow-xl py-1">
+                {resultadosBusca.map(t => {
+                  const Icon = t.icon
+                  return (
+                    <button
+                      key={t.path}
+                      onMouseDown={() => { navigate(t.path); setBusca(''); setBuscaAberta(false) }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left min-h-[44px]"
+                    >
+                      <Icon size={16} className="text-gray-400 shrink-0" />
+                      <span className="text-sm font-medium text-gray-700">{t.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-white/5 px-3 py-2 max-h-[70vh] overflow-y-auto" style={{ backgroundColor: brand.cor_secundaria }}>
@@ -462,7 +513,7 @@ export default function Layout() {
 
       {/* Support Mode Banner */}
       {isSupport && (
-        <div className="sticky top-20 md:top-[124px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+        <div className="sticky top-14 sm:top-16 md:top-[124px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
           <div className="flex items-center gap-2 min-w-0">
             <Shield size={14} className="shrink-0" />
             <p className="text-xs font-bold truncate">
