@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
-import type { ContaFinanceira, FormaPagamento } from '../types'
+import type { ContaFinanceira, FormaPagamento, Venda } from '../types'
 import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
@@ -21,8 +22,10 @@ interface ContaBancaria { id: string; nome: string; banco: string; saldo: number
 const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '' })
 
 export default function Financeiro() {
+  const navigate = useNavigate()
   const { data: contas, save: salvar } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
   const { data: bancos, save: salvarBancos } = useCloudSync<ContaBancaria>({ table: 'contas_bancarias', storageKey: 'contas_bancarias' })
+  const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos')
@@ -165,6 +168,31 @@ export default function Financeiro() {
           <p className="text-[10px] text-gray-400">Gerencie saldos e vincule lançamentos</p>
         </button>
       )}
+
+      {/* Banner: vendas com pagamento pendente */}
+      {(() => {
+        const pendentes = vendas.filter(v => v.status_pagamento === 'pendente' || v.status_pagamento === 'parcial')
+        if (pendentes.length === 0) return null
+        const totalRestante = pendentes.reduce((a, v) => a + ((v.valor_total || v.valor) - (v.valor_pago || 0)), 0)
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle size={16} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-800">{pendentes.length} venda{pendentes.length !== 1 ? 's' : ''} com pagamento pendente</p>
+                  <p className="text-[11px] text-amber-600">Total a receber: <span className="font-bold">{fmt(totalRestante)}</span></p>
+                </div>
+              </div>
+              <button onClick={() => navigate('/vendas')} className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-bold transition-colors">
+                Ver vendas <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="flex gap-3">
         <div className="relative flex-1">
