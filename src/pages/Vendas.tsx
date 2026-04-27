@@ -230,19 +230,20 @@ export default function Vendas() {
     doc.save(`prevenda_${o.nome_cliente.replace(/\s+/g, '_').toLowerCase()}.pdf`)
   }
 
-  const adicionar = () => {
+  const adicionar = async () => {
     if (!form.nome_cliente || !form.valor) return
     const valor = parseFloat(form.valor)
     const descRaw = parseFloat(form.desconto || '0')
     const desconto = descontoTipo === 'percentual' ? valor * (descRaw / 100) : descRaw
     const valorTotal = Math.max(valor - desconto, 0)
     const vendaId = uid()
+    const temPagamento = !!form.forma_pagamento
     const nova: Venda = {
       id: vendaId, user_id: '', cliente_id: null, nome_cliente: form.nome_cliente,
       descricao: form.descricao, valor, desconto, valor_total: valorTotal,
-      valor_pago: form.forma_pagamento ? valorTotal : 0,
+      valor_pago: temPagamento ? valorTotal : 0,
       forma_pagamento: form.forma_pagamento || null,
-      status_pagamento: form.forma_pagamento ? 'pago' : 'pendente',
+      status_pagamento: temPagamento ? 'pago' : 'pendente',
       data_venda: form.data_venda,
       data_agendamento: form.data_agendamento || undefined,
       hora_agendamento: form.data_agendamento ? form.hora_agendamento : undefined,
@@ -251,6 +252,21 @@ export default function Vendas() {
       created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
+
+    // Se tem forma_pagamento → criar pagamento + financeiro via RPC
+    if (temPagamento) {
+      supabase.rpc('capturar_pagamento', {
+        p_venda_id: vendaId,
+        p_valor: valorTotal,
+        p_forma_pagamento: form.forma_pagamento,
+        p_parcelas: parseInt(form.parcelas) || 1,
+        p_data_pagamento: form.data_venda,
+        p_observacoes: null,
+        p_criar_financeiro: true,
+      }).then(({ error }) => {
+        if (error) console.error('Erro ao criar pagamento:', error.message)
+      })
+    }
 
     // Se data de agendamento preenchida → criar agendamento automaticamente
     if (form.data_agendamento) {
