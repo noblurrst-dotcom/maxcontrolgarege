@@ -590,12 +590,13 @@ export default function Clientes() {
 
       {/* Modal Novo Cliente */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">{editandoId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
-              <button onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">{editandoId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+              <button onClick={() => { setModal(false); setForm(initForm()); setCamposAtivos(new Set()); setEditandoId(null) }} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
 
               {/* Nome — obrigatório */}
@@ -769,14 +770,15 @@ export default function Clientes() {
               </button>
 
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal Importar CSV */}
       {csvModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={fecharCsvModal}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={fecharCsvModal}>
+          <div className="bg-white w-full sm:max-w-xl sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
                 <h2 className="text-base font-bold text-gray-900">Importar Contatos via CSV</h2>
