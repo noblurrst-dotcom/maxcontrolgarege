@@ -263,11 +263,11 @@ export default function Configuracoes() {
 
       {/* Preview PDF Modal */}
       {previewPdf && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPreviewPdf(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPreviewPdf(false)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h2 className="text-sm font-bold text-gray-900">Pré-visualização do PDF</h2>
-              <button onClick={() => setPreviewPdf(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <button onClick={() => setPreviewPdf(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
               {/* PDF Header */}

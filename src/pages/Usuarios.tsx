@@ -185,13 +185,13 @@ export default function Usuarios() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    <button onClick={() => toggleAtivo(u.id)} className={`p-1.5 rounded-lg transition-colors ${u.ativo ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-50'}`} title={u.ativo ? 'Desativar' : 'Ativar'}>
+                    <button onClick={() => toggleAtivo(u.id)} className={`p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${u.ativo ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-50'}`} title={u.ativo ? 'Desativar' : 'Ativar'}>
                       {u.ativo ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
-                    <button onClick={() => abrirEditar(u)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                    <button onClick={() => abrirEditar(u)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => remover(u.id)} className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => remover(u.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -204,12 +204,13 @@ export default function Usuarios() {
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">{editId ? 'Editar Usuário' : 'Novo Usuário'}</h2>
-              <button onClick={() => setModal(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setModal(false)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">{editId ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+              <button onClick={() => setModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
 
             <div className="space-y-4">
               {/* Nome */}
@@ -331,10 +332,11 @@ export default function Usuarios() {
 
             {/* Actions */}
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
-              <button onClick={salvar} disabled={!form.nome.trim() || !form.email.trim() || (!editId && !form.senha.trim())} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={() => setModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors min-h-[44px]">Cancelar</button>
+              <button onClick={salvar} disabled={!form.nome.trim() || !form.email.trim() || (!editId && !form.senha.trim())} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]">
                 {editId ? 'Salvar' : 'Criar Usuário'}
               </button>
+            </div>
             </div>
           </div>
         </div>
