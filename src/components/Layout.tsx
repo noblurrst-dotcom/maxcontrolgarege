@@ -152,30 +152,32 @@ export default function Layout() {
           <div className="h-14 sm:h-16 md:h-20 flex items-center gap-2 sm:gap-3 min-w-0">
 
             {/* Logo A.T.A + Divisor + Logo Cliente */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Logo A.T.A Gestão (plataforma) — adaptativo claro/escuro */}
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/')} title="A.T.A Gestão">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              {/* Logo A.T.A Gestão — ícone em mobile (<sm), horizontal em sm+ */}
+              <div className="flex items-center cursor-pointer shrink-0" onClick={() => navigate('/')} title="A.T.A Gestão">
+                {/* Mobile: ícone KV_Favicon (h-8 w-8) */}
                 <img
-                  src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
+                  src={isDark ? '/kv/logo-compress/KV_Favicon_white_comprimido.webp' : '/kv/logo-compress/KV_Favicon_black_comprimido.webp'}
                   alt="A.T.A Gestão"
-                  className="h-[38px] w-auto hidden md:block"
+                  className="h-8 w-8 object-contain sm:hidden"
                 />
+                {/* sm+: logo horizontal com max-w para não dominar */}
                 <img
                   src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
                   alt="A.T.A Gestão"
-                  className="h-7 w-auto md:hidden"
+                  className="h-7 sm:h-8 md:h-[38px] w-auto max-w-[120px] sm:max-w-[140px] md:max-w-[180px] object-contain hidden sm:block"
                 />
               </div>
 
               {/* Divisor */}
-              <div className="w-px h-8 sm:h-10 md:h-14 bg-white/25" aria-hidden="true" />
+              <div className="w-px h-8 sm:h-10 md:h-14 bg-white/25 shrink-0" aria-hidden="true" />
 
               {/* Logo + nome do cliente */}
-              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
+              <div className="flex items-center gap-2 cursor-pointer min-w-0" onClick={() => navigate('/')} title={brand.nome_empresa || 'Minha empresa'}>
                 {brand.logo_url ? (
-                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl object-contain" />
+                  <img src={brand.logo_url} alt={`Logo ${brand.nome_empresa || 'da empresa'}`} className="w-9 h-9 sm:w-10 sm:h-10 md:w-14 md:h-14 rounded-lg md:rounded-xl object-contain shrink-0" />
                 ) : (
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center bg-primary-500">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center bg-primary-500 shrink-0">
                     <Car className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-on-primary" />
                   </div>
                 )}
@@ -185,8 +187,8 @@ export default function Layout() {
               </div>
             </div>
 
-            {/* Busca global — centro (hidden on mobile, icon opens overlay) */}
-            <div className="flex-1 min-w-0 max-w-md mx-auto relative hidden sm:block">
+            {/* Busca global — centro (visível só em md+; em <md o usuário usa o ícone de lupa que abre sheet fullscreen) */}
+            <div className="flex-1 min-w-0 max-w-md mx-auto relative hidden md:block">
               <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2.5 transition-colors cursor-text"
                 onClick={() => { setBuscaAberta(true); buscaRef.current?.focus() }}>
                 <Search size={16} className="text-white/50 shrink-0" />
@@ -222,16 +224,16 @@ export default function Layout() {
               )}
             </div>
 
-            {/* Mobile: spacer to push actions right */}
-            <div className="flex-1 sm:hidden" />
+            {/* Mobile/tablet: spacer to push actions right */}
+            <div className="flex-1 md:hidden" />
 
             {/* Ações direita */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
 
-              {/* Mobile search icon */}
+              {/* Mobile/tablet search icon — abre sheet fullscreen */}
               <button
                 onClick={() => { setBuscaAberta(true); setTimeout(() => buscaRef.current?.focus(), 100) }}
-                className="sm:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="md:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Buscar"
               >
                 <Search size={20} />
@@ -438,42 +440,64 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Mobile search overlay */}
+        {/* Mobile/tablet search sheet — fullscreen overlay quando buscaAberta */}
         {buscaAberta && (
-          <div className="sm:hidden border-t border-white/10 px-3 py-3 bg-secondary-500">
-            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5">
-              <Search size={16} className="text-white/50 shrink-0" />
-              <input
-                ref={buscaRef}
-                type="text"
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                onBlur={() => setTimeout(() => { setBuscaAberta(false); setBusca('') }, 150)}
-                placeholder="Buscar tela ou função..."
-                className="flex-1 bg-transparent text-on-secondary placeholder-white/40 text-sm outline-none min-w-0"
-                autoFocus
-              />
-              <button onClick={() => { setBuscaAberta(false); setBusca('') }} className="p-1 text-white/40 hover:text-white">
-                <X size={16} />
+          <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col animate-in fade-in duration-150" role="dialog" aria-modal="true" aria-label="Buscar">
+            {/* Header do sheet */}
+            <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-100 safe-area-top">
+              <button
+                onClick={() => { setBuscaAberta(false); setBusca('') }}
+                className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label="Fechar busca"
+              >
+                <X size={22} />
               </button>
-            </div>
-            {resultadosBusca.length > 0 && (
-              <div className="mt-2 bg-white rounded-xl shadow-xl py-1">
-                {resultadosBusca.map(t => {
-                  const Icon = t.icon
-                  return (
-                    <button
-                      key={t.path}
-                      onMouseDown={() => { navigate(t.path); setBusca(''); setBuscaAberta(false) }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left min-h-[44px]"
-                    >
-                      <Icon size={16} className="text-gray-400 shrink-0" />
-                      <span className="text-sm font-medium text-gray-700">{t.label}</span>
-                    </button>
-                  )
-                })}
+              <div className="flex-1 min-w-0 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2.5">
+                <Search size={18} className="text-gray-400 shrink-0" />
+                <input
+                  ref={buscaRef}
+                  type="text"
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  placeholder="Buscar tela ou função..."
+                  className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 text-base outline-none min-w-0"
+                  autoFocus
+                />
+                {busca && (
+                  <button onClick={() => setBusca('')} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Limpar">
+                    <X size={16} />
+                  </button>
+                )}
               </div>
-            )}
+            </div>
+            {/* Resultados */}
+            <div className="flex-1 overflow-y-auto">
+              {busca.trim() === '' ? (
+                <div className="p-6 text-center text-sm text-gray-400">
+                  Digite o nome de uma tela ou função
+                </div>
+              ) : resultadosBusca.length === 0 ? (
+                <div className="p-6 text-center text-sm text-gray-400">
+                  Nenhum resultado para “{busca}”
+                </div>
+              ) : (
+                <div className="py-1">
+                  {resultadosBusca.map(t => {
+                    const Icon = t.icon
+                    return (
+                      <button
+                        key={t.path}
+                        onClick={() => { navigate(t.path); setBusca(''); setBuscaAberta(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left min-h-[48px]"
+                      >
+                        <Icon size={18} className="text-gray-400 shrink-0" />
+                        <span className="text-sm font-medium text-gray-700">{t.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -575,8 +599,8 @@ export default function Layout() {
       {/* Floating Help Button — hidden in support mode */}
       {!isSupport && <FloatingHelpButton />}
 
-      {/* Bottom Navigation (mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-bottom">
+      {/* Bottom Navigation (mobile + tablet portrait) — visível até 1023px */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-bottom">
         <div className="flex justify-around py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
           {bottomNavItems.map((item) => {
             const isActive = location.pathname === item.path

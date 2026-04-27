@@ -106,7 +106,7 @@ export default function Usuarios() {
 
   if (!isOwner) {
     return (
-      <div className="space-y-6 pb-20 md:pb-6">
+      <div className="space-y-6 pb-20 lg:pb-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
           <Shield size={48} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-900 font-semibold text-lg">Acesso restrito</p>
@@ -120,7 +120,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
+    <div className="space-y-6 pb-20 lg:pb-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

@@ -215,9 +215,9 @@ html, body, #root {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Container com padding bottom para mobile nav */
+  /* Container com padding bottom para mobile/tablet nav (visível até 1023px) */
   .container-with-bottom-nav {
-    @apply pb-20 md:pb-0;
+    @apply pb-20 lg:pb-0;
   }
 }
 

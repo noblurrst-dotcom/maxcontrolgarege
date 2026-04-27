@@ -57,10 +57,15 @@ export default function FloatingHelpButton() {
         </div>
       )}
 
-      {/* Floating button — bottom-20 em mobile para não sobrepor o bottom nav (md:bottom-6 no desktop) */}
+      {/*
+       * Floating button:
+       * - <lg (até 1023px): há bottom nav (lg:hidden); o FAB sobe respeitando safe-area
+       *   + altura da nav (5rem). Não sobrepõe nenhum item.
+       * - lg+ (1024+): bottom nav some; FAB volta ao canto inferior padrão.
+       */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-30 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 bg-primary-500 text-on-primary"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] right-4 lg:bottom-6 lg:right-6 z-30 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 bg-primary-500 text-on-primary"
         title="Ajuda"
       >
         {open ? <X size={22} /> : <HelpCircle size={22} />}
