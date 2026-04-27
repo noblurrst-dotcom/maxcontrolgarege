@@ -126,7 +126,7 @@ export default function AgendaSemanal({
       {/* Grid */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="overflow-x-auto -mx-3 sm:-mx-5 px-3 sm:px-5 flex-1 min-h-0 flex flex-col">
-          <div className="min-w-[640px] flex-1 min-h-0 flex flex-col">
+          <div className="min-w-full sm:min-w-[640px] flex-1 min-h-0 flex flex-col">
 
             {/* Header dos dias */}
             <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-gray-100 pb-2 shrink-0">
