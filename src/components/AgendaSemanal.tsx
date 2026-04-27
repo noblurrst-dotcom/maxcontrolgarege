@@ -140,7 +140,7 @@ export default function AgendaSemanal({
                     </p>
                     <div className={`text-lg font-bold mt-0.5 leading-none ${
                       ehHoje
-                        ? 'w-8 h-8 mx-auto bg-primary-500 text-white rounded-full flex items-center justify-center'
+                        ? 'w-8 h-8 mx-auto bg-primary-500 text-on-primary rounded-full flex items-center justify-center'
                         : 'text-gray-700 text-center'
                     }`}>
                       {format(dia, 'd')}

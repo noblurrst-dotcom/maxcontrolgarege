@@ -95,7 +95,7 @@ export default function AgendaMensal({ mesAtual, setMesAtual, agendamentos, onDi
               <div className="flex items-start justify-between">
                 <span className={`text-sm sm:text-base font-bold leading-none ${
                   ehHoje
-                    ? 'w-7 h-7 bg-primary-500 text-white rounded-full flex items-center justify-center text-xs sm:text-sm'
+                    ? 'w-7 h-7 bg-primary-500 text-on-primary rounded-full flex items-center justify-center text-xs sm:text-sm'
                     : ehDomingo
                       ? 'text-danger-400'
                       : 'text-gray-700'
