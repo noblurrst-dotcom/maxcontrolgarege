@@ -140,8 +140,8 @@ export default function AdminSuporte() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle size={32} className="text-red-500" />
+          <div className="w-16 h-16 rounded-full bg-danger-100 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={32} className="text-danger-500" />
           </div>
           <h2 className="text-lg font-bold text-gray-900 mb-2">Acesso Restrito</h2>
           <p className="text-sm text-gray-500 mb-6">Esta página é exclusiva para administradores do sistema.</p>
@@ -149,7 +149,7 @@ export default function AdminSuporte() {
             <button onClick={() => navigate('/')} className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold">
               Voltar ao sistema
             </button>
-            <button onClick={handleSignOut} className="w-full py-2.5 text-red-500 text-sm font-medium">
+            <button onClick={handleSignOut} className="w-full py-2.5 text-danger-500 text-sm font-medium">
               Sair da conta
             </button>
           </div>
@@ -164,7 +164,7 @@ export default function AdminSuporte() {
         <div className="max-w-lg mx-auto px-4 sm:px-6">
           <div className="h-14 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Shield size={20} className="text-amber-400" />
+              <Shield size={20} className="text-warning-400" />
               <span className="text-sm font-bold">Painel de Suporte</span>
             </div>
             <button onClick={handleSignOut} className="p-2 text-gray-400 hover:text-white transition-colors" title="Sair">
@@ -178,7 +178,7 @@ export default function AdminSuporte() {
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full">
           <div className="text-center mb-6">
             <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center mx-auto mb-4">
-              <Shield size={28} className="text-amber-400" />
+              <Shield size={28} className="text-warning-400" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Acessar Conta do Usuário</h2>
             <p className="text-sm text-gray-500 mt-1">Insira o código de suporte fornecido pelo cliente</p>
@@ -200,9 +200,9 @@ export default function AdminSuporte() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl">
-                <XCircle size={14} className="text-red-500 shrink-0" />
-                <p className="text-xs text-red-600">{error}</p>
+              <div className="flex items-center gap-2 px-3 py-2 bg-danger-50 border border-danger-100 rounded-xl">
+                <XCircle size={14} className="text-danger-500 shrink-0" />
+                <p className="text-xs text-danger-600">{error}</p>
               </div>
             )}
 

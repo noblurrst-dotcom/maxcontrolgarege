@@ -13,8 +13,8 @@ const CACHE_TTL = 5 * 60 * 1000 // 5min
 
 const TIPO_STYLE: Record<string, { bg: string; border: string; text: string; icon: any }> = {
   info: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: Info },
-  aviso: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', icon: AlertTriangle },
-  critico: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: AlertCircle },
+  aviso: { bg: 'bg-warning-50', border: 'border-warning-200', text: 'text-warning-800', icon: AlertTriangle },
+  critico: { bg: 'bg-danger-50', border: 'border-danger-200', text: 'text-danger-800', icon: AlertCircle },
 }
 
 export default function GlobalBanner() {

@@ -61,7 +61,7 @@ export default function AdminLayout() {
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-gray-950 text-white flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:z-auto`}>
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-warning-500 rounded-lg flex items-center justify-center">
             <Shield size={16} className="text-gray-950" />
           </div>
           <div className="min-w-0">
@@ -83,7 +83,7 @@ export default function AdminLayout() {
                 onClick={() => handleNav(item.path, item.external)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-amber-500/15 text-amber-400'
+                    ? 'bg-warning-500/15 text-warning-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -106,7 +106,7 @@ export default function AdminLayout() {
           </button>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-danger-400 hover:text-danger-300 hover:bg-danger-500/10 transition-colors"
           >
             <LogOut size={18} />
             Sair
@@ -122,7 +122,7 @@ export default function AdminLayout() {
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <Shield size={16} className="text-amber-500" />
+            <Shield size={16} className="text-warning-500" />
             <span className="text-sm font-bold">Superadmin</span>
           </div>
         </header>

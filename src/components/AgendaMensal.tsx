@@ -63,7 +63,7 @@ export default function AgendaMensal({ mesAtual, setMesAtual, agendamentos, onDi
       {/* Cabeçalho dos dias da semana */}
       <div className="grid grid-cols-7 border-b border-gray-100 pb-2 mb-0">
         {DIAS_SEMANA.map((d, i) => (
-          <div key={d} className={`text-center text-[10px] sm:text-xs font-semibold uppercase tracking-wider ${i === 0 ? 'text-red-400' : 'text-gray-400'}`}>
+          <div key={d} className={`text-center text-[10px] sm:text-xs font-semibold uppercase tracking-wider ${i === 0 ? 'text-danger-400' : 'text-gray-400'}`}>
             {d}
           </div>
         ))}
@@ -97,7 +97,7 @@ export default function AgendaMensal({ mesAtual, setMesAtual, agendamentos, onDi
                   ehHoje
                     ? 'w-7 h-7 bg-primary-500 text-white rounded-full flex items-center justify-center text-xs sm:text-sm'
                     : ehDomingo
-                      ? 'text-red-400'
+                      ? 'text-danger-400'
                       : 'text-gray-700'
                 }`}>
                   {format(dia, 'd')}
@@ -108,7 +108,7 @@ export default function AgendaMensal({ mesAtual, setMesAtual, agendamentos, onDi
               {feriado && (
                 <span className={`mt-0.5 text-[8px] sm:text-[9px] font-semibold leading-tight truncate px-1 py-0.5 rounded ${
                   feriado.tipo === 'nacional'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-danger-100 text-danger-700'
                     : 'bg-violet-100 text-violet-700'
                 }`}>
                   <span className="hidden sm:inline">{feriado.nome}</span>
@@ -157,7 +157,7 @@ export default function AgendaMensal({ mesAtual, setMesAtual, agendamentos, onDi
       {/* Legenda */}
       <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
         {[
-          { label: 'Feriado nacional', color: 'bg-red-400' },
+          { label: 'Feriado nacional', color: 'bg-danger-400' },
           { label: 'Data comemorativa', color: 'bg-violet-400' },
           { label: 'Hoje', color: 'bg-primary-500' },
         ].map((s) => (

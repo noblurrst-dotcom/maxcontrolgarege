@@ -192,7 +192,7 @@ export default function Configuracoes() {
                 <Upload size={14} /> Enviar logo
               </button>
               {brand.logo_url && (
-                <button onClick={removeLogo} className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
+                <button onClick={removeLogo} className="flex items-center gap-1.5 px-4 py-2 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
                   <X size={14} /> Remover
                 </button>
               )}

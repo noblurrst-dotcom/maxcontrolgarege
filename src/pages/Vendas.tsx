@@ -421,11 +421,11 @@ export default function Vendas() {
         <div className="flex flex-wrap gap-1.5">
           {([
             { key: 'todos', label: 'Todas', count: contagensPag.todos, color: 'bg-gray-100 text-gray-700' },
-            { key: 'pendente', label: 'Pendentes', count: contagensPag.pendente, color: 'bg-amber-100 text-amber-700' },
+            { key: 'pendente', label: 'Pendentes', count: contagensPag.pendente, color: 'bg-warning-100 text-warning-700' },
             { key: 'parcial', label: 'Parciais', count: contagensPag.parcial, color: 'bg-blue-100 text-blue-700' },
-            { key: 'pago', label: 'Pagas', count: contagensPag.pago, color: 'bg-emerald-100 text-emerald-700' },
+            { key: 'pago', label: 'Pagas', count: contagensPag.pago, color: 'bg-success-100 text-success-700' },
             { key: 'cortesia', label: 'Cortesia', count: contagensPag.cortesia, color: 'bg-gray-100 text-gray-500' },
-            { key: 'cancelada', label: 'Canceladas', count: contagensPag.cancelada, color: 'bg-red-100 text-red-600' },
+            { key: 'cancelada', label: 'Canceladas', count: contagensPag.cancelada, color: 'bg-danger-100 text-danger-600' },
           ] as const).map(chip => (
             <button
               key={chip.key}
@@ -444,9 +444,9 @@ export default function Vendas() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: 'Total hoje', value: fmt(totalHoje), color: 'text-emerald-600', iconBg: 'bg-emerald-100' },
+          { label: 'Total hoje', value: fmt(totalHoje), color: 'text-success-600', iconBg: 'bg-success-100' },
           { label: periodoLabel, value: fmt(totalPeriodo), color: 'text-primary-600', iconBg: 'bg-primary-100' },
-          { label: 'A receber', value: fmt(totalPendente), color: 'text-amber-600', iconBg: 'bg-amber-100' },
+          { label: 'A receber', value: fmt(totalPendente), color: 'text-warning-600', iconBg: 'bg-warning-100' },
           { label: 'No período', value: filtradas.length, color: 'text-violet-600', iconBg: 'bg-violet-100' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
@@ -471,21 +471,21 @@ export default function Vendas() {
             <div key={v.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 active:bg-gray-50 transition-colors" onClick={() => setDetalhe(v)}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${v.status === 'aberta' ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-                    {v.status === 'aberta' ? <Unlock size={16} className="text-amber-600" /> : <Lock size={16} className="text-emerald-600" />}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${v.status === 'aberta' ? 'bg-warning-100' : 'bg-success-100'}`}>
+                    {v.status === 'aberta' ? <Unlock size={16} className="text-warning-600" /> : <Lock size={16} className="text-success-600" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900 truncate">{v.nome_cliente}</p>
-                      <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${v.status === 'aberta' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${v.status === 'aberta' ? 'bg-warning-100 text-warning-700' : 'bg-success-100 text-success-700'}`}>
                         {v.status === 'aberta' ? 'Aberta' : 'Fechada'}
                       </span>
                       {v.status_pagamento && v.status_pagamento !== 'pago' && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                          v.status_pagamento === 'pendente' ? 'bg-amber-100 text-amber-700' :
+                          v.status_pagamento === 'pendente' ? 'bg-warning-100 text-warning-700' :
                           v.status_pagamento === 'parcial' ? 'bg-blue-100 text-blue-700' :
                           v.status_pagamento === 'cortesia' ? 'bg-gray-100 text-gray-500' :
-                          v.status_pagamento === 'cancelada' ? 'bg-red-100 text-red-600' : ''
+                          v.status_pagamento === 'cancelada' ? 'bg-danger-100 text-danger-600' : ''
                         }`}>
                           {v.status_pagamento === 'pendente' ? '$ Pendente' : v.status_pagamento === 'parcial' ? '$ Parcial' : v.status_pagamento === 'cortesia' ? 'Cortesia' : v.status_pagamento === 'cancelada' ? 'Cancelada' : ''}
                         </span>
@@ -495,9 +495,9 @@ export default function Vendas() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
-                  <p className="text-sm font-bold text-emerald-600">{fmt(v.valor_total || v.valor)}</p>
+                  <p className="text-sm font-bold text-success-600">{fmt(v.valor_total || v.valor)}</p>
                   <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(v) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); remover(v.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); remover(v.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
             </div>
@@ -683,7 +683,7 @@ export default function Vendas() {
 
               {/* Checklist opcional */}
               <div className={`border rounded-xl overflow-hidden transition-all ${
-                mostrarChecklist ? 'border-emerald-200' : 'border-gray-200'
+                mostrarChecklist ? 'border-success-200' : 'border-gray-200'
               }`}>
                 <button
                   type="button"
@@ -691,7 +691,7 @@ export default function Vendas() {
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <ClipboardCheck size={16} className={mostrarChecklist ? 'text-emerald-500' : 'text-gray-400'} />
+                    <ClipboardCheck size={16} className={mostrarChecklist ? 'text-success-500' : 'text-gray-400'} />
                     <span className="text-sm font-semibold text-gray-700">
                       Checklist de inspeção
                     </span>
@@ -699,7 +699,7 @@ export default function Vendas() {
                       opcional
                     </span>
                     {checklistSalvo && (
-                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] text-success-600 bg-success-50 px-2 py-0.5 rounded-full font-bold">
                         ✓ Salvo
                       </span>
                     )}
@@ -738,8 +738,8 @@ export default function Vendas() {
                     return (
                       <>
                         <div className="flex justify-between text-xs"><span className="text-gray-500">Sub-total</span><span className="font-semibold">{fmt(subtotal)}</span></div>
-                        {descRaw > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto{descontoTipo === 'percentual' ? ` (${descRaw}%)` : ''}</span><span className="font-semibold text-red-500">-{fmt(descValor)}</span></div>}
-                        <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-emerald-600">{fmt(total)}</span></div>
+                        {descRaw > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto{descontoTipo === 'percentual' ? ` (${descRaw}%)` : ''}</span><span className="font-semibold text-danger-500">-{fmt(descValor)}</span></div>}
+                        <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(total)}</span></div>
                       </>
                     )
                   })()}
@@ -828,7 +828,7 @@ export default function Vendas() {
                       return (
                         <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2">
                           <span>Novo total</span>
-                          <span className="text-emerald-600">{fmt(Math.max(edSub - edDescVal, 0))}</span>
+                          <span className="text-success-600">{fmt(Math.max(edSub - edDescVal, 0))}</span>
                         </div>
                       )
                     })()}
@@ -866,8 +866,8 @@ export default function Vendas() {
                 ) : (
                   <>
                     <div className="flex justify-between text-xs"><span className="text-gray-500">Subtotal</span><span>{fmt(detalhe.valor)}</span></div>
-                    {detalhe.desconto > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="text-red-500">-{fmt(detalhe.desconto)}</span></div>}
-                    <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Valor total</span><span className="text-emerald-600">{fmt(detalhe.valor_total || detalhe.valor)}</span></div>
+                    {detalhe.desconto > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="text-danger-500">-{fmt(detalhe.desconto)}</span></div>}
+                    <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Valor total</span><span className="text-success-600">{fmt(detalhe.valor_total || detalhe.valor)}</span></div>
                     <div className="flex justify-between text-xs"><span className="text-gray-500">Pagamento</span><span>{detalhe.forma_pagamento ? FORMAS.find(f => f.value === detalhe.forma_pagamento)?.label : 'Pendente'}{detalhe.parcelas > 1 ? ` · ${detalhe.parcelas}x` : ''}</span></div>
                   </>
                 )}
@@ -879,17 +879,17 @@ export default function Vendas() {
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</p>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${detalhe.status_pagamento === 'pendente' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${detalhe.status_pagamento === 'pendente' ? 'bg-warning-100 text-warning-700' : 'bg-blue-100 text-blue-700'}`}>
                       {detalhe.status_pagamento === 'pendente' ? 'Pendente' : 'Parcial'}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-500">Pago</span>
-                    <span className="font-bold text-emerald-600">{fmt(detalhe.valor_pago || 0)}</span>
+                    <span className="font-bold text-success-600">{fmt(detalhe.valor_pago || 0)}</span>
                   </div>
                   <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
                     <span className="text-gray-500 font-bold">Restante</span>
-                    <span className="font-bold text-amber-600">{fmt((detalhe.valor_total || detalhe.valor) - (detalhe.valor_pago || 0))}</span>
+                    <span className="font-bold text-warning-600">{fmt((detalhe.valor_total || detalhe.valor) - (detalhe.valor_pago || 0))}</span>
                   </div>
                   <button
                     onClick={() => setVendaPagModal(true)}
@@ -900,7 +900,7 @@ export default function Vendas() {
                 </div>
               )}
               <div className="flex gap-2">
-                <button onClick={() => { toggleStatus(detalhe.id); setDetalhe({ ...detalhe, status: detalhe.status === 'aberta' ? 'fechada' : 'aberta' }) }} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${detalhe.status === 'aberta' ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}>
+                <button onClick={() => { toggleStatus(detalhe.id); setDetalhe({ ...detalhe, status: detalhe.status === 'aberta' ? 'fechada' : 'aberta' }) }} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${detalhe.status === 'aberta' ? 'bg-success-500 hover:bg-success-600 text-white' : 'bg-warning-500 hover:bg-warning-600 text-white'}`}>
                   {detalhe.status === 'aberta' ? 'Fechar venda' : 'Reabrir venda'}
                 </button>
                 <button onClick={() => enviarWhatsApp(detalhe)} className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
@@ -934,13 +934,13 @@ export default function Vendas() {
                       setDetalhe(atualizada)
                       toast.success('Venda cancelada')
                     }}
-                    className="flex-1 py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                    className="flex-1 py-2.5 border border-danger-200 text-danger-500 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors"
                   >
                     Cancelar venda
                   </button>
                 </div>
               )}
-              <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
+              <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Venda
               </button>
             </div>
@@ -960,7 +960,7 @@ export default function Vendas() {
           ) : (
             <div className="space-y-2">
               {preVendas.map((pv) => {
-                const stColor = pv.status === 'aprovado' ? 'bg-emerald-100 text-emerald-700' : pv.status === 'recusado' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'
+                const stColor = pv.status === 'aprovado' ? 'bg-success-100 text-success-700' : pv.status === 'recusado' ? 'bg-danger-100 text-danger-600' : 'bg-warning-100 text-warning-700'
                 return (
                   <div key={pv.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 active:bg-gray-50 transition-colors" onClick={() => setPvDetalhe(pv)}>
                     <div className="flex items-center justify-between">
@@ -976,7 +976,7 @@ export default function Vendas() {
                           {pv.status === 'aprovado' ? 'Convertida' : pv.status === 'recusado' ? 'Cancelada' : 'Pendente'}
                         </span>
                         <p className="text-sm font-bold text-gray-900">{fmt(pv.valor_total)}</p>
-                        <button onClick={(e) => { e.stopPropagation(); removerPv(pv.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); removerPv(pv.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -1018,7 +1018,7 @@ export default function Vendas() {
                       <input type="text" value={item.descricao} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], descricao: e.target.value }; setPvItens(n) }} placeholder="Serviço" className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                       <input type="number" min="1" value={item.quantidade} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], quantidade: parseInt(e.target.value) || 1 }; setPvItens(n) }} className="w-14 px-2 py-2 border border-gray-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
                       <input type="number" step="0.01" value={item.valor_unitario || ''} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], valor_unitario: parseFloat(e.target.value) || 0 }; setPvItens(n) }} placeholder="R$" className="w-24 px-2 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
-                      {pvItens.length > 1 && <button type="button" onClick={() => setPvItens(pvItens.filter((_, i) => i !== idx))} className="p-2 text-gray-300 hover:text-red-500 transition-colors shrink-0"><MinusCircle size={16} /></button>}
+                      {pvItens.length > 1 && <button type="button" onClick={() => setPvItens(pvItens.filter((_, i) => i !== idx))} className="p-2 text-gray-300 hover:text-danger-500 transition-colors shrink-0"><MinusCircle size={16} /></button>}
                     </div>
                   ))}
                 </div>
@@ -1043,8 +1043,8 @@ export default function Vendas() {
                   {pvItens.filter(i => i.descricao).map((i, idx) => (
                     <div key={idx} className="flex justify-between text-xs"><span className="text-gray-500">{i.descricao} ({i.quantidade}x)</span><span className="font-semibold">{fmt(i.quantidade * i.valor_unitario)}</span></div>
                   ))}
-                  {pvDesc > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="font-semibold text-red-500">-{fmt(pvDesc)}</span></div>}
-                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-emerald-600">{fmt(pvTotal)}</span></div>
+                  {pvDesc > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="font-semibold text-danger-500">-{fmt(pvDesc)}</span></div>}
+                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(pvTotal)}</span></div>
                 </div>
               )}
               <button onClick={adicionarPv} className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition-colors">
@@ -1075,13 +1075,13 @@ export default function Vendas() {
                 {pvDetalhe.itens.map((i, idx) => (
                   <div key={idx} className="flex justify-between text-xs"><span className="text-gray-600">{i.descricao} ({i.quantidade}x {fmt(i.valor_unitario)})</span><span className="font-semibold">{fmt(i.quantidade * i.valor_unitario)}</span></div>
                 ))}
-                <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-emerald-600">{fmt(pvDetalhe.valor_total)}</span></div>
+                <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(pvDetalhe.valor_total)}</span></div>
                 {pvDetalhe.validade && <p className="text-[10px] text-gray-400">Válido até {new Date(pvDetalhe.validade).toLocaleDateString('pt-BR')}</p>}
                 {pvDetalhe.observacoes && <p className="text-[10px] text-gray-400">Obs: {pvDetalhe.observacoes}</p>}
               </div>
               <div className="flex gap-2">
                 {pvDetalhe.status === 'pendente' && (
-                  <button onClick={() => abrirConversao(pvDetalhe)} className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                  <button onClick={() => abrirConversao(pvDetalhe)} className="flex-1 py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                     <CalendarDays size={14} /> Agendar e Converter
                   </button>
                 )}
@@ -1100,7 +1100,7 @@ export default function Vendas() {
                   <MessageCircle size={14} /> WhatsApp
                 </button>
               )}
-              <button onClick={() => removerPv(pvDetalhe.id)} className="w-full py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">
+              <button onClick={() => removerPv(pvDetalhe.id)} className="w-full py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Pré-Venda
               </button>
             </div>
@@ -1235,7 +1235,7 @@ export default function Vendas() {
             <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
               <p className="text-xs font-bold text-gray-700">{convPv.nome_cliente}</p>
               <p className="text-[11px] text-gray-500">{convPv.itens.map(i => i.descricao).join(', ')}</p>
-              <p className="text-sm font-bold text-emerald-600">{fmt(convPv.valor_total)}</p>
+              <p className="text-sm font-bold text-success-600">{fmt(convPv.valor_total)}</p>
             </div>
 
             <div className="space-y-4">
@@ -1300,7 +1300,7 @@ export default function Vendas() {
               <button onClick={() => setConvModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancelar
               </button>
-              <button onClick={confirmarConversao} disabled={!convData} className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
+              <button onClick={confirmarConversao} disabled={!convData} className="flex-1 px-4 py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
                 <CalendarDays size={14} /> Confirmar
               </button>
             </div>

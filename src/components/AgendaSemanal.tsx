@@ -64,11 +64,11 @@ interface AgendaSemanalProps {
 }
 
 const STATUS_LEGENDA = [
-  { label: 'Pendente',     color: 'bg-amber-300' },
+  { label: 'Pendente',     color: 'bg-warning-300' },
   { label: 'Confirmado',   color: 'bg-blue-300' },
   { label: 'Em andamento', color: 'bg-primary-400' },
-  { label: 'Concluído',    color: 'bg-emerald-300' },
-  { label: 'Cancelado',    color: 'bg-red-300' },
+  { label: 'Concluído',    color: 'bg-success-300' },
+  { label: 'Cancelado',    color: 'bg-danger-300' },
 ]
 
 // ── Componente ────────────────────────────────────────────────────────────────

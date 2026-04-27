@@ -67,7 +67,7 @@ export default function MensagensDropdown() {
       >
         <Bell size={22} />
         {naoLidas > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
             {naoLidas > 9 ? '9+' : naoLidas}
           </span>
         )}
@@ -79,7 +79,7 @@ export default function MensagensDropdown() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h3 className="text-sm font-bold text-gray-900">Mensagens</h3>
             {naoLidas > 0 && (
-              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">{naoLidas} nova{naoLidas > 1 ? 's' : ''}</span>
+              <span className="text-[10px] font-bold text-danger-500 bg-danger-50 px-2 py-0.5 rounded-full">{naoLidas} nova{naoLidas > 1 ? 's' : ''}</span>
             )}
           </div>
 

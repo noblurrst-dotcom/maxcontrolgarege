@@ -278,7 +278,7 @@ export default function Layout() {
                     {subUsuarioAtivo && (
                       <button
                         onClick={() => { logoutSubUsuario(); setProfileOpen(false) }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-warning-600 hover:bg-warning-50 transition-colors"
                       >
                         <UsersRound size={16} />
                         Voltar ao proprietário
@@ -311,7 +311,7 @@ export default function Layout() {
                       className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <span className="flex items-center gap-3">
-                        {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-gray-400" />}
+                        {isDark ? <Sun size={16} className="text-warning-400" /> : <Moon size={16} className="text-gray-400" />}
                         {isDark ? 'Modo claro' : 'Modo noturno'}
                       </span>
                       <span className={`w-8 h-[18px] rounded-full flex items-center px-0.5 transition-colors ${
@@ -326,7 +326,7 @@ export default function Layout() {
                       <>
                         <div className="border-t border-gray-100 my-1" />
                         <div className="px-4 py-2">
-                          <p className="text-[10px] font-bold text-amber-600 uppercase mb-1.5 flex items-center gap-1"><Shield size={10} /> Suporte Admin</p>
+                          <p className="text-[10px] font-bold text-warning-600 uppercase mb-1.5 flex items-center gap-1"><Shield size={10} /> Suporte Admin</p>
                           <div className="flex gap-1.5">
                             <input
                               type="text"
@@ -380,7 +380,7 @@ export default function Layout() {
                     {/* Sair */}
                     <button
                       onClick={() => { setProfileOpen(false); handleSignOut() }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-danger-500 hover:bg-danger-50 transition-colors"
                     >
                       <LogOut size={16} />
                       Sair da conta
@@ -427,7 +427,7 @@ export default function Layout() {
                 <button
                   onClick={() => navigate('/admin')}
                   className={`relative flex items-center gap-2 px-3.5 h-full text-sm font-semibold transition-colors rounded-t-lg ml-auto ${
-                    location.pathname.startsWith('/admin') ? 'text-amber-400' : 'text-amber-400/50 hover:text-amber-400/80'
+                    location.pathname.startsWith('/admin') ? 'text-warning-400' : 'text-warning-400/50 hover:text-warning-400/80'
                   }`}
                 >
                   <Shield size={18} />
@@ -509,7 +509,7 @@ export default function Layout() {
 
       {/* Support Mode Banner */}
       {isSupport && (
-        <div className="sticky top-14 sm:top-16 md:top-[124px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-400 text-amber-900">
+        <div className="sticky top-14 sm:top-16 md:top-[124px] z-30 flex items-center justify-between gap-3 px-4 py-2 bg-warning-400 text-warning-900">
           <div className="flex items-center gap-2 min-w-0">
             <Shield size={14} className="shrink-0" />
             <p className="text-xs font-bold truncate">
@@ -518,7 +518,7 @@ export default function Layout() {
           </div>
           <button
             onClick={() => { endSupportView(); navigate('/admin/suporte') }}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-amber-900/20 hover:bg-amber-900/30 rounded-lg text-[11px] font-bold transition-colors"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-warning-900/20 hover:bg-warning-900/30 rounded-lg text-[11px] font-bold transition-colors"
           >
             <LogOut size={12} />
             Encerrar
@@ -546,7 +546,7 @@ export default function Layout() {
                   className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
                   title="Copiar"
                 >
-                  {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} className="text-gray-400" />}
+                  {copied ? <Check size={18} className="text-success-500" /> : <Copy size={18} className="text-gray-400" />}
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 text-center mt-2">Válido por 30 minutos</p>

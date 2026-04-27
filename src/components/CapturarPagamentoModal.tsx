@@ -181,12 +181,12 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
             {valorJaPago > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="text-gray-500">Já pago</span>
-                <span className="font-bold text-emerald-600">{fmt(valorJaPago)}</span>
+                <span className="font-bold text-success-600">{fmt(valorJaPago)}</span>
               </div>
             )}
             <div className="flex justify-between text-xs border-t border-gray-200 pt-2">
               <span className="text-gray-500 font-bold">Restante</span>
-              <span className={`font-bold ${valorRestante > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{fmt(valorRestante)}</span>
+              <span className={`font-bold ${valorRestante > 0 ? 'text-warning-600' : 'text-success-600'}`}>{fmt(valorRestante)}</span>
             </div>
           </div>
 
@@ -196,13 +196,13 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pagamentos registrados</p>
               <div className="space-y-1.5">
                 {pagamentos.map(p => (
-                  <div key={p.id} className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2">
+                  <div key={p.id} className="flex items-center justify-between bg-success-50 rounded-lg px-3 py-2">
                     <div>
-                      <span className="text-xs font-bold text-emerald-700">{fmt(p.valor)}</span>
-                      <span className="text-[10px] text-emerald-600 ml-2">{formaLabel(p.forma_pagamento)}{p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</span>
+                      <span className="text-xs font-bold text-success-700">{fmt(p.valor)}</span>
+                      <span className="text-[10px] text-success-600 ml-2">{formaLabel(p.forma_pagamento)}{p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</span>
                       <span className="text-[10px] text-gray-400 ml-2">{new Date(p.data_pagamento).toLocaleDateString('pt-BR')}</span>
                     </div>
-                    <button onClick={() => excluirPagamento(p)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                    <button onClick={() => excluirPagamento(p)} className="p-1 text-gray-300 hover:text-danger-500 transition-colors">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -217,7 +217,7 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
             <>
               {/* Valor */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Valor a receber <span className="text-red-400">*</span></label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Valor a receber <span className="text-danger-400">*</span></label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
                   <input
@@ -309,10 +309,10 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
 
           {valorRestante === 0 && pagamentos.length > 0 && (
             <div className="text-center py-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <CreditCard size={20} className="text-emerald-600" />
+              <div className="w-12 h-12 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <CreditCard size={20} className="text-success-600" />
               </div>
-              <p className="text-sm font-bold text-emerald-700">Totalmente pago</p>
+              <p className="text-sm font-bold text-success-700">Totalmente pago</p>
               <p className="text-xs text-gray-400 mt-1">Todos os pagamentos foram registrados</p>
             </div>
           )}

@@ -6,9 +6,9 @@ import { MODULOS_DISPONIVEIS, ROLES_LABELS } from '../types'
 import { uid } from '../lib/utils'
 
 const ROLE_COLORS: Record<SubUsuario['role'], { bg: string; text: string }> = {
-  admin: { bg: 'bg-red-100', text: 'text-red-700' },
+  admin: { bg: 'bg-danger-100', text: 'text-danger-700' },
   gerente: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  operador: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  operador: { bg: 'bg-warning-100', text: 'text-warning-700' },
   visualizador: { bg: 'bg-gray-100', text: 'text-gray-600' },
 }
 
@@ -136,9 +136,9 @@ export default function Usuarios() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total', value: subUsuarios.length, color: 'text-violet-600', bg: 'bg-violet-100' },
-          { label: 'Ativos', value: subUsuarios.filter(u => u.ativo).length, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+          { label: 'Ativos', value: subUsuarios.filter(u => u.ativo).length, color: 'text-success-600', bg: 'bg-success-100' },
           { label: 'Inativos', value: subUsuarios.filter(u => !u.ativo).length, color: 'text-gray-500', bg: 'bg-gray-100' },
-          { label: 'Admins', value: subUsuarios.filter(u => u.role === 'admin').length, color: 'text-red-600', bg: 'bg-red-100' },
+          { label: 'Admins', value: subUsuarios.filter(u => u.role === 'admin').length, color: 'text-danger-600', bg: 'bg-danger-100' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <p className="text-[10px] font-medium text-gray-400 mb-1">{s.label}</p>
@@ -185,13 +185,13 @@ export default function Usuarios() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    <button onClick={() => toggleAtivo(u.id)} className={`p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${u.ativo ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-50'}`} title={u.ativo ? 'Desativar' : 'Ativar'}>
+                    <button onClick={() => toggleAtivo(u.id)} className={`p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${u.ativo ? 'text-success-500 hover:bg-success-50' : 'text-gray-300 hover:bg-gray-50'}`} title={u.ativo ? 'Desativar' : 'Ativar'}>
                       {u.ativo ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
                     <button onClick={() => abrirEditar(u)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => remover(u.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <button onClick={() => remover(u.id)} className="p-2 text-gray-300 hover:text-danger-500 hover:bg-danger-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -279,7 +279,7 @@ export default function Usuarios() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, ativo: !form.ativo })}
-                  className={`w-10 h-[22px] rounded-full flex items-center px-0.5 transition-colors ${form.ativo ? 'bg-emerald-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  className={`w-10 h-[22px] rounded-full flex items-center px-0.5 transition-colors ${form.ativo ? 'bg-success-500 justify-end' : 'bg-gray-200 justify-start'}`}
                 >
                   <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
                 </button>
@@ -308,7 +308,7 @@ export default function Usuarios() {
                             <button
                               type="button"
                               onClick={() => togglePerm(mod.id, 'ver')}
-                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${perm.ver ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-300'}`}
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${perm.ver ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-300'}`}
                             >
                               <Check size={12} />
                             </button>

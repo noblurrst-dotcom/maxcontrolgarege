@@ -110,8 +110,8 @@ export default function AdminDashboard() {
           label="Ativas (30d)"
           value={metricas.ativas_30d}
           icon={TrendingUp}
-          color="text-emerald-600"
-          iconBg="bg-emerald-100"
+          color="text-success-600"
+          iconBg="bg-success-100"
           sub={`${metricas.total_contas > 0 ? Math.round((metricas.ativas_30d / metricas.total_contas) * 100) : 0}% do total`}
         />
         <MetricCard
@@ -126,8 +126,8 @@ export default function AdminDashboard() {
           label="Churn estimado"
           value={metricas.churn}
           icon={TrendingDown}
-          color="text-red-500"
-          iconBg="bg-red-100"
+          color="text-danger-500"
+          iconBg="bg-danger-100"
           sub="ativa → inativa no mês"
         />
       </div>
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
         {/* Top 10 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Trophy size={16} className="text-amber-500" />
+            <Trophy size={16} className="text-warning-500" />
             <h3 className="text-sm font-bold text-gray-900">Top 10 mais ativas do mês</h3>
           </div>
           {metricas.top10.length === 0 ? (
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                 >
                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                    i < 3 ? 'bg-warning-100 text-warning-700' : 'bg-gray-100 text-gray-500'
                   }`}>{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
         {/* Em risco */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle size={16} className="text-red-500" />
+            <AlertTriangle size={16} className="text-danger-500" />
             <h3 className="text-sm font-bold text-gray-900">Contas em risco</h3>
           </div>
           <p className="text-[10px] text-gray-400 -mt-3 mb-4">&gt;5 registros mês passado, &lt;2 neste mês</p>
@@ -245,10 +245,10 @@ export default function AdminDashboard() {
                 <button
                   key={c.id}
                   onClick={() => navigate(`/admin/contas/${c.id}`)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50/50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-danger-50/50 transition-colors text-left"
                 >
-                  <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                    <AlertTriangle size={11} className="text-red-500" />
+                  <div className="w-6 h-6 bg-danger-100 rounded-full flex items-center justify-center shrink-0">
+                    <AlertTriangle size={11} className="text-danger-500" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
@@ -284,7 +284,7 @@ function MetricCard({ label, value, icon: Icon, color, iconBg, sub, variacao }: 
       </div>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {variacao !== undefined && (
-        <p className={`text-[10px] font-bold mt-1 ${variacao >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+        <p className={`text-[10px] font-bold mt-1 ${variacao >= 0 ? 'text-success-500' : 'text-danger-500'}`}>
           {variacao >= 0 ? '↑' : '↓'} {Math.abs(variacao)}% vs mês anterior
         </p>
       )}

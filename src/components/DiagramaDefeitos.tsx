@@ -95,7 +95,7 @@ export default function DiagramaDefeitos({ marcacoes, onChange }: DiagramaDefeit
           <button
             type="button"
             onClick={() => onChange([])}
-            className="text-[10px] text-red-400 hover:text-red-600 font-medium"
+            className="text-[10px] text-danger-400 hover:text-danger-600 font-medium"
           >
             Limpar tudo
           </button>

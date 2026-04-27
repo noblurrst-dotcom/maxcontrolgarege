@@ -141,12 +141,12 @@ export default function Login() {
 
             {/* Supabase warning */}
             {!configured && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 sm:p-4 mb-5 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="bg-warning-50 border border-warning-200 rounded-xl p-3 sm:p-4 mb-5 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-warning-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-amber-800">Supabase não configurado</p>
-                  <p className="text-xs text-amber-600 mt-1">
-                    Configure o <code className="bg-amber-100 px-1 rounded">.env</code> com suas credenciais.
+                  <p className="text-sm font-medium text-warning-800">Supabase não configurado</p>
+                  <p className="text-xs text-warning-600 mt-1">
+                    Configure o <code className="bg-warning-100 px-1 rounded">.env</code> com suas credenciais.
                   </p>
                 </div>
               </div>

@@ -48,7 +48,7 @@ export default function Agenda() {
 
   const STATUS_FLOW: Agendamento['status'][] = ['pendente', 'confirmado', 'em_andamento', 'concluido', 'cancelado']
   const STATUS_LABELS: Record<Agendamento['status'], string> = { pendente: 'Pendente', confirmado: 'Confirmado', em_andamento: 'Em andamento', concluido: 'Concluído', cancelado: 'Cancelado' }
-  const STATUS_COLORS: Record<Agendamento['status'], string> = { pendente: 'bg-amber-100 text-amber-700', confirmado: 'bg-blue-100 text-blue-700', em_andamento: 'bg-purple-100 text-purple-700', concluido: 'bg-emerald-100 text-emerald-700', cancelado: 'bg-red-100 text-red-700' }
+  const STATUS_COLORS: Record<Agendamento['status'], string> = { pendente: 'bg-warning-100 text-warning-700', confirmado: 'bg-blue-100 text-blue-700', em_andamento: 'bg-purple-100 text-purple-700', concluido: 'bg-success-100 text-success-700', cancelado: 'bg-danger-100 text-danger-700' }
 
   const mudarStatus = (ag: Agendamento, novoStatus: Agendamento['status']) => {
     const atualizado = { ...ag, status: novoStatus }
@@ -247,8 +247,8 @@ export default function Agenda() {
                               {(() => {
                                 const v = a.venda_id ? vendas.find(x => x.id === a.venda_id) : undefined
                                 const sp = v?.status_pagamento
-                                if (a.status === 'concluido' && !v) return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 shrink-0">$ Pendente</span>
-                                if (sp === 'pendente') return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 shrink-0">$ Pendente</span>
+                                if (a.status === 'concluido' && !v) return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-warning-100 text-warning-600 shrink-0">$ Pendente</span>
+                                if (sp === 'pendente') return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-warning-100 text-warning-600 shrink-0">$ Pendente</span>
                                 if (sp === 'parcial') return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-600 shrink-0">$ Parcial</span>
                                 return null
                               })()}
@@ -258,7 +258,7 @@ export default function Agenda() {
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
                           {a.telefone_cliente && <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(a) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
-                          <button onClick={(e) => { e.stopPropagation(); remover(a.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); remover(a.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </div>
                       {a.observacoes && <p className="text-[10px] text-gray-400 mt-1 pl-[42px] sm:pl-11 truncate">Obs: {a.observacoes}</p>}
@@ -362,13 +362,13 @@ export default function Agenda() {
                   {agDetalhe.desconto > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Desconto</span>
-                      <span className="font-semibold text-red-500">-{fmt(agDetalhe.desconto)}</span>
+                      <span className="font-semibold text-danger-500">-{fmt(agDetalhe.desconto)}</span>
                     </div>
                   )}
                   {agDetalhe.valor > 0 && (
                     <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-1">
                       <span>Total</span>
-                      <span className="text-emerald-600">{fmt(Math.max(agDetalhe.valor - (agDetalhe.desconto || 0), 0))}</span>
+                      <span className="text-success-600">{fmt(Math.max(agDetalhe.valor - (agDetalhe.desconto || 0), 0))}</span>
                     </div>
                   )}
                 </div>
@@ -398,11 +398,11 @@ export default function Agenda() {
                 const vendaAssociada = agDetalhe.venda_id ? vendas.find(v => v.id === agDetalhe.venda_id) : undefined
                 const statusPag = vendaAssociada?.status_pagamento
                 const STATUS_PAG_COLORS: Record<string, string> = {
-                  pendente: 'bg-amber-100 text-amber-700',
+                  pendente: 'bg-warning-100 text-warning-700',
                   parcial: 'bg-blue-100 text-blue-700',
-                  pago: 'bg-emerald-100 text-emerald-700',
+                  pago: 'bg-success-100 text-success-700',
                   cortesia: 'bg-gray-100 text-gray-500',
-                  cancelada: 'bg-red-100 text-red-600',
+                  cancelada: 'bg-danger-100 text-danger-600',
                 }
                 const STATUS_PAG_LABELS: Record<string, string> = {
                   pendente: 'Pendente',
@@ -429,12 +429,12 @@ export default function Agenda() {
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-gray-500">Pago</span>
-                          <span className="font-bold text-emerald-600">{fmt(vendaAssociada.valor_pago || 0)}</span>
+                          <span className="font-bold text-success-600">{fmt(vendaAssociada.valor_pago || 0)}</span>
                         </div>
                         {vendaAssociada.valor_total - (vendaAssociada.valor_pago || 0) > 0 && (
                           <div className="flex justify-between text-xs border-t border-gray-200 pt-1.5">
                             <span className="text-gray-500 font-bold">Restante</span>
-                            <span className="font-bold text-amber-600">{fmt(vendaAssociada.valor_total - (vendaAssociada.valor_pago || 0))}</span>
+                            <span className="font-bold text-warning-600">{fmt(vendaAssociada.valor_total - (vendaAssociada.valor_pago || 0))}</span>
                           </div>
                         )}
                       </div>
@@ -473,9 +473,9 @@ export default function Agenda() {
                     )}
                     {/* Banner: agendamento concluído sem pagamento e sem venda */}
                     {!vendaAssociada && agDetalhe.status === 'concluido' && (
-                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-amber-700">Esse atendimento ainda não tem pagamento registrado.</p>
+                      <div className="flex items-start gap-2 bg-warning-50 border border-warning-200 rounded-lg p-3">
+                        <AlertCircle size={14} className="text-warning-500 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-warning-700">Esse atendimento ainda não tem pagamento registrado.</p>
                       </div>
                     )}
                   </div>
@@ -483,9 +483,9 @@ export default function Agenda() {
               })()}
 
               {agDetalhe.observacoes && (
-                <div className="bg-amber-50 rounded-xl p-4">
-                  <p className="text-xs font-bold text-amber-700 mb-1">Observações</p>
-                  <p className="text-sm text-amber-800">{agDetalhe.observacoes}</p>
+                <div className="bg-warning-50 rounded-xl p-4">
+                  <p className="text-xs font-bold text-warning-700 mb-1">Observações</p>
+                  <p className="text-sm text-warning-800">{agDetalhe.observacoes}</p>
                 </div>
               )}
               <div className="flex gap-2 pt-1">
@@ -494,7 +494,7 @@ export default function Agenda() {
                     <MessageCircle size={14} /> WhatsApp
                   </button>
                 )}
-                <button onClick={() => { remover(agDetalhe.id); setAgDetalhe(null) }} className="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors">Excluir</button>
+                <button onClick={() => { remover(agDetalhe.id); setAgDetalhe(null) }} className="px-4 py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">Excluir</button>
               </div>
             </div>
             </div>
@@ -526,7 +526,7 @@ export default function Agenda() {
               {/* Data inicial + Hora inicial */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Data inicial <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Data inicial <span className="text-danger-400">*</span></label>
                   <input type="date" value={form.data_hora ? form.data_hora.split('T')[0] : ''}
                     onChange={(e) => {
                       const time = form.data_hora ? form.data_hora.split('T')[1] || '' : ''
@@ -535,7 +535,7 @@ export default function Agenda() {
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Hora inicial <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Hora inicial <span className="text-danger-400">*</span></label>
                   <input type="time" value={form.data_hora ? form.data_hora.split('T')[1]?.slice(0, 5) || '' : ''}
                     onChange={(e) => {
                       const date = form.data_hora ? form.data_hora.split('T')[0] : new Date().toISOString().split('T')[0]
@@ -765,7 +765,7 @@ export default function Agenda() {
                   <div className="flex items-center gap-2 text-sm">
                     <DollarSign size={14} className="text-gray-400 shrink-0" />
                     <span className="text-gray-600">Sub-total ficou</span>
-                    <span className="font-bold text-emerald-600">{fmt(Math.max((parseFloat(form.valor) || 0) - (parseFloat(form.desconto || '0')), 0))}</span>
+                    <span className="font-bold text-success-600">{fmt(Math.max((parseFloat(form.valor) || 0) - (parseFloat(form.desconto || '0')), 0))}</span>
                   </div>
                 </div>
               </div>
@@ -775,7 +775,7 @@ export default function Agenda() {
             <div className="shrink-0 px-5 py-4 border-t border-gray-100">
               <button onClick={() => { adicionar(); setCamposOpcionais(new Set()) }}
                 disabled={!form.nome_cliente || !form.data_hora}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                className="w-full py-3.5 bg-success-500 hover:bg-success-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 Adicionar agendamento <Check size={16} />
               </button>
             </div>

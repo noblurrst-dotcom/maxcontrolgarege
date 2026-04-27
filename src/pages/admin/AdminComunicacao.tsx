@@ -35,8 +35,8 @@ interface MensagemRecente {
 const TIPO_ICON: Record<string, any> = { info: Info, aviso: AlertTriangle, critico: AlertCircle }
 const TIPO_STYLE: Record<string, { bg: string; text: string }> = {
   info: { bg: 'bg-blue-50', text: 'text-blue-700' },
-  aviso: { bg: 'bg-amber-50', text: 'text-amber-700' },
-  critico: { bg: 'bg-red-50', text: 'text-red-700' },
+  aviso: { bg: 'bg-warning-50', text: 'text-warning-700' },
+  critico: { bg: 'bg-danger-50', text: 'text-danger-700' },
 }
 
 export default function AdminComunicacao() {
@@ -156,14 +156,14 @@ function BannersTab() {
             value={form.titulo}
             onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
             placeholder="Título do banner"
-            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-warning-500"
           />
           <textarea
             value={form.mensagem}
             onChange={e => setForm(f => ({ ...f, mensagem: e.target.value }))}
             placeholder="Mensagem (opcional)"
             rows={2}
-            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-warning-500 resize-none"
           />
           <div className="flex items-center gap-2">
             <label className="text-xs text-gray-500 font-medium">Tipo:</label>
@@ -180,7 +180,7 @@ function BannersTab() {
             ))}
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={criar} disabled={submitting} className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 disabled:opacity-40">
+            <button onClick={criar} disabled={submitting} className="px-4 py-2 bg-warning-500 text-white rounded-lg text-xs font-bold hover:bg-warning-600 disabled:opacity-40">
               {submitting ? <Loader2 size={14} className="animate-spin" /> : 'Publicar'}
             </button>
             <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-200">
@@ -218,7 +218,7 @@ function BannersTab() {
                 </div>
                 <button onClick={() => toggle(b)} className="shrink-0 p-1">
                   {b.ativo ? (
-                    <ToggleRight size={24} className="text-emerald-500" />
+                    <ToggleRight size={24} className="text-success-500" />
                   ) : (
                     <ToggleLeft size={24} className="text-gray-300" />
                   )}

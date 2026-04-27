@@ -53,11 +53,11 @@ interface DetalheData {
 }
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; text: string }> = {
-  ativa: { label: 'Ativa', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  dormente: { label: 'Dormente', bg: 'bg-amber-100', text: 'text-amber-700' },
+  ativa: { label: 'Ativa', bg: 'bg-success-100', text: 'text-success-700' },
+  dormente: { label: 'Dormente', bg: 'bg-warning-100', text: 'text-warning-700' },
   inativa: { label: 'Inativa', bg: 'bg-gray-100', text: 'text-gray-600' },
   nunca_logou: { label: 'Nunca logou', bg: 'bg-blue-100', text: 'text-blue-700' },
-  suspensa: { label: 'Suspensa', bg: 'bg-red-100', text: 'text-red-700' },
+  suspensa: { label: 'Suspensa', bg: 'bg-danger-100', text: 'text-danger-700' },
 }
 
 const ACAO_LABELS: Record<string, string> = {
@@ -181,7 +181,7 @@ export default function AdminContaDetalhe() {
     return (
       <div className="text-center py-16">
         <p className="text-gray-500 font-medium">Conta não encontrada</p>
-        <button onClick={() => navigate('/admin/contas')} className="text-sm text-amber-600 mt-2 hover:underline">
+        <button onClick={() => navigate('/admin/contas')} className="text-sm text-warning-600 mt-2 hover:underline">
           ← Voltar à lista
         </button>
       </div>
@@ -232,7 +232,7 @@ export default function AdminContaDetalhe() {
             <button
               onClick={gerarSupportCode}
               disabled={gerando}
-              className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-2 bg-warning-50 text-warning-700 rounded-lg text-xs font-bold hover:bg-warning-100 transition-colors disabled:opacity-40"
             >
               {gerando ? <Loader2 size={14} className="animate-spin" /> : <Headphones size={14} />}
               Entrar como suporte
@@ -242,8 +242,8 @@ export default function AdminContaDetalhe() {
               disabled={actionLoading}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-40 ${
                 isSuspensa
-                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+                  ? 'bg-success-50 text-success-700 hover:bg-success-100'
+                  : 'bg-danger-50 text-danger-600 hover:bg-danger-100'
               }`}
             >
               {actionLoading ? <Loader2 size={14} className="animate-spin" /> : isSuspensa ? <CheckCircle2 size={14} /> : <Ban size={14} />}
@@ -314,7 +314,7 @@ export default function AdminContaDetalhe() {
           </div>
           <button
             onClick={() => setShowMsgForm(!showMsgForm)}
-            className="text-xs font-bold text-amber-600 hover:text-amber-700"
+            className="text-xs font-bold text-warning-600 hover:text-warning-700"
           >
             {showMsgForm ? 'Cancelar' : '+ Nova mensagem'}
           </button>
@@ -327,19 +327,19 @@ export default function AdminContaDetalhe() {
               value={msgForm.assunto}
               onChange={e => setMsgForm(f => ({ ...f, assunto: e.target.value }))}
               placeholder="Assunto"
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-warning-500"
             />
             <textarea
               value={msgForm.corpo}
               onChange={e => setMsgForm(f => ({ ...f, corpo: e.target.value }))}
               placeholder="Corpo da mensagem"
               rows={3}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-warning-500 resize-none"
             />
             <button
               onClick={enviarMensagem}
               disabled={msgSending}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 disabled:opacity-40"
+              className="flex items-center gap-1.5 px-4 py-2 bg-warning-500 text-white rounded-lg text-xs font-bold hover:bg-warning-600 disabled:opacity-40"
             >
               {msgSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               Enviar

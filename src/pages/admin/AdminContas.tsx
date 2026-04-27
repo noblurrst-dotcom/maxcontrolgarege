@@ -40,11 +40,11 @@ const FILTROS = [
 ] as const
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; text: string }> = {
-  ativa: { label: 'Ativa', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  dormente: { label: 'Dormente', bg: 'bg-amber-100', text: 'text-amber-700' },
+  ativa: { label: 'Ativa', bg: 'bg-success-100', text: 'text-success-700' },
+  dormente: { label: 'Dormente', bg: 'bg-warning-100', text: 'text-warning-700' },
   inativa: { label: 'Inativa', bg: 'bg-gray-100', text: 'text-gray-600' },
   nunca_logou: { label: 'Nunca logou', bg: 'bg-blue-100', text: 'text-blue-700' },
-  suspensa: { label: 'Suspensa', bg: 'bg-red-100', text: 'text-red-700' },
+  suspensa: { label: 'Suspensa', bg: 'bg-danger-100', text: 'text-danger-700' },
 }
 
 const PER_PAGE = 50
@@ -168,13 +168,13 @@ export default function AdminContas() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por email ou empresa..."
-            className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-warning-500 focus:border-transparent outline-none"
           />
         </div>
         <select
           value={ordem}
           onChange={(e) => setOrdem(e.target.value)}
-          className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-600 outline-none focus:ring-2 focus:ring-amber-500"
+          className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-600 outline-none focus:ring-2 focus:ring-warning-500"
         >
           <option value="cadastro_desc">Cadastro (recente)</option>
           <option value="cadastro_asc">Cadastro (antigo)</option>
@@ -252,7 +252,7 @@ export default function AdminContas() {
                             onClick={() => gerarSupportCode(c)}
                             disabled={gerando === c.id}
                             title="Entrar como suporte"
-                            className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-40"
+                            className="p-1.5 text-warning-500 hover:text-warning-700 hover:bg-warning-50 rounded-lg transition-colors disabled:opacity-40"
                           >
                             {gerando === c.id ? <Loader2 size={14} className="animate-spin" /> : <Headphones size={14} />}
                           </button>

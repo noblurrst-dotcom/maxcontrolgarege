@@ -153,17 +153,17 @@ function Calendario({
                 ehHoje
                   ? 'bg-primary-500 text-on-primary font-bold shadow-md shadow-primary-500/30'
                   : feriado?.tipo === 'nacional'
-                    ? 'bg-red-50 text-red-600 font-semibold hover:bg-red-100'
+                    ? 'bg-danger-50 text-danger-600 font-semibold hover:bg-danger-100'
                     : feriado?.tipo === 'regional'
                       ? 'bg-blue-50 text-blue-600 font-semibold hover:bg-blue-100'
                       : ehDomingo
-                        ? 'text-red-400 hover:bg-gray-50'
+                        ? 'text-danger-400 hover:bg-gray-50'
                         : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               {format(dia, 'd')}
               <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-                {feriado?.tipo === 'nacional' && !ehHoje && <span className="w-1 h-1 bg-red-500 rounded-full" />}
+                {feriado?.tipo === 'nacional' && !ehHoje && <span className="w-1 h-1 bg-danger-500 rounded-full" />}
                 {feriado?.tipo === 'regional' && !ehHoje && <span className="w-1 h-1 bg-blue-500 rounded-full" />}
                 {temAgendamento && <span className="w-1 h-1 bg-primary-500 rounded-full" />}
               </span>
@@ -175,7 +175,7 @@ function Calendario({
       {/* Legenda */}
       <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-50">
         <div className="flex items-center gap-1">
-          <span className="w-2 h-2 bg-red-500 rounded-full" />
+          <span className="w-2 h-2 bg-danger-500 rounded-full" />
           <span className="text-[10px] text-gray-400">Nacional</span>
         </div>
         <div className="flex items-center gap-1">
@@ -194,10 +194,10 @@ function Calendario({
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Feriados de {format(mesAtual, 'MMMM', { locale: ptBR })}</p>
           {feriadosDoMes.map((f) => (
             <div key={f.data + f.nome} className="flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${f.tipo === 'nacional' ? 'bg-red-500' : 'bg-blue-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${f.tipo === 'nacional' ? 'bg-danger-500' : 'bg-blue-500'}`} />
               <span className="text-[11px] text-gray-500 font-medium w-5">{f.data.split('-')[1]}</span>
               <span className="text-[11px] text-gray-700">{f.nome}</span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto ${f.tipo === 'nacional' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{f.tipo === 'nacional' ? 'Nacional' : 'Regional'}</span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto ${f.tipo === 'nacional' ? 'bg-danger-50 text-danger-500' : 'bg-blue-50 text-blue-500'}`}>{f.tipo === 'nacional' ? 'Nacional' : 'Regional'}</span>
             </div>
           ))}
         </div>
@@ -216,8 +216,8 @@ function GraficoVendas({ vendasMes }: { vendasMes: number }) {
     { label: 'Pix', color: 'bg-primary-500' },
     { label: 'Crédito', color: 'bg-blue-400' },
     { label: 'Débito', color: 'bg-violet-400' },
-    { label: 'Dinheiro', color: 'bg-emerald-400' },
-    { label: 'Boleto', color: 'bg-amber-400' },
+    { label: 'Dinheiro', color: 'bg-success-400' },
+    { label: 'Boleto', color: 'bg-warning-400' },
   ]
 
   return (
@@ -267,43 +267,43 @@ function ResumoFinanceiro({ entradas, saidas, saldo }: { entradas: number; saida
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-success-50 rounded-xl">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <TrendingUp size={18} className="text-emerald-600" />
+            <div className="w-9 h-9 bg-success-100 rounded-xl flex items-center justify-center">
+              <TrendingUp size={18} className="text-success-600" />
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-700">Entradas</p>
               <p className="text-[10px] text-gray-400">Vendas + receitas</p>
             </div>
           </div>
-          <p className="text-base sm:text-lg font-bold text-emerald-600">{formatCurrency(entradas)}</p>
+          <p className="text-base sm:text-lg font-bold text-success-600">{formatCurrency(entradas)}</p>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-danger-50 rounded-xl">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
-              <TrendingDown size={18} className="text-red-500" />
+            <div className="w-9 h-9 bg-danger-100 rounded-xl flex items-center justify-center">
+              <TrendingDown size={18} className="text-danger-500" />
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-700">Saídas</p>
               <p className="text-[10px] text-gray-400">Despesas do mês</p>
             </div>
           </div>
-          <p className="text-base sm:text-lg font-bold text-red-500">{formatCurrency(saidas)}</p>
+          <p className="text-base sm:text-lg font-bold text-danger-500">{formatCurrency(saidas)}</p>
         </div>
 
-        <div className={`flex items-center justify-between p-3 rounded-xl ${saldo >= 0 ? 'bg-blue-50' : 'bg-amber-50'}`}>
+        <div className={`flex items-center justify-between p-3 rounded-xl ${saldo >= 0 ? 'bg-blue-50' : 'bg-warning-50'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${saldo >= 0 ? 'bg-blue-100' : 'bg-amber-100'}`}>
-              <CreditCard size={18} className={saldo >= 0 ? 'text-blue-600' : 'text-amber-600'} />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${saldo >= 0 ? 'bg-blue-100' : 'bg-warning-100'}`}>
+              <CreditCard size={18} className={saldo >= 0 ? 'text-blue-600' : 'text-warning-600'} />
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-700">Saldo</p>
               <p className="text-[10px] text-gray-400">Entradas - Saídas</p>
             </div>
           </div>
-          <p className={`text-base sm:text-lg font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>{formatCurrency(saldo)}</p>
+          <p className={`text-base sm:text-lg font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-warning-600'}`}>{formatCurrency(saldo)}</p>
         </div>
       </div>
     </Card>
@@ -656,8 +656,8 @@ export default function Dashboard() {
               { key: 'pix', label: 'Pix', color: 'bg-primary-500' },
               { key: 'credito', label: 'Crédito', color: 'bg-blue-400' },
               { key: 'debito', label: 'Débito', color: 'bg-violet-400' },
-              { key: 'dinheiro', label: 'Dinheiro', color: 'bg-emerald-400' },
-              { key: 'boleto', label: 'Boleto', color: 'bg-amber-400' },
+              { key: 'dinheiro', label: 'Dinheiro', color: 'bg-success-400' },
+              { key: 'boleto', label: 'Boleto', color: 'bg-warning-400' },
               { key: 'transferencia', label: 'Transferência', color: 'bg-rose-400' },
             ].filter(f => vendasPorForma[f.key]).map(f => (
               <div key={f.key} className="flex items-center gap-3">
@@ -680,8 +680,8 @@ export default function Dashboard() {
     <Card destino="/clientes">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-              <Trophy size={20} className="text-amber-500" />
+            <div className="w-10 h-10 bg-warning-50 rounded-xl flex items-center justify-center">
+              <Trophy size={20} className="text-warning-500" />
             </div>
             <h4 className="text-sm font-bold text-gray-900">Top 5 clientes que mais gastaram</h4>
           </div>
@@ -691,14 +691,14 @@ export default function Dashboard() {
           <div className="space-y-3">
             {topClientes.map((c, i) => (
               <div key={c.nome} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-warning-100 text-warning-600' : 'bg-gray-100 text-gray-500'}`}>
                   {c.nome.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
                   <p className="text-[10px] text-gray-400">{c.count} transaç{c.count === 1 ? 'ão' : 'ões'} • {formatCurrency(c.total)}</p>
                 </div>
-                {i === 0 && <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Top 1</span>}
+                {i === 0 && <span className="text-[10px] font-bold text-warning-500 bg-warning-50 px-2 py-0.5 rounded-full">Top 1</span>}
               </div>
             ))}
           </div>
@@ -759,15 +759,15 @@ export default function Dashboard() {
                   {(() => {
                     const v = ag.venda_id ? vendas.find((x: any) => x.id === ag.venda_id) : undefined
                     const sp = v?.status_pagamento
-                    if (ag.status === 'concluido' && !v) return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">$</span>
-                    if (sp === 'pendente') return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">$</span>
+                    if (ag.status === 'concluido' && !v) return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning-50 text-warning-600">$</span>
+                    if (sp === 'pendente') return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning-50 text-warning-600">$</span>
                     if (sp === 'parcial') return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">½</span>
                     return null
                   })()}
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                     ag.status === 'confirmado' ? 'bg-blue-50 text-blue-600' :
-                    ag.status === 'em_andamento' ? 'bg-amber-50 text-amber-600' :
-                    ag.status === 'concluido' ? 'bg-emerald-50 text-emerald-600' :
+                    ag.status === 'em_andamento' ? 'bg-warning-50 text-warning-600' :
+                    ag.status === 'concluido' ? 'bg-success-50 text-success-600' :
                     'bg-gray-100 text-gray-500'
                   }`}>
                     {ag.status === 'confirmado' ? 'Confirmado' :
@@ -807,7 +807,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: 'Clientes', value: clientes.length, color: 'text-violet-600', bg: 'bg-violet-50' },
-            { label: 'Vendas hoje', value: formatCurrency(totalVendasHoje), color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Vendas hoje', value: formatCurrency(totalVendasHoje), color: 'text-success-600', bg: 'bg-success-50' },
             { label: 'Agendamentos', value: agendamentos.length, color: 'text-blue-600', bg: 'bg-blue-50' },
           ].map(item => (
             <div key={item.label} className={`${item.bg} rounded-xl p-2.5 text-center`}>
@@ -845,7 +845,7 @@ export default function Dashboard() {
             title={editMode ? 'Concluir edição' : 'Editar painel'}
             className={`p-2 rounded-xl transition-colors ${
               editMode
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                ? 'bg-success-500 hover:bg-success-600 text-white'
                 : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
             }`}
           >
@@ -906,9 +906,9 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'Agendamentos hoje', value: agendamentosHoje, icon: CalendarPlus, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100', onClick: () => navigate('/agenda') },
-            { label: 'Vendas este mês', value: formatCurrency(vendasMesAtual), icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', onClick: () => navigate('/vendas') },
+            { label: 'Vendas este mês', value: formatCurrency(vendasMesAtual), icon: ShoppingCart, color: 'text-success-600', bg: 'bg-success-50', iconBg: 'bg-success-100', onClick: () => navigate('/vendas') },
             { label: 'Total de clientes', value: clientes.length, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', iconBg: 'bg-violet-100', onClick: () => navigate('/clientes') },
-            { label: 'Orçamentos pendentes', value: orcamentosPendentes, icon: FileText, color: 'text-amber-600', bg: 'bg-amber-50', iconBg: 'bg-amber-100', onClick: () => navigate('/vendas') },
+            { label: 'Orçamentos pendentes', value: orcamentosPendentes, icon: FileText, color: 'text-warning-600', bg: 'bg-warning-50', iconBg: 'bg-warning-100', onClick: () => navigate('/vendas') },
           ].map((item) => (
             <button key={item.label} onClick={item.onClick}
               className={`${item.bg} rounded-2xl p-3 sm:p-4 text-left hover:brightness-95 transition-all active:scale-[0.98] border border-transparent hover:border-gray-100`}>

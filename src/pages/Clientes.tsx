@@ -417,13 +417,13 @@ export default function Clientes() {
           onClick={() => setAbaClientes('inativos')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-colors ${
             abaClientes === 'inativos'
-              ? 'bg-white text-amber-600 shadow-sm'
+              ? 'bg-white text-warning-600 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           <AlertCircle size={13} /> Inativos
           {clientesInativos.length > 0 && (
-            <span className="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+            <span className="bg-warning-100 text-warning-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
               {clientesInativos.length}
             </span>
           )}
@@ -435,8 +435,8 @@ export default function Clientes() {
           {[
             { label: 'Total', value: lista.length, color: 'text-primary-600' },
             { label: 'Com veículo', value: lista.filter(c => c.placa).length, color: 'text-violet-600' },
-            { label: 'Sem visita +30d', value: ausentes30, color: 'text-amber-600' },
-            { label: 'Sem visita +90d', value: ausentes90, color: 'text-red-500' },
+            { label: 'Sem visita +30d', value: ausentes30, color: 'text-warning-600' },
+            { label: 'Sem visita +90d', value: ausentes90, color: 'text-danger-500' },
           ].map(item => (
             <div key={item.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
               <p className="text-[10px] sm:text-xs font-medium text-gray-400 mb-2">{item.label}</p>
@@ -485,7 +485,7 @@ export default function Clientes() {
                   onClick={() => setFiltroInatividade(d)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                     filtroInatividade === d
-                      ? 'bg-amber-500 text-white'
+                      ? 'bg-warning-500 text-white'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
@@ -497,7 +497,7 @@ export default function Clientes() {
 
           {clientesInativos.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-              <CheckCircle2 size={40} className="text-emerald-300 mx-auto mb-3" />
+              <CheckCircle2 size={40} className="text-success-300 mx-auto mb-3" />
               <p className="text-sm font-semibold text-gray-700">Nenhum cliente inativo</p>
               <p className="text-xs text-gray-400 mt-1">Todos os clientes regulares visitaram nos últimos {filtroInatividade} dias</p>
             </div>
@@ -505,8 +505,8 @@ export default function Clientes() {
             <div className="space-y-2">
               {clientesInativos.map(c => {
                 const badge =
-                  (c.diasSemVisita ?? 0) >= 90 ? { label: '+90 dias', cls: 'bg-red-100 text-red-600' } :
-                  (c.diasSemVisita ?? 0) >= 60 ? { label: '+60 dias', cls: 'bg-amber-100 text-amber-600' } :
+                  (c.diasSemVisita ?? 0) >= 90 ? { label: '+90 dias', cls: 'bg-danger-100 text-danger-600' } :
+                  (c.diasSemVisita ?? 0) >= 60 ? { label: '+60 dias', cls: 'bg-warning-100 text-warning-600' } :
                                                   { label: '+30 dias', cls: 'bg-yellow-100 text-yellow-700' }
                 return (
                   <div
@@ -515,8 +515,8 @@ export default function Clientes() {
                     onClick={() => setDetalhe(c)}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-amber-600">{c.nome.slice(0, 2).toUpperCase()}</span>
+                      <div className="w-9 h-9 bg-warning-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-warning-600">{c.nome.slice(0, 2).toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{c.nome}</p>
@@ -575,13 +575,13 @@ export default function Clientes() {
                 {(() => {
                   const { totalGasto } = getDadosCliente(c)
                   return totalGasto > 0 ? (
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[10px] font-bold text-success-600 bg-success-50 px-2 py-0.5 rounded-full shrink-0">
                       {fmt(totalGasto)}
                     </span>
                   ) : null
                 })()}
                 {c.telefone && <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(c) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>}
-                <button onClick={(e) => { e.stopPropagation(); remover(c.id) }} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                <button onClick={(e) => { e.stopPropagation(); remover(c.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
               </div>
             </div>
           ))}
@@ -602,7 +602,7 @@ export default function Clientes() {
               {/* Nome — obrigatório */}
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">
-                  Nome <span className="text-red-400">*</span>
+                  Nome <span className="text-danger-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -617,7 +617,7 @@ export default function Clientes() {
               {/* WhatsApp — obrigatório */}
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">
-                  WhatsApp <span className="text-red-400">*</span>
+                  WhatsApp <span className="text-danger-400">*</span>
                 </label>
                 <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-500">
                   <span className="px-3 py-2.5 bg-gray-50 text-sm text-gray-500 border-r border-gray-200 shrink-0 flex items-center gap-1.5">
@@ -656,7 +656,7 @@ export default function Clientes() {
                     <button
                       type="button"
                       onClick={() => setForm(f => ({ ...f, veiculo: '', placa: '' }))}
-                      className="p-2.5 text-gray-300 hover:text-red-400 transition-colors"
+                      className="p-2.5 text-gray-300 hover:text-danger-400 transition-colors"
                     >
                       <X size={16} />
                     </button>
@@ -789,8 +789,8 @@ export default function Clientes() {
             <div className="p-5 space-y-4">
               {csvImportados !== null ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 size={32} className="text-emerald-500" />
+                  <div className="w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 size={32} className="text-success-500" />
                   </div>
                   <p className="text-lg font-bold text-gray-900">{csvImportados} contato{csvImportados !== 1 ? 's' : ''} importado{csvImportados !== 1 ? 's' : ''}!</p>
                   <p className="text-sm text-gray-400 mt-1">Os contatos já aparecem na sua lista.</p>
@@ -827,9 +827,9 @@ export default function Clientes() {
                 </>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-                    <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-                    <p className="text-xs font-semibold text-emerald-700">{csvData.rows.length} linha{csvData.rows.length !== 1 ? 's' : ''} encontrada{csvData.rows.length !== 1 ? 's' : ''} no arquivo</p>
+                  <div className="flex items-center gap-2 bg-success-50 border border-success-100 rounded-xl p-3">
+                    <CheckCircle2 size={15} className="text-success-500 shrink-0" />
+                    <p className="text-xs font-semibold text-success-700">{csvData.rows.length} linha{csvData.rows.length !== 1 ? 's' : ''} encontrada{csvData.rows.length !== 1 ? 's' : ''} no arquivo</p>
                     <button onClick={() => { setCsvData(null); setCsvMapeamento({}) }} className="ml-auto text-[10px] font-bold text-gray-400 hover:text-gray-600 underline">Trocar arquivo</button>
                   </div>
 
@@ -878,13 +878,13 @@ export default function Clientes() {
                     return (
                       <>
                         {nomeIdx < 0 ? (
-                          <div className="flex items-center gap-2 text-amber-700 text-xs font-semibold bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                          <div className="flex items-center gap-2 text-warning-700 text-xs font-semibold bg-warning-50 border border-warning-100 rounded-xl px-3 py-2">
                             <AlertCircle size={14} className="shrink-0" /> Mapeie a coluna Nome para continuar
                           </div>
                         ) : (
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
-                            <p className="text-[11px] font-bold text-emerald-700">{comNome} contato{comNome !== 1 ? 's' : ''} válido{comNome !== 1 ? 's' : ''} para importar</p>
-                            {semNome > 0 && <p className="text-[10px] text-amber-600 mt-0.5">{semNome} linha{semNome !== 1 ? 's' : ''} sem nome serão ignoradas</p>}
+                          <div className="bg-success-50 border border-success-100 rounded-xl px-3 py-2">
+                            <p className="text-[11px] font-bold text-success-700">{comNome} contato{comNome !== 1 ? 's' : ''} válido{comNome !== 1 ? 's' : ''} para importar</p>
+                            {semNome > 0 && <p className="text-[10px] text-warning-600 mt-0.5">{semNome} linha{semNome !== 1 ? 's' : ''} sem nome serão ignoradas</p>}
                           </div>
                         )}
                         <button
@@ -942,7 +942,7 @@ export default function Clientes() {
                   {detalhe.telefone && (
                     <button
                       onClick={() => enviarWhatsApp(detalhe)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-success-500 hover:bg-success-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
                     >
                       <MessageCircle size={18} />
                       Chamar no WhatsApp
@@ -1035,9 +1035,9 @@ export default function Clientes() {
                   const { totalGasto, qtdServicos } = getDadosCliente(detalhe)
                   return totalGasto > 0 || qtdServicos > 0 ? (
                     <div className="grid grid-cols-2 gap-2 mt-4">
-                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                        <p className="text-[10px] text-emerald-600 font-medium mb-0.5">Total gasto</p>
-                        <p className="text-base font-bold text-emerald-600">{fmt(totalGasto)}</p>
+                      <div className="bg-success-50 rounded-xl p-3 text-center">
+                        <p className="text-[10px] text-success-600 font-medium mb-0.5">Total gasto</p>
+                        <p className="text-base font-bold text-success-600">{fmt(totalGasto)}</p>
                       </div>
                       <div className="bg-violet-50 rounded-xl p-3 text-center">
                         <p className="text-[10px] text-violet-600 font-medium mb-0.5">Serviços</p>
@@ -1122,7 +1122,7 @@ export default function Clientes() {
                         <div key={veiculo.id} className="border border-gray-200 rounded-xl overflow-hidden">
                           <div className="flex items-center justify-between px-3 py-3 bg-gray-50">
                             <div className="flex items-center gap-3">
-                              <Car size={20} className="text-red-400 shrink-0" />
+                              <Car size={20} className="text-danger-400 shrink-0" />
                               <div>
                                 <p className="text-sm font-bold text-gray-900 uppercase">{veiculo.placa}</p>
                                 <p className="text-xs text-gray-500">
@@ -1150,7 +1150,7 @@ export default function Clientes() {
                               </button>
                               <button
                                 onClick={() => removerVeiculo(veiculo)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                className="p-1.5 text-gray-400 hover:text-danger-500 transition-colors"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -1186,7 +1186,7 @@ export default function Clientes() {
                                               onChange={e => { const f = e.target.files?.[0]; if (f) uploadFotoVeiculoNovo(veiculo, face, f) }} />
                                           </label>
                                           <button onClick={() => removerFotoVeiculoNovo(veiculo, face)}
-                                            className="p-1 bg-red-500/90 rounded-md">
+                                            className="p-1 bg-danger-500/90 rounded-md">
                                             <X size={11} className="text-white" />
                                           </button>
                                         </div>
@@ -1240,7 +1240,7 @@ export default function Clientes() {
                             <p className="text-xs font-semibold text-gray-800 truncate">{v.descricao || 'Serviço'}</p>
                             <p className="text-[10px] text-gray-400">{new Date(v.data_venda).toLocaleDateString('pt-BR')}</p>
                           </div>
-                          <span className="text-xs font-bold text-emerald-600 shrink-0 ml-2">{fmt((v as any).valor_total || v.valor)}</span>
+                          <span className="text-xs font-bold text-success-600 shrink-0 ml-2">{fmt((v as any).valor_total || v.valor)}</span>
                         </div>
                       ))}
                     </div>
@@ -1250,17 +1250,17 @@ export default function Clientes() {
 
               {/* ── Seção 5: Checklist ── */}
               <div className="px-5 py-5 border-b border-gray-100">
-                <div className={`border rounded-xl overflow-hidden ${mostrarChecklistCliente ? 'border-emerald-200' : 'border-gray-200'}`}>
+                <div className={`border rounded-xl overflow-hidden ${mostrarChecklistCliente ? 'border-success-200' : 'border-gray-200'}`}>
                   <button
                     type="button"
                     onClick={() => setMostrarChecklistCliente(v => !v)}
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <ClipboardCheck size={16} className={mostrarChecklistCliente ? 'text-emerald-500' : 'text-gray-400'} />
+                      <ClipboardCheck size={16} className={mostrarChecklistCliente ? 'text-success-500' : 'text-gray-400'} />
                       <span className="text-sm font-semibold text-gray-700">Novo checklist</span>
                       {checklistClienteSalvo && (
-                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">✓ Salvo</span>
+                        <span className="text-[10px] text-success-600 bg-success-50 px-2 py-0.5 rounded-full font-bold">✓ Salvo</span>
                       )}
                     </div>
                     {mostrarChecklistCliente ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
@@ -1286,7 +1286,7 @@ export default function Clientes() {
               <div className="px-5 py-4">
                 <button
                   onClick={() => remover(detalhe.id)}
-                  className="w-full py-2.5 border border-red-200 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors"
+                  className="w-full py-2.5 border border-danger-200 text-danger-500 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors"
                 >
                   Excluir cliente
                 </button>
@@ -1313,7 +1313,7 @@ export default function Clientes() {
                   setDetalhe(null)
                   setModal(true)
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors active:scale-[0.98]"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-success-500 hover:bg-success-600 text-white rounded-xl text-sm font-bold transition-colors active:scale-[0.98]"
               >
                 <Pencil size={16} />
                 Editar
@@ -1344,7 +1344,7 @@ export default function Clientes() {
             <div className="px-5 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">
-                  Placa <span className="text-red-400">*</span>
+                  Placa <span className="text-danger-400">*</span>
                 </label>
                 <input type="text"
                   value={veiculoForm.placa}

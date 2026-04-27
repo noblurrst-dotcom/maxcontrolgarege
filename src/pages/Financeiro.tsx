@@ -83,10 +83,10 @@ export default function Financeiro() {
           <p className="text-sm text-gray-400 mt-0.5">{filtradas.length} lançamento{filtradas.length !== 1 ? 's' : ''}{pendentes > 0 ? ` · ${pendentes} pendente${pendentes !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setModal('entrada')} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-xs font-bold transition-colors">
+          <button onClick={() => setModal('entrada')} className="flex items-center gap-1.5 px-4 py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-full text-xs font-bold transition-colors">
             <Plus size={14} /> Entrada
           </button>
-          <button onClick={() => setModal('saida')} className="flex items-center gap-1.5 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-bold transition-colors">
+          <button onClick={() => setModal('saida')} className="flex items-center gap-1.5 px-4 py-2.5 bg-danger-500 hover:bg-danger-600 text-white rounded-full text-xs font-bold transition-colors">
             <Plus size={14} /> Saída
           </button>
         </div>
@@ -111,31 +111,31 @@ export default function Financeiro() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
           <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 rounded-xl flex items-center justify-center"><TrendingUp size={16} className="text-emerald-600" /></div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-success-100 rounded-xl flex items-center justify-center"><TrendingUp size={16} className="text-success-600" /></div>
             <p className="text-[10px] sm:text-xs font-medium text-gray-400">Entradas</p>
           </div>
-          <p className="text-lg sm:text-xl font-bold text-emerald-600">{fmt(entradas)}</p>
+          <p className="text-lg sm:text-xl font-bold text-success-600">{fmt(entradas)}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
           <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-red-100 rounded-xl flex items-center justify-center"><TrendingDown size={16} className="text-red-500" /></div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-danger-100 rounded-xl flex items-center justify-center"><TrendingDown size={16} className="text-danger-500" /></div>
             <p className="text-[10px] sm:text-xs font-medium text-gray-400">Saídas</p>
           </div>
-          <p className="text-lg sm:text-xl font-bold text-red-500">{fmt(saidas)}</p>
+          <p className="text-lg sm:text-xl font-bold text-danger-500">{fmt(saidas)}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
           <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center ${saldo >= 0 ? 'bg-blue-100' : 'bg-amber-100'}`}><CreditCard size={16} className={saldo >= 0 ? 'text-blue-600' : 'text-amber-600'} /></div>
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center ${saldo >= 0 ? 'bg-blue-100' : 'bg-warning-100'}`}><CreditCard size={16} className={saldo >= 0 ? 'text-blue-600' : 'text-warning-600'} /></div>
             <p className="text-[10px] sm:text-xs font-medium text-gray-400">Saldo</p>
           </div>
-          <p className={`text-lg sm:text-xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>{fmt(saldo)}</p>
+          <p className={`text-lg sm:text-xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-warning-600'}`}>{fmt(saldo)}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
           <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-amber-100 rounded-xl flex items-center justify-center"><Clock size={16} className="text-amber-600" /></div>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-warning-100 rounded-xl flex items-center justify-center"><Clock size={16} className="text-warning-600" /></div>
             <p className="text-[10px] sm:text-xs font-medium text-gray-400">Pendentes</p>
           </div>
-          <p className="text-lg sm:text-xl font-bold text-amber-600">{pendentes}</p>
+          <p className="text-lg sm:text-xl font-bold text-warning-600">{pendentes}</p>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ export default function Financeiro() {
                   <p className="text-[10px] text-gray-400">{b.banco || b.tipo}</p>
                   <p className="text-sm font-bold text-primary-600 mt-1">{fmt(b.saldo)}</p>
                 </div>
-                <button onClick={() => removerBanco(b.id)} className="p-1 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
+                <button onClick={() => removerBanco(b.id)} className="p-1 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={12} /></button>
               </div>
             ))}
           </div>
@@ -175,18 +175,18 @@ export default function Financeiro() {
         if (pendentes.length === 0) return null
         const totalRestante = pendentes.reduce((a, v) => a + ((v.valor_total || v.valor) - (v.valor_pago || 0)), 0)
         return (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <div className="bg-warning-50 border border-warning-200 rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <AlertCircle size={16} className="text-amber-600" />
+                <div className="w-8 h-8 bg-warning-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle size={16} className="text-warning-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-amber-800">{pendentes.length} venda{pendentes.length !== 1 ? 's' : ''} com pagamento pendente</p>
-                  <p className="text-[11px] text-amber-600">Total a receber: <span className="font-bold">{fmt(totalRestante)}</span></p>
+                  <p className="text-sm font-bold text-warning-800">{pendentes.length} venda{pendentes.length !== 1 ? 's' : ''} com pagamento pendente</p>
+                  <p className="text-[11px] text-warning-600">Total a receber: <span className="font-bold">{fmt(totalRestante)}</span></p>
                 </div>
               </div>
-              <button onClick={() => navigate('/vendas')} className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-bold transition-colors">
+              <button onClick={() => navigate('/vendas')} className="flex items-center gap-1 px-3 py-1.5 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-[11px] font-bold transition-colors">
                 Ver vendas <ArrowRight size={12} />
               </button>
             </div>
@@ -215,10 +215,10 @@ export default function Financeiro() {
       ) : (
         <div className="space-y-2">
           {filtradas.map((c) => (
-            <div key={c.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 flex items-center justify-between ${!c.pago ? 'border-l-4 border-l-amber-400' : ''}`}>
+            <div key={c.id} className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 flex items-center justify-between ${!c.pago ? 'border-l-4 border-l-warning-400' : ''}`}>
               <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${c.tipo === 'entrada' ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                  {c.tipo === 'entrada' ? <TrendingUp size={16} className="text-emerald-600" /> : <TrendingDown size={16} className="text-red-500" />}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${c.tipo === 'entrada' ? 'bg-success-100' : 'bg-danger-100'}`}>
+                  {c.tipo === 'entrada' ? <TrendingUp size={16} className="text-success-600" /> : <TrendingDown size={16} className="text-danger-500" />}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{c.descricao}</p>
@@ -230,13 +230,13 @@ export default function Financeiro() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
-                <button onClick={() => togglePago(c.id)} className={`p-1.5 transition-colors ${c.pago ? 'text-emerald-500' : 'text-amber-400 hover:text-emerald-500'}`} title={c.pago ? 'Pago' : 'Marcar como pago'}>
+                <button onClick={() => togglePago(c.id)} className={`p-1.5 transition-colors ${c.pago ? 'text-success-500' : 'text-warning-400 hover:text-success-500'}`} title={c.pago ? 'Pago' : 'Marcar como pago'}>
                   {c.pago ? <CheckCircle2 size={14} /> : <Clock size={14} />}
                 </button>
-                <p className={`text-sm font-bold ${c.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-500'}`}>
+                <p className={`text-sm font-bold ${c.tipo === 'entrada' ? 'text-success-600' : 'text-danger-500'}`}>
                   {c.tipo === 'entrada' ? '+' : '-'} {fmt(c.valor)}
                 </p>
-                <button onClick={() => remover(c.id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                <button onClick={() => remover(c.id)} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
               </div>
             </div>
           ))}
@@ -295,7 +295,7 @@ export default function Financeiro() {
                 <input type="checkbox" id="pago" checked={form.pago} onChange={(e) => setForm({ ...form, pago: e.target.checked })} className="rounded border-gray-300 text-primary-500 focus:ring-primary-500" />
                 <label htmlFor="pago" className="text-xs font-medium text-gray-500">Já foi pago/recebido</label>
               </div>
-              <button onClick={adicionar} className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-colors ${modal === 'entrada' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>
+              <button onClick={adicionar} className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-colors ${modal === 'entrada' ? 'bg-success-500 hover:bg-success-600' : 'bg-danger-500 hover:bg-danger-600'}`}>
                 Salvar {modal === 'entrada' ? 'Entrada' : 'Saída'}
               </button>
             </div>

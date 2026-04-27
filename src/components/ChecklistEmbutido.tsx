@@ -249,7 +249,7 @@ export default function ChecklistEmbutido({ nomeCliente, placa, telefone, onSalv
                         className="w-14 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center outline-none"
                       />
                     )}
-                    <span className="text-xs font-semibold text-emerald-600">
+                    <span className="text-xs font-semibold text-success-600">
                       {s.preco_padrao > 0 ? `R$ ${Number(s.preco_padrao).toFixed(2)}` : 'Grátis'}
                     </span>
                   </div>
@@ -296,7 +296,7 @@ export default function ChecklistEmbutido({ nomeCliente, placa, telefone, onSalv
                   </span>
                   <span className="text-xs font-medium text-gray-700">{item.item_tipo}</span>
                   {item.fotos.length > 0 && (
-                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">
+                    <span className="text-[9px] bg-success-100 text-success-700 px-1.5 py-0.5 rounded-full font-bold">
                       {item.fotos.length} foto(s)
                     </span>
                   )}
@@ -318,7 +318,7 @@ export default function ChecklistEmbutido({ nomeCliente, placa, telefone, onSalv
                           className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
                         <button type="button"
                           onClick={() => handleFotoRemove(index, fotoIdx)}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-danger-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <X size={10} />
                         </button>
                       </div>
@@ -342,7 +342,7 @@ export default function ChecklistEmbutido({ nomeCliente, placa, telefone, onSalv
         type="button"
         onClick={salvarChecklist}
         disabled={loading}
-        className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {loading
           ? <><Loader2 size={16} className="animate-spin" /> Salvando...</>

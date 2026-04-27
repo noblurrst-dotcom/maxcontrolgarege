@@ -388,7 +388,7 @@ export default function Servicos() {
                   </button>
                   <button
                     onClick={() => handleDelete(servico)}
-                    className="p-2 bg-white/90 backdrop-blur-sm text-red-600 rounded-lg hover:bg-white transition-colors shadow-sm"
+                    className="p-2 bg-white/90 backdrop-blur-sm text-danger-600 rounded-lg hover:bg-white transition-colors shadow-sm"
                   >
                     <Trash2 size={14} />
                   </button>

@@ -123,8 +123,8 @@ export default function Relatorios() {
       nome: 'Fluxo de Caixa (DFC)',
       descricao: 'Entradas e saídas consolidadas por período',
       icon: BarChart2,
-      cor: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      cor: 'text-success-600',
+      bg: 'bg-success-50',
       cabecalho: ['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (R$)', 'Pago'],
       linhas: () => [
         ...vendas.map(v => [
@@ -204,8 +204,8 @@ export default function Relatorios() {
       nome: 'Serviços cadastrados',
       descricao: `${servicos.length} serviço(s) no sistema`,
       icon: Briefcase,
-      cor: 'text-amber-600',
-      bg: 'bg-amber-50',
+      cor: 'text-warning-600',
+      bg: 'bg-warning-50',
       cabecalho: ['Nome', 'Descrição', 'Preço Padrão (R$)'],
       linhas: () => servicos.map(s => [
         s.nome || '—',
@@ -235,8 +235,8 @@ export default function Relatorios() {
       nome: 'Entradas financeiras',
       descricao: `${financeiro.filter(f => f.tipo === 'entrada').length} entrada(s) registrada(s)`,
       icon: TrendingUp,
-      cor: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      cor: 'text-success-600',
+      bg: 'bg-success-50',
       cabecalho: ['Data', 'Categoria', 'Descrição', 'Valor (R$)', 'Forma Pgto', 'Pago', 'Conta'],
       linhas: () => financeiro
         .filter(f => f.tipo === 'entrada')
@@ -255,8 +255,8 @@ export default function Relatorios() {
       nome: 'Saídas financeiras',
       descricao: `${financeiro.filter(f => f.tipo === 'saida').length} saída(s) registrada(s)`,
       icon: TrendingDown,
-      cor: 'text-red-600',
-      bg: 'bg-red-50',
+      cor: 'text-danger-600',
+      bg: 'bg-danger-50',
       cabecalho: ['Data', 'Categoria', 'Descrição', 'Valor (R$)', 'Forma Pgto', 'Pago', 'Conta'],
       linhas: () => financeiro
         .filter(f => f.tipo === 'saida')
@@ -359,7 +359,7 @@ export default function Relatorios() {
                 <button
                   onClick={() => exportarPDF(rel)}
                   disabled={!!gerando}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-danger-50 hover:bg-danger-100 text-danger-600 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {gerandoPDF
                     ? <Loader2 size={13} className="animate-spin" />
@@ -370,7 +370,7 @@ export default function Relatorios() {
                 <button
                   onClick={() => exportarCSV(rel)}
                   disabled={!!gerando}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-success-50 hover:bg-success-100 text-success-600 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {gerandoCSV
                     ? <Loader2 size={13} className="animate-spin" />
