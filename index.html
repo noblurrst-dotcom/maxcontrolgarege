@@ -11,24 +11,17 @@
     <meta name="description" content="A.T.A Gestão — Plataforma completa de gestão para estética automotiva" />
     <meta name="author" content="A.T.A Gestão" />
     
-    <!-- Favicon adaptativo (preto em modo claro, branco em modo escuro) -->
-    <!-- 192x192 — usado em bookmarks, atalhos e new-tab pages -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/kv/favicon_black/android-chrome-192x192.png" media="(prefers-color-scheme: light)" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/kv/favicon_white/android-chrome-192x192.png" media="(prefers-color-scheme: dark)" />
-    <!-- 32x32 — aba do navegador (maior = mais nítido) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/kv/favicon_black/favicon-32x32.png" media="(prefers-color-scheme: light)" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/kv/favicon_white/favicon-32x32.png" media="(prefers-color-scheme: dark)" />
-    <!-- 16x16 — fallback mínimo -->
-    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_black/favicon-16x16.png" media="(prefers-color-scheme: light)" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/kv/favicon_white/favicon-16x16.png" media="(prefers-color-scheme: dark)" />
-    <!-- Fallback .ico (sem media query) -->
-    <link rel="icon" type="image/x-icon" href="/kv/favicon_black/favicon.ico" />
-    
+    <!-- Favicon adaptativo (azul em modo claro, branco em modo escuro) -->
+    <link rel="icon" type="image/png" href="/kv/favicon-light.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" href="/kv/favicon-dark.png" media="(prefers-color-scheme: dark)" />
+    <!-- Fallback (navegadores sem suporte a media query no link rel=icon) -->
+    <link rel="icon" type="image/png" href="/kv/favicon-light.png" />
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Apple Touch Icon (PNG para iOS) -->
-    <link rel="apple-touch-icon" href="/kv/pwa/apple-touch-icon.png" />
+
+    <!-- Apple Touch Icon (iOS PWA — ícone branco sobre fundo escuro do tema) -->
+    <link rel="apple-touch-icon" href="/kv/favicon-dark.png" />
     
     <!-- TODO: Splash screens — implementar quando os assets estiverem prontos -->
     
