@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check, CreditCard, AlertCircle } from 'lucide-react'
+import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check, CreditCard, AlertCircle, Pencil, Save } from 'lucide-react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAuth } from '../contexts/AuthContext'
@@ -31,6 +31,45 @@ export default function Agenda() {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(initForm())
   const [agDetalhe, setAgDetalhe] = useState<Agendamento | null>(null)
+  const [editAg, setEditAg] = useState<{
+    nome_cliente: string; telefone_cliente: string; placa: string; veiculo: string;
+    titulo: string; servico: string;
+    data_hora: string; data_hora_fim: string;
+    valor: string; desconto: string; observacoes: string;
+  } | null>(null)
+  const abrirEdicao = (ag: Agendamento) => setEditAg({
+    nome_cliente: ag.nome_cliente || '',
+    telefone_cliente: ag.telefone_cliente || '',
+    placa: ag.placa || '', veiculo: ag.veiculo || '',
+    titulo: ag.titulo || '', servico: ag.servico || '',
+    data_hora: ag.data_hora || '', data_hora_fim: ag.data_hora_fim || '',
+    valor: String(ag.valor || ''), desconto: String(ag.desconto || ''),
+    observacoes: ag.observacoes || '',
+  })
+  const salvarEdicao = () => {
+    if (!agDetalhe || !editAg) return
+    const dataHora = editAg.data_hora
+    const dataHoraFim = editAg.data_hora_fim
+    const duracaoMin = dataHora && dataHoraFim
+      ? Math.max(Math.round((new Date(dataHoraFim).getTime() - new Date(dataHora).getTime()) / 60000), 30)
+      : agDetalhe.duracao_min
+    const atualizado: Agendamento = {
+      ...agDetalhe,
+      nome_cliente: editAg.nome_cliente.trim() || agDetalhe.nome_cliente,
+      telefone_cliente: editAg.telefone_cliente,
+      placa: editAg.placa.toUpperCase(), veiculo: editAg.veiculo,
+      titulo: editAg.titulo, servico: editAg.servico,
+      data_hora: dataHora, data_hora_fim: dataHoraFim,
+      duracao_min: duracaoMin,
+      valor: parseFloat(editAg.valor) || 0,
+      desconto: parseFloat(editAg.desconto) || 0,
+      observacoes: editAg.observacoes,
+    }
+    salvar(lista.map(a => a.id === agDetalhe.id ? atualizado : a))
+    setAgDetalhe(atualizado)
+    setEditAg(null)
+    toast.success('Agendamento atualizado')
+  }
   const [camposOpcionais, setCamposOpcionais] = useState<Set<string>>(new Set())
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -293,14 +332,21 @@ export default function Agenda() {
       )}
 
       {agDetalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAgDetalhe(null)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => { setAgDetalhe(null); setEditAg(null) }}>
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: agDetalhe.cor || '#4285F4' }} />
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">{agDetalhe.titulo || agDetalhe.nome_cliente}</h2>
               </div>
-              <button onClick={() => setAgDetalhe(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"><X size={20} /></button>
+              <div className="flex items-center gap-1 shrink-0">
+                {!editAg && (
+                  <button onClick={() => abrirEdicao(agDetalhe)} className="p-2 text-gray-400 hover:text-primary-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Editar agendamento">
+                    <Pencil size={18} />
+                  </button>
+                )}
+                <button onClick={() => { setAgDetalhe(null); setEditAg(null) }} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
@@ -317,6 +363,91 @@ export default function Agenda() {
                   />
                 ))}
               </div>
+              {/* Formulário de edição */}
+              {editAg && (
+                <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-primary-700 uppercase tracking-wider">Editar agendamento</p>
+                    <button onClick={() => setEditAg(null)} className="text-[10px] font-bold text-gray-500 hover:text-gray-700">Cancelar</button>
+                  </div>
+
+                  {/* Cliente */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Cliente</label>
+                      <input type="text" value={editAg.nome_cliente} onChange={(e) => setEditAg({ ...editAg, nome_cliente: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Telefone</label>
+                      <input type="tel" value={editAg.telefone_cliente} onChange={(e) => setEditAg({ ...editAg, telefone_cliente: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  </div>
+
+                  {/* Veículo */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Placa</label>
+                      <input type="text" value={editAg.placa} onChange={(e) => setEditAg({ ...editAg, placa: e.target.value.toUpperCase() })} maxLength={8} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white uppercase font-mono focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Veículo</label>
+                      <input type="text" value={editAg.veiculo} onChange={(e) => setEditAg({ ...editAg, veiculo: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  </div>
+
+                  {/* Título e Serviço */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">Título</label>
+                    <input type="text" value={editAg.titulo} onChange={(e) => setEditAg({ ...editAg, titulo: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">Serviço</label>
+                    <input type="text" value={editAg.servico} onChange={(e) => setEditAg({ ...editAg, servico: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                  </div>
+
+                  {/* Datas */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Entrada</label>
+                      <input type="datetime-local" value={editAg.data_hora.slice(0, 16)} onChange={(e) => setEditAg({ ...editAg, data_hora: e.target.value })} className="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Saída</label>
+                      <input type="datetime-local" value={editAg.data_hora_fim.slice(0, 16)} onChange={(e) => setEditAg({ ...editAg, data_hora_fim: e.target.value })} className="w-full px-2 py-2 border border-gray-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  </div>
+
+                  {/* Valor / Desconto */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Valor (R$)</label>
+                      <input type="number" step="0.01" value={editAg.valor} onChange={(e) => setEditAg({ ...editAg, valor: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 mb-1 block">Desconto (R$)</label>
+                      <input type="number" step="0.01" value={editAg.desconto} onChange={(e) => setEditAg({ ...editAg, desconto: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
+                    </div>
+                  </div>
+
+                  {/* Observações */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">Observações</label>
+                    <textarea value={editAg.observacoes} onChange={(e) => setEditAg({ ...editAg, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setEditAg(null)} className="flex-1 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-bold transition-colors">
+                      Cancelar
+                    </button>
+                    <button onClick={salvarEdicao} className="flex-1 py-2 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                      <Save size={14} /> Salvar alterações
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!editAg && (
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cliente</p>
                 <div className="flex items-center gap-3">
@@ -338,6 +469,8 @@ export default function Agenda() {
                   </div>
                 )}
               </div>
+              )}
+              {!editAg && (
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Serviço</p>
                 {agDetalhe.servico && (
@@ -363,7 +496,8 @@ export default function Agenda() {
                   </div>
                 )}
               </div>
-              {(agDetalhe.valor > 0 || agDetalhe.desconto > 0) && (
+              )}
+              {!editAg && (agDetalhe.valor > 0 || agDetalhe.desconto > 0) && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Financeiro</p>
                   {agDetalhe.valor > 0 && (
@@ -495,7 +629,7 @@ export default function Agenda() {
                 )
               })()}
 
-              {agDetalhe.observacoes && (
+              {!editAg && agDetalhe.observacoes && (
                 <div className="bg-warning-50 rounded-xl p-4">
                   <p className="text-xs font-bold text-warning-700 mb-1">Observações</p>
                   <p className="text-sm text-warning-800">{agDetalhe.observacoes}</p>
