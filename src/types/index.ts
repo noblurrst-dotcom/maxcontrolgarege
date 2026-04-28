@@ -246,6 +246,24 @@ export interface Colaborador {
  */
 export type Funcionario = Colaborador
 
+// ============================================================
+// Pagamento a Colaborador (folha, comissão, bônus)
+// ============================================================
+export type TipoPagamentoColaborador = 'salario' | 'comissao' | 'bonus' | 'adiantamento' | 'outro'
+
+export interface PagamentoColaborador {
+  id: string;
+  user_id: string;
+  colaborador_id: string;
+  tipo: TipoPagamentoColaborador;
+  valor: number;
+  mes_referencia: string;       // 'YYYY-MM'
+  data_pagamento: string;       // ISO date
+  venda_id?: string | null;     // se comissão, qual venda originou
+  observacoes: string;
+  created_at: string;
+}
+
 export interface ContaFinanceira {
   id: string;
   user_id: string;
