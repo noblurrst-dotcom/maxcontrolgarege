@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User } from 'lucide-react'
+import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User, Pencil } from 'lucide-react'
 import { useCloudSync } from '../../hooks/useCloudSync'
 import { useDebounce } from '../../hooks/useDebounce'
-import { fmt } from '../../lib/utils'
+import { fmt, uid } from '../../lib/utils'
 import type { Colaborador, TipoColaborador } from '../../types'
+import ColaboradorFormModal from './ColaboradorFormModal'
 
 type Filtro = 'todos' | 'ativos' | 'inativos' | 'clt' | 'freelancer_pj' | 'freelancer_autonomo'
 
@@ -39,6 +40,8 @@ export default function ColaboradoresSection() {
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtro, setFiltro] = useState<Filtro>('todos')
+  const [modalAberto, setModalAberto] = useState(false)
+  const [editando, setEditando] = useState<Colaborador | null>(null)
 
   const filtrados = useMemo(() => {
     return colaboradores.filter(c => {
@@ -63,6 +66,25 @@ export default function ColaboradoresSection() {
     save(colaboradores.map(c => c.id === id ? { ...c, ativo: !c.ativo } : c))
   }
 
+  const abrirNovo = () => { setEditando(null); setModalAberto(true) }
+  const abrirEditar = (c: Colaborador) => { setEditando(c); setModalAberto(true) }
+  const fecharModal = () => { setModalAberto(false); setEditando(null) }
+
+  const salvarColaborador = (data: Omit<Colaborador, 'id' | 'user_id' | 'created_at'>) => {
+    if (editando) {
+      save(colaboradores.map(c => c.id === editando.id ? { ...c, ...data } : c))
+    } else {
+      const novo: Colaborador = {
+        ...data,
+        id: uid(),
+        user_id: '',
+        created_at: new Date().toISOString(),
+      }
+      save([novo, ...colaboradores])
+    }
+    fecharModal()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -85,7 +107,7 @@ export default function ColaboradoresSection() {
           </p>
         </div>
         <button
-          onClick={() => {/* commit 3: abrir modal */}}
+          onClick={abrirNovo}
           className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors self-start sm:self-auto"
         >
           <Plus size={14} /> Novo colaborador
@@ -196,6 +218,13 @@ export default function ColaboradoresSection() {
                 {/* Ações */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    onClick={() => abrirEditar(c)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+                    title="Editar"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
                     onClick={() => toggleAtivo(c.id)}
                     className={`p-1.5 rounded-lg transition-colors ${
                       c.ativo
@@ -211,6 +240,15 @@ export default function ColaboradoresSection() {
             )
           })}
         </div>
+      )}
+
+      {/* Modal cadastro/edição */}
+      {modalAberto && (
+        <ColaboradorFormModal
+          colaborador={editando}
+          onSave={salvarColaborador}
+          onClose={fecharModal}
+        />
       )}
     </div>
   )
