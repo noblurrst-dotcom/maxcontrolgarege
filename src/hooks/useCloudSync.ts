@@ -107,22 +107,28 @@ export function useCloudSync<T extends Record<string, any>>(
     return () => { cancelled = true }
   }, [user, table]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Helper: detecta IDs que existem em `before` mas não em `after` → foram removidos
+  const dataRef = useRef<T[]>(data)
+  useEffect(() => { dataRef.current = data }, [data])
+
   // Save function: read-only in support mode
   const save = useCallback(async (items: T[]) => {
     if (isSupport) return // read-only in support mode
+
+    // Detecta IDs removidos comparando com snapshot anterior
+    const idsAntes = new Set(dataRef.current.map(i => (i as any).id).filter(Boolean))
+    const idsDepois = new Set(items.map(i => (i as any).id).filter(Boolean))
+    const idsRemovidos = [...idsAntes].filter(id => !idsDepois.has(id))
+
     setData(items)
     safeSetStorage(storageKey, items)
 
     if (!user || !isSupabaseConfigured) return
 
     try {
-      // Estratégia segura: upsert PRIMEIRO; só deleta os IDs que sobraram depois.
-      // Se algum erro acontecer no upsert, NÃO apaga nada do banco (evita perder dados).
+      // 1) UPSERT dos itens atuais
       if (items.length > 0) {
-        const toInsert = items.map((item) => ({
-          ...item,
-          [userIdField]: user.id,
-        }))
+        const toInsert = items.map((item) => ({ ...item, [userIdField]: user.id }))
         const { error: upErr } = await supabase.from(table).upsert(toInsert, { onConflict: 'id' })
         if (upErr) {
           console.error(`[CloudSync] Erro ao salvar "${table}":`, upErr)
@@ -131,25 +137,37 @@ export function useCloudSync<T extends Record<string, any>>(
         }
       }
 
-      // Apaga apenas IDs que NÃO estão no items (limpeza de removidos)
-      const idsManter = items.map(i => (i as any).id).filter(Boolean)
-      if (idsManter.length > 0) {
+      // 2) DELETE direto por id dos itens removidos (in ('uuid1','uuid2'))
+      if (idsRemovidos.length > 0) {
         const { error: delErr } = await supabase
           .from(table).delete()
           .eq(userIdField, user.id)
-          .not('id', 'in', `(${idsManter.map(id => `"${id}"`).join(',')})`)
-        if (delErr) console.warn(`[CloudSync] Erro ao limpar removidos "${table}":`, delErr.message)
-      } else {
-        // items vazio → apaga tudo do usuário
-        await supabase.from(table).delete().eq(userIdField, user.id)
+          .in('id', idsRemovidos)
+        if (delErr) {
+          console.error(`[CloudSync] Erro ao remover de "${table}":`, delErr)
+          toast.error(`Erro ao remover de ${table}: ${delErr.message}`, { duration: 6000 })
+        }
       }
     } catch (err: any) {
       console.error(`[CloudSync] Erro ao sincronizar "${table}":`, err)
       toast.error(`Erro de sincronização: ${err?.message || 'desconhecido'}`, { duration: 6000 })
     }
-  }, [user, table, storageKey, userIdField])
+  }, [user, table, storageKey, userIdField, isSupport])
 
-  return { data, save, loading, synced }
+  // Método explícito para remover ids (útil quando UI já filtrou e quer garantia de delete no banco)
+  const remove = useCallback(async (ids: string[]) => {
+    if (isSupport || ids.length === 0) return
+    setData(prev => prev.filter(i => !ids.includes((i as any).id)))
+    safeSetStorage(storageKey, dataRef.current.filter(i => !ids.includes((i as any).id)))
+    if (!user || !isSupabaseConfigured) return
+    const { error } = await supabase.from(table).delete().eq(userIdField, user.id).in('id', ids)
+    if (error) {
+      console.error(`[CloudSync] Erro ao remover de "${table}":`, error)
+      toast.error(`Erro ao remover de ${table}: ${error.message}`, { duration: 6000 })
+    }
+  }, [user, table, storageKey, userIdField, isSupport])
+
+  return { data, save, remove, loading, synced }
 }
 
 
