@@ -88,20 +88,20 @@ export default function AdminSuporte() {
   const loadUserDataAndEnter = async (userId: string, email: string, nome: string) => {
     setLoading(true)
     try {
-      const [vendas, agendamentos, clientes, financeiro, kanban, preVendas, contasBancarias, brand] = await Promise.all([
+      const [vendas, agendamentos, clientes, financeiro, kanban, orcamentos, contasBancarias, brand] = await Promise.all([
         supabase.from('vendas').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('agendamentos').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('clientes').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('financeiro').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('kanban_items').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-        supabase.from('pre_vendas').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('orcamentos').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('contas_bancarias').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('brand_config').select('*').eq('user_id', userId).single(),
       ])
 
       startSupportView(userId, { email, nome }, {
         vendas: vendas.data || [],
-        pre_vendas: preVendas.data || [],
+        orcamentos: orcamentos.data || [],
         agendamentos: agendamentos.data || [],
         clientes: clientes.data || [],
         financeiro: financeiro.data || [],

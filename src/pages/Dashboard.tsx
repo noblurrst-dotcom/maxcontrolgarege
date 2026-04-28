@@ -450,7 +450,7 @@ export default function Dashboard() {
   const { data: agendamentos } = useCloudSync<any>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: clientes } = useCloudSync<any>({ table: 'clientes', storageKey: 'clientes' })
   const { data: financeiro } = useCloudSync<any>({ table: 'financeiro', storageKey: 'financeiro' })
-  const { data: preVendas } = useCloudSync<any>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
+  const { data: orcamentos } = useCloudSync<any>({ table: 'orcamentos', storageKey: 'orcamentos' })
   
   // Métricas financeiras do período
   const vendasMes = useMemo(() => vendas.filter((v: any) => isInRange(v.data_venda)).reduce((a: number, v: any) => a + (v.valor || 0), 0), [vendas, isInRange])
@@ -599,7 +599,7 @@ export default function Dashboard() {
     return vendas.filter((v: any) => v.data_venda >= inicio && v.data_venda <= fim).reduce((a: number, v: any) => a + (v.valor_total || v.valor || 0), 0)
   }, [vendas])
 
-  const orcamentosPendentes = useMemo(() => (preVendas || []).filter((pv: any) => pv.status === 'pendente').length, [preVendas])
+  const orcamentosPendentes = useMemo(() => (orcamentos || []).filter((pv: any) => pv.status === 'pendente').length, [orcamentos])
 
   const agendamentosDeHoje = useMemo(() => {
     const hojeStr = format(new Date(), 'yyyy-MM-dd')

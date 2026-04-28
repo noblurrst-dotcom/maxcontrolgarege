@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import type { PreVenda, Servico } from '../types'
+import type { Orcamento, Servico } from '../types'
 
 interface BrandConfig {
   nome_empresa: string
@@ -13,7 +13,7 @@ interface BrandConfig {
 }
 
 interface DadosOrcamento {
-  preVenda: PreVenda
+  orcamento: Orcamento
   servicos: Servico[]
   brand: BrandConfig
   marcacoesDefeitos?: { x: number; y: number }[]
@@ -27,7 +27,7 @@ interface DadosOrcamento {
 }
 
 export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void> {
-  const { preVenda, servicos, brand, marcacoesDefeitos = [],
+  const { orcamento, servicos, brand, marcacoesDefeitos = [],
     estadoPintura, lavador, tecnicoPolidor,
     dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
     observacoes } = dados
@@ -107,8 +107,8 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.setFontSize(10)
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.text(preVenda.nome_cliente || '—', margin, y)
-  doc.text(preVenda.telefone_cliente || '—', pw / 2 + 2, y)
+  doc.text(orcamento.nome_cliente || '—', margin, y)
+  doc.text(orcamento.telefone_cliente || '—', pw / 2 + 2, y)
   y += 2
 
   doc.setDrawColor(200, 200, 200)
@@ -127,9 +127,9 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.setFontSize(9)
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  const descServicos = preVenda.itens.map(i => i.descricao).filter(Boolean).join(', ')
+  const descServicos = orcamento.itens.map(i => i.descricao).filter(Boolean).join(', ')
   doc.text(descServicos.substring(0, 45) || '—', margin, y)
-  doc.text(`#${preVenda.id.slice(0, 8).toUpperCase()}`, pw / 2 + 2, y)
+  doc.text(`#${orcamento.id.slice(0, 8).toUpperCase()}`, pw / 2 + 2, y)
   y += 2
   doc.setDrawColor(200, 200, 200)
   doc.setLineWidth(0.3)
@@ -147,7 +147,7 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   y += 9
 
   const servicosSelecionados = new Set(
-    preVenda.itens.map(i => i.descricao.toLowerCase().trim())
+    orcamento.itens.map(i => i.descricao.toLowerCase().trim())
   )
 
   const colW = (pw - margin * 2) / 3
@@ -368,7 +368,7 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.text('• RESUMO FINANCEIRO', margin + 3, y + 4)
   y += 9
 
-  preVenda.itens.forEach(item => {
+  orcamento.itens.forEach(item => {
     const sub = item.quantidade * item.valor_unitario
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
@@ -388,7 +388,7 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.setTextColor(corSec.r, corSec.g, corSec.b)
   doc.text('TOTAL', margin + 2, y)
   doc.setTextColor(corPri.r > 200 ? 0 : corPri.r, corPri.g > 200 ? 100 : corPri.g, 0)
-  doc.text(`R$ ${preVenda.valor_total.toFixed(2).replace('.', ',')}`, pw - margin - 2, y, { align: 'right' })
+  doc.text(`R$ ${orcamento.valor_total.toFixed(2).replace('.', ',')}`, pw - margin - 2, y, { align: 'right' })
   y += 10
 
   // ── ASSINATURA ──
@@ -421,6 +421,6 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
     doc.text(brand.endereco, pw / 2, ph - 3, { align: 'center' })
   }
 
-  const nomeArq = `orcamento_${preVenda.nome_cliente.replace(/\s+/g, '_').toLowerCase()}_${preVenda.id.slice(0, 6)}.pdf`
+  const nomeArq = `orcamento_${orcamento.nome_cliente.replace(/\s+/g, '_').toLowerCase()}_${orcamento.id.slice(0, 6)}.pdf`
   doc.save(nomeArq)
 }

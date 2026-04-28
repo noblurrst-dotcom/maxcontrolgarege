@@ -11,7 +11,7 @@ import DateRangeFilter from '../components/DateRangeFilter'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import jsPDF from 'jspdf'
-import type { Venda, Agendamento, Cliente, Servico, PreVenda, ContaFinanceira } from '../types'
+import type { Venda, Agendamento, Cliente, Servico, Orcamento, ContaFinanceira } from '../types'
 
 // ─── Utilitário CSV ───────────────────────────────────────────────────────────
 function gerarCSV(cabecalho: string[], linhas: (string | number)[][]): string {
@@ -116,13 +116,13 @@ export default function Relatorios() {
   const { data: agendamentosAll } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: clientes } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: servicos } = useCloudSync<Servico>({ table: 'servicos', storageKey: 'servicos' })
-  const { data: preVendasAll } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
+  const { data: orcamentosAll } = useCloudSync<Orcamento>({ table: 'orcamentos', storageKey: 'orcamentos' })
   const { data: financeiroAll } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
 
   // Filtrar por período
   const vendas = useMemo(() => vendasAll.filter(v => isInRange(v.data_venda)), [vendasAll, isInRange])
   const agendamentos = useMemo(() => agendamentosAll.filter(a => isInRange(a.data_hora)), [agendamentosAll, isInRange])
-  const preVendas = useMemo(() => preVendasAll.filter(pv => isInRange(pv.created_at)), [preVendasAll, isInRange])
+  const orcamentos = useMemo(() => orcamentosAll.filter(pv => isInRange(pv.created_at)), [orcamentosAll, isInRange])
   const financeiro = useMemo(() => financeiroAll.filter(f => isInRange(f.data)), [financeiroAll, isInRange])
 
   // ── Definição dos relatórios ──────────────────────────────────────────────
@@ -225,12 +225,12 @@ export default function Relatorios() {
     {
       id: 'orcamentos',
       nome: 'Orçamentos criados',
-      descricao: `${preVendas.length} orçamento(s) no sistema`,
+      descricao: `${orcamentos.length} orçamento(s) no sistema`,
       icon: FileText,
       cor: 'text-rose-600',
       bg: 'bg-rose-50',
       cabecalho: ['Data', 'Cliente', 'Telefone', 'Total (R$)', 'Status', 'Validade'],
-      linhas: () => preVendas.map(pv => [
+      linhas: () => orcamentos.map(pv => [
         pv.created_at ? format(new Date(pv.created_at), 'dd/MM/yyyy') : '—',
         pv.nome_cliente || '—',
         pv.telefone_cliente || '—',
@@ -279,7 +279,7 @@ export default function Relatorios() {
           f.conta_bancaria || '—',
         ]),
     },
-  ], [vendas, agendamentos, clientes, servicos, preVendas, financeiro])
+  ], [vendas, agendamentos, clientes, servicos, orcamentos, financeiro])
 
   // ── Filtro por busca ──────────────────────────────────────────────────────
   const relatoriosFiltrados = useMemo(() =>

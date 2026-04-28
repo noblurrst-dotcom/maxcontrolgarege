@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, Loader2, CreditCard } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
-import type { Venda, FormaPagamento, PreVenda, PreVendaItem, Servico, Agendamento } from '../types'
+import type { Venda, FormaPagamento, Orcamento, OrcamentoItem, Servico, Agendamento } from '../types'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
@@ -36,7 +36,7 @@ const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: 
 export default function Vendas() {
   const { brand } = useBrand()
   const { user } = useAuth()
-  const [tab, setTab] = useState<'vendas' | 'prevenda'>('vendas')
+  const [tab, setTab] = useState<'vendas' | 'orcamento'>('vendas')
   const [servicos, setServicos] = useState<Servico[]>([])
   const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos, save: salvarAgendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
@@ -67,12 +67,12 @@ export default function Vendas() {
     }
   }, [user])
 
-  // Pré-Venda state
-  const { data: preVendas, save: salvarPreVendas } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
-  const [pvModal, setPvModal] = useState(false)
-  const [pvDetalhe, setPvDetalhe] = useState<PreVenda | null>(null)
+  // Orçamento state
+  const { data: orcamentos, save: salvarOrcamentos } = useCloudSync<Orcamento>({ table: 'orcamentos', storageKey: 'orcamentos' })
+  const [orcModal, setOrcModal] = useState(false)
+  const [orcDetalhe, setOrcDetalhe] = useState<Orcamento | null>(null)
   const [exportModal, setExportModal] = useState(false)
-  const [exportPv, setExportPv] = useState<PreVenda | null>(null)
+  const [exportOrc, setExportOrc] = useState<Orcamento | null>(null)
   const [marcacoesDefeitos, setMarcacoesDefeitos] = useState<{x:number;y:number}[]>([])
   const [estadoPintura, setEstadoPintura] = useState<'otimo'|'bom'|'regular'|'ruim'|''>('')
   const [lavador, setLavador] = useState('')
@@ -82,12 +82,12 @@ export default function Vendas() {
   const [dataSaidaOficina, setDataSaidaOficina] = useState('')
   const [obsExport, setObsExport] = useState('')
   const [gerandoPDF, setGerandoPDF] = useState(false)
-  const [pvForm, setPvForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
-  const [pvItens, setPvItens] = useState<PreVendaItem[]>([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
+  const [orcForm, setOrcForm] = useState({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
+  const [orcItens, setOrcItens] = useState<OrcamentoItem[]>([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
 
   // Conversão com agendamento
   const [convModal, setConvModal] = useState(false)
-  const [convPv, setConvPv] = useState<PreVenda | null>(null)
+  const [convOrc, setConvOrc] = useState<Orcamento | null>(null)
   const [convData, setConvData] = useState('')
   const [convHora, setConvHora] = useState('09:00')
   const [convCor, setConvCor] = useState('#4285F4')
@@ -95,32 +95,32 @@ export default function Vendas() {
   const [convDataFim, setConvDataFim] = useState('')
 
   const salvar = (l: Venda[]) => { salvarVendas(l) }
-  const salvarPv = (l: PreVenda[]) => { salvarPreVendas(l) }
+  const salvarOrc = (l: Orcamento[]) => { salvarOrcamentos(l) }
 
-  // Pré-Venda helpers
-  const pvSubtotal = pvItens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0)
-  const pvDesc = parseFloat(pvForm.desconto || '0')
-  const pvTotal = Math.max(pvSubtotal - pvDesc, 0)
+  // Orçamento helpers
+  const orcSubtotal = orcItens.reduce((a, i) => a + i.quantidade * i.valor_unitario, 0)
+  const orcDesc = parseFloat(orcForm.desconto || '0')
+  const orcTotal = Math.max(orcSubtotal - orcDesc, 0)
 
-  const adicionarPv = () => {
-    if (!pvForm.nome_cliente || pvItens.every(i => !i.descricao)) return
-    const validItens = pvItens.filter(i => i.descricao)
-    const novo: PreVenda = {
-      id: uid(), user_id: '', cliente_id: null, nome_cliente: pvForm.nome_cliente,
-      telefone_cliente: pvForm.telefone_cliente, itens: validItens,
-      valor_total: pvTotal, status: 'pendente', validade: pvForm.validade || '',
-      observacoes: pvForm.observacoes, checklist_id: null, created_at: new Date().toISOString(),
+  const adicionarOrc = () => {
+    if (!orcForm.nome_cliente || orcItens.every(i => !i.descricao)) return
+    const validItens = orcItens.filter(i => i.descricao)
+    const novo: Orcamento = {
+      id: uid(), user_id: '', cliente_id: null, nome_cliente: orcForm.nome_cliente,
+      telefone_cliente: orcForm.telefone_cliente, itens: validItens,
+      valor_total: orcTotal, status: 'pendente', validade: orcForm.validade || '',
+      observacoes: orcForm.observacoes, checklist_id: null, created_at: new Date().toISOString(),
     }
-    salvarPv([novo, ...preVendas])
-    setPvModal(false)
-    setPvForm({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
-    setPvItens([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
+    salvarOrc([novo, ...orcamentos])
+    setOrcModal(false)
+    setOrcForm({ nome_cliente: '', telefone_cliente: '', desconto: '', validade: '', observacoes: '' })
+    setOrcItens([{ descricao: '', quantidade: 1, valor_unitario: 0 }])
   }
 
-  const removerPv = (id: string) => { salvarPv(preVendas.filter(p => p.id !== id)); setPvDetalhe(null) }
+  const removerOrc = (id: string) => { salvarOrc(orcamentos.filter(p => p.id !== id)); setOrcDetalhe(null) }
 
-  const abrirConversao = (pv: PreVenda) => {
-    setConvPv(pv)
+  const abrirConversao = (pv: Orcamento) => {
+    setConvOrc(pv)
     setConvData(new Date().toISOString().split('T')[0])
     setConvHora('09:00')
     setConvCor('#4285F4')
@@ -130,22 +130,22 @@ export default function Vendas() {
   }
 
   const confirmarConversao = () => {
-    if (!convPv || !convData) return
-    const pv = convPv
-    const descItens = pv.itens.map(i => i.descricao).join(', ')
+    if (!convOrc || !convData) return
+    const orc = convOrc
+    const descItens = orc.itens.map(i => i.descricao).join(', ')
 
     // Criar venda
     const nova: Venda = {
-      id: uid(), user_id: '', cliente_id: null, nome_cliente: pv.nome_cliente,
-      descricao: descItens, valor: pv.valor_total,
-      desconto: 0, valor_total: pv.valor_total, valor_pago: 0,
+      id: uid(), user_id: '', cliente_id: null, nome_cliente: orc.nome_cliente,
+      descricao: descItens, valor: orc.valor_total,
+      desconto: 0, valor_total: orc.valor_total, valor_pago: 0,
       forma_pagamento: null, status_pagamento: 'pendente',
       data_venda: convData, status: 'aberta',
-      parcelas: 1, funcionario: '', observacoes: `Convertido de orçamento. ${pv.observacoes}`,
+      parcelas: 1, funcionario: '', observacoes: `Convertido de orçamento. ${orc.observacoes}`,
       checklist_id: null, created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
-    salvarPv(preVendas.map(p => p.id === pv.id ? { ...p, status: 'aprovado' as const } : p))
+    salvarOrc(orcamentos.map(p => p.id === orc.id ? { ...p, status: 'aprovado' as const } : p))
 
     // Criar agendamento
     const dataHoraInicio = `${convData}T${convHora}:00`
@@ -164,31 +164,31 @@ export default function Vendas() {
       user_id: '',
       cliente_id: null,
       venda_id: nova.id,
-      nome_cliente: pv.nome_cliente,
-      telefone_cliente: pv.telefone_cliente || '',
+      nome_cliente: orc.nome_cliente,
+      telefone_cliente: orc.telefone_cliente || '',
       servico: descItens,
       titulo: descItens,
       data_hora: dataHoraInicio,
       data_hora_fim: dataHoraFim,
       duracao_min: duracaoMin,
       status: 'pendente',
-      observacoes: pv.observacoes || '',
+      observacoes: orc.observacoes || '',
       desconto: 0,
-      valor: pv.valor_total,
+      valor: orc.valor_total,
       cor: convCor,
       created_at: new Date().toISOString(),
     }
     salvarAgendamentos([agendamento, ...agendamentos])
 
     setConvModal(false)
-    setConvPv(null)
+    setConvOrc(null)
     setConvHoraFim('10:00')
     setConvDataFim('')
-    setPvDetalhe(null)
+    setOrcDetalhe(null)
     setTab('vendas')
   }
 
-  const exportarPvPDF = async (o: PreVenda) => {
+  const exportarOrcPDFSimples = async (o: Orcamento) => {
     const { default: jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     const pw = doc.internal.pageSize.getWidth()
@@ -200,7 +200,7 @@ export default function Vendas() {
     if (brand.pdf_mostrar_logo && brand.logo_url) { try { doc.addImage(brand.logo_url, 'PNG', margin, y, 30, 30) } catch { /* ignore */ } y += 2 }
     const headerX = brand.pdf_mostrar_logo && brand.logo_url ? margin + 36 : margin
     doc.setFontSize(18); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold')
-    doc.text(brand.nome_empresa || 'Pré-Venda', headerX, y + 8)
+    doc.text(brand.nome_empresa || 'Orçamento', headerX, y + 8)
     if (brand.slogan) { doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.setFont('helvetica', 'normal'); doc.text(brand.slogan, headerX, y + 14) }
     if (brand.pdf_mostrar_dados) {
       doc.setFontSize(8); doc.setTextColor(130, 130, 130); let infoY = y + (brand.slogan ? 20 : 16)
@@ -211,7 +211,7 @@ export default function Vendas() {
     }
     y += (brand.pdf_mostrar_logo && brand.logo_url ? 34 : 22)
     doc.setDrawColor(corPri.r, corPri.g, corPri.b); doc.setLineWidth(1.5); doc.line(margin, y, pw - margin, y); y += 10
-    doc.setFontSize(14); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold'); doc.text('PRÉ-VENDA / ORÇAMENTO', margin, y)
+    doc.setFontSize(14); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold'); doc.text('ORÇAMENTO', margin, y)
     doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.setFont('helvetica', 'normal'); doc.text(`Data: ${new Date(o.created_at).toLocaleDateString('pt-BR')}`, pw - margin, y, { align: 'right' }); y += 8
     doc.setFontSize(10); doc.setTextColor(60, 60, 60); doc.text(`Cliente: ${o.nome_cliente}`, margin, y)
     if (o.telefone_cliente) { doc.text(`Tel: ${o.telefone_cliente}`, pw - margin, y, { align: 'right' }) }; y += 6
@@ -228,7 +228,7 @@ export default function Vendas() {
     if (o.observacoes) { doc.setFontSize(8); doc.setTextColor(130, 130, 130); doc.setFont('helvetica', 'italic'); doc.text(`Obs: ${o.observacoes}`, margin, y, { maxWidth: pw - 2 * margin }); y += 10 }
     if (brand.pdf_termos) { doc.setDrawColor(230, 230, 230); doc.setLineWidth(0.3); doc.line(margin, y, pw - margin, y); y += 6; doc.setFontSize(7); doc.setTextColor(150, 150, 150); doc.setFont('helvetica', 'normal'); const tl = doc.splitTextToSize(brand.pdf_termos, pw - 2 * margin); doc.text(tl, margin, y); y += tl.length * 4 + 6 }
     if (brand.pdf_rodape) { doc.setDrawColor(corPri.r, corPri.g, corPri.b); doc.setLineWidth(1); doc.line(margin, y, pw - margin, y); y += 6; doc.setFontSize(9); doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'bold'); doc.text(brand.pdf_rodape, pw / 2, y, { align: 'center' }) }
-    doc.save(`prevenda_${o.nome_cliente.replace(/\s+/g, '_').toLowerCase()}.pdf`)
+    doc.save(`orcamento_${o.nome_cliente.replace(/\s+/g, '_').toLowerCase()}.pdf`)
   }
 
   const adicionar = async () => {
@@ -369,8 +369,8 @@ export default function Vendas() {
           <p className="text-sm text-gray-400 mt-0.5">{vendas.length} venda{vendas.length !== 1 ? 's' : ''}{abertas > 0 ? ` · ${abertas} aberta${abertas !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setPvModal(true); setTab('prevenda') }} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
-            <FileText size={14} /> Nova Pré-Venda
+          <button onClick={() => { setOrcModal(true); setTab('orcamento') }} className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-xs font-bold transition-colors">
+            <FileText size={14} /> Novo Orçamento
           </button>
           <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors shadow-sm">
             <Plus size={16} /> Nova Venda
@@ -399,8 +399,8 @@ export default function Vendas() {
         <button onClick={() => setTab('vendas')} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-colors ${tab === 'vendas' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
           <ShoppingCart size={14} /> Vendas
         </button>
-        <button onClick={() => setTab('prevenda')} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-colors ${tab === 'prevenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          <FileText size={14} /> Pré-Venda{preVendas.length > 0 ? ` (${preVendas.length})` : ''}
+        <button onClick={() => setTab('orcamento')} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-colors ${tab === 'orcamento' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          <FileText size={14} /> Orçamento{orcamentos.length > 0 ? ` (${orcamentos.length})` : ''}
         </button>
       </div>
 
@@ -952,21 +952,21 @@ export default function Vendas() {
           </div>
         </div>
       )}
-      {/* === Pré-Venda Tab === */}
-      {tab === 'prevenda' && (
+      {/* === Orçamento Tab === */}
+      {tab === 'orcamento' && (
         <>
-          {preVendas.length === 0 ? (
+          {orcamentos.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
               <FileText size={48} className="text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-900 font-semibold text-lg">Nenhuma pré-venda</p>
-              <p className="text-gray-400 text-sm mt-1">Crie orçamentos de pré-venda para enviar ao cliente e converter em vendas</p>
+              <p className="text-gray-900 font-semibold text-lg">Nenhum orçamento</p>
+              <p className="text-gray-400 text-sm mt-1">Crie orçamentos para enviar ao cliente e converter em vendas</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {preVendas.map((pv) => {
+              {orcamentos.map((pv) => {
                 const stColor = pv.status === 'aprovado' ? 'bg-success-100 text-success-700' : pv.status === 'recusado' ? 'bg-danger-100 text-danger-600' : 'bg-warning-100 text-warning-700'
                 return (
-                  <div key={pv.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 active:bg-gray-50 transition-colors" onClick={() => setPvDetalhe(pv)}>
+                  <div key={pv.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 active:bg-gray-50 transition-colors" onClick={() => setOrcDetalhe(pv)}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                         <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0"><FileText size={16} className="text-blue-600" /></div>
@@ -980,7 +980,7 @@ export default function Vendas() {
                           {pv.status === 'aprovado' ? 'Convertida' : pv.status === 'recusado' ? 'Cancelada' : 'Pendente'}
                         </span>
                         <p className="text-sm font-bold text-gray-900">{fmt(pv.valor_total)}</p>
-                        <button onClick={(e) => { e.stopPropagation(); removerPv(pv.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); removerOrc(pv.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -991,38 +991,38 @@ export default function Vendas() {
         </>
       )}
 
-      {/* Modal Nova Pré-Venda */}
-      {pvModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPvModal(false)}>
+      {/* Modal Novo Orçamento */}
+      {orcModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setOrcModal(false)}>
           <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900">Nova Pré-Venda</h2>
-              <button onClick={() => setPvModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Novo Orçamento</h2>
+              <button onClick={() => setOrcModal(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Cliente *</label>
-                  <input type="text" value={pvForm.nome_cliente} onChange={(e) => setPvForm({ ...pvForm, nome_cliente: e.target.value })} placeholder="Nome do cliente" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <input type="text" value={orcForm.nome_cliente} onChange={(e) => setOrcForm({ ...orcForm, nome_cliente: e.target.value })} placeholder="Nome do cliente" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Telefone</label>
-                  <input type="tel" value={pvForm.telefone_cliente} onChange={(e) => setPvForm({ ...pvForm, telefone_cliente: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <input type="tel" value={orcForm.telefone_cliente} onChange={(e) => setOrcForm({ ...orcForm, telefone_cliente: e.target.value })} placeholder="(00) 00000-0000" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                 </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-gray-500">Itens</label>
-                  <button type="button" onClick={() => setPvItens([...pvItens, { descricao: '', quantidade: 1, valor_unitario: 0 }])} className="text-[10px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5"><PlusCircle size={12} /> Adicionar</button>
+                  <button type="button" onClick={() => setOrcItens([...orcItens, { descricao: '', quantidade: 1, valor_unitario: 0 }])} className="text-[10px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5"><PlusCircle size={12} /> Adicionar</button>
                 </div>
                 <div className="space-y-2">
-                  {pvItens.map((item, idx) => (
+                  {orcItens.map((item, idx) => (
                     <div key={idx} className="flex gap-2 items-start">
-                      <input type="text" value={item.descricao} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], descricao: e.target.value }; setPvItens(n) }} placeholder="Serviço" className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                      <input type="number" min="1" value={item.quantidade} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], quantidade: parseInt(e.target.value) || 1 }; setPvItens(n) }} className="w-14 px-2 py-2 border border-gray-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
-                      <input type="number" step="0.01" value={item.valor_unitario || ''} onChange={(e) => { const n = [...pvItens]; n[idx] = { ...n[idx], valor_unitario: parseFloat(e.target.value) || 0 }; setPvItens(n) }} placeholder="R$" className="w-24 px-2 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
-                      {pvItens.length > 1 && <button type="button" onClick={() => setPvItens(pvItens.filter((_, i) => i !== idx))} className="p-2 text-gray-300 hover:text-danger-500 transition-colors shrink-0"><MinusCircle size={16} /></button>}
+                      <input type="text" value={item.descricao} onChange={(e) => { const n = [...orcItens]; n[idx] = { ...n[idx], descricao: e.target.value }; setOrcItens(n) }} placeholder="Serviço" className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                      <input type="number" min="1" value={item.quantidade} onChange={(e) => { const n = [...orcItens]; n[idx] = { ...n[idx], quantidade: parseInt(e.target.value) || 1 }; setOrcItens(n) }} className="w-14 px-2 py-2 border border-gray-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
+                      <input type="number" step="0.01" value={item.valor_unitario || ''} onChange={(e) => { const n = [...orcItens]; n[idx] = { ...n[idx], valor_unitario: parseFloat(e.target.value) || 0 }; setOrcItens(n) }} placeholder="R$" className="w-24 px-2 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                      {orcItens.length > 1 && <button type="button" onClick={() => setOrcItens(orcItens.filter((_, i) => i !== idx))} className="p-2 text-gray-300 hover:text-danger-500 transition-colors shrink-0"><MinusCircle size={16} /></button>}
                     </div>
                   ))}
                 </div>
@@ -1030,29 +1030,29 @@ export default function Vendas() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Desconto (R$)</label>
-                  <input type="number" step="0.01" value={pvForm.desconto} onChange={(e) => setPvForm({ ...pvForm, desconto: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <input type="number" step="0.01" value={orcForm.desconto} onChange={(e) => setOrcForm({ ...orcForm, desconto: e.target.value })} placeholder="0,00" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Validade</label>
-                  <input type="date" value={pvForm.validade} onChange={(e) => setPvForm({ ...pvForm, validade: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  <input type="date" value={orcForm.validade} onChange={(e) => setOrcForm({ ...orcForm, validade: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
-                <textarea value={pvForm.observacoes} onChange={(e) => setPvForm({ ...pvForm, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
+                <textarea value={orcForm.observacoes} onChange={(e) => setOrcForm({ ...orcForm, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none" />
               </div>
-              {pvSubtotal > 0 && (
+              {orcSubtotal > 0 && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-1">
                   <p className="text-xs font-bold text-gray-600 mb-2">Resumo</p>
-                  {pvItens.filter(i => i.descricao).map((i, idx) => (
-                    <div key={idx} className="flex justify-between text-xs"><span className="text-gray-500">{i.descricao} ({i.quantidade}x)</span><span className="font-semibold">{fmt(i.quantidade * i.valor_unitario)}</span></div>
+                  {orcItens.filter(i => i.descricao).map((i, idx) => (
+                    <div key={idx} className="flex justify-between text-xs"><span className="text-gray-500">{i.descricao} ({i.quantidade}x {fmt(i.valor_unitario)})</span><span className="font-semibold">{fmt(i.quantidade * i.valor_unitario)}</span></div>
                   ))}
-                  {pvDesc > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="font-semibold text-danger-500">-{fmt(pvDesc)}</span></div>}
-                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(pvTotal)}</span></div>
+                  {orcDesc > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Desconto</span><span className="font-semibold text-danger-500">-{fmt(orcDesc)}</span></div>}
+                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(orcTotal)}</span></div>
                 </div>
               )}
-              <button onClick={adicionarPv} className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition-colors">
-                Criar Pré-Venda
+              <button onClick={adicionarOrc} className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition-colors">
+                Criar Orçamento
               </button>
             </div>
             </div>
@@ -1060,52 +1060,52 @@ export default function Vendas() {
         </div>
       )}
 
-      {/* Modal Detalhe Pré-Venda */}
-      {pvDetalhe && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPvDetalhe(null)}>
+      {/* Modal Detalhe Orçamento */}
+      {orcDetalhe && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setOrcDetalhe(null)}>
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900">Pré-Venda</h2>
-              <button onClick={() => setPvDetalhe(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Orçamento</h2>
+              <button onClick={() => setOrcDetalhe(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><span className="text-sm font-bold text-blue-600">{pvDetalhe.nome_cliente.slice(0, 2).toUpperCase()}</span></div>
-                <div><p className="text-sm font-bold text-gray-900">{pvDetalhe.nome_cliente}</p>{pvDetalhe.telefone_cliente && <p className="text-xs text-gray-400">{pvDetalhe.telefone_cliente}</p>}</div>
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><span className="text-sm font-bold text-blue-600">{orcDetalhe.nome_cliente.slice(0, 2).toUpperCase()}</span></div>
+                <div><p className="text-sm font-bold text-gray-900">{orcDetalhe.nome_cliente}</p>{orcDetalhe.telefone_cliente && <p className="text-xs text-gray-400">{orcDetalhe.telefone_cliente}</p>}</div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-bold text-gray-600 mb-2">Itens da pré-venda</p>
-                {pvDetalhe.itens.map((i, idx) => (
+                <p className="text-xs font-bold text-gray-600 mb-2">Itens do orçamento</p>
+                {orcDetalhe.itens.map((i, idx) => (
                   <div key={idx} className="flex justify-between text-xs"><span className="text-gray-600">{i.descricao} ({i.quantidade}x {fmt(i.valor_unitario)})</span><span className="font-semibold">{fmt(i.quantidade * i.valor_unitario)}</span></div>
                 ))}
-                <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(pvDetalhe.valor_total)}</span></div>
-                {pvDetalhe.validade && <p className="text-[10px] text-gray-400">Válido até {new Date(pvDetalhe.validade).toLocaleDateString('pt-BR')}</p>}
-                {pvDetalhe.observacoes && <p className="text-[10px] text-gray-400">Obs: {pvDetalhe.observacoes}</p>}
+                <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span className="text-success-600">{fmt(orcDetalhe.valor_total)}</span></div>
+                {orcDetalhe.validade && <p className="text-[10px] text-gray-400">Válido até {new Date(orcDetalhe.validade).toLocaleDateString('pt-BR')}</p>}
+                {orcDetalhe.observacoes && <p className="text-[10px] text-gray-400">Obs: {orcDetalhe.observacoes}</p>}
               </div>
               <div className="flex gap-2">
-                {pvDetalhe.status === 'pendente' && (
-                  <button onClick={() => abrirConversao(pvDetalhe)} className="flex-1 py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                {orcDetalhe.status === 'pendente' && (
+                  <button onClick={() => abrirConversao(orcDetalhe)} className="flex-1 py-2.5 bg-success-500 hover:bg-success-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                     <CalendarDays size={14} /> Agendar e Converter
                   </button>
                 )}
-                <button onClick={() => exportarPvPDF(pvDetalhe)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                <button onClick={() => exportarOrcPDFSimples(orcDetalhe)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                   <Download size={14} /> Exportar PDF
                 </button>
                 <button
-                  onClick={() => { setExportPv(pvDetalhe); setExportModal(true) }}
+                  onClick={() => { setExportOrc(orcDetalhe); setExportModal(true) }}
                   className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
                 >
                   <FileText size={14} /> Check List PDF
                 </button>
               </div>
-              {pvDetalhe.telefone_cliente && (
-                <button onClick={() => { const tel = pvDetalhe.telefone_cliente?.replace(/\D/g, ''); window.open(`https://wa.me/${tel ? '55' + tel : ''}`, '_blank') }} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+              {orcDetalhe.telefone_cliente && (
+                <button onClick={() => { const tel = orcDetalhe.telefone_cliente?.replace(/\D/g, ''); window.open(`https://wa.me/${tel ? '55' + tel : ''}`, '_blank') }} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                   <MessageCircle size={14} /> WhatsApp
                 </button>
               )}
-              <button onClick={() => removerPv(pvDetalhe.id)} className="w-full py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
-                Excluir Pré-Venda
+              <button onClick={() => removerOrc(orcDetalhe.id)} className="w-full py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
+                Excluir Orçamento
               </button>
             </div>
             </div>
@@ -1114,7 +1114,7 @@ export default function Vendas() {
       )}
 
       {/* Modal Exportação Check List PDF */}
-      {exportModal && exportPv && (
+      {exportModal && exportOrc && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setExportModal(false)}>
           <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] overflow-y-auto"
@@ -1198,7 +1198,7 @@ export default function Vendas() {
                   setGerandoPDF(true)
                   try {
                     await exportarOrcamentoPDF({
-                      preVenda: exportPv,
+                      orcamento: exportOrc,
                       servicos,
                       brand,
                       marcacoesDefeitos,
@@ -1226,7 +1226,7 @@ export default function Vendas() {
       )}
 
       {/* Modal Conversão com Agendamento */}
-      {convModal && convPv && (
+      {convModal && convOrc && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConvModal(false)}>
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
@@ -1235,11 +1235,11 @@ export default function Vendas() {
             </div>
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
 
-            {/* Resumo da pré-venda */}
+            {/* Resumo da orçamento */}
             <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
-              <p className="text-xs font-bold text-gray-700">{convPv.nome_cliente}</p>
-              <p className="text-[11px] text-gray-500">{convPv.itens.map(i => i.descricao).join(', ')}</p>
-              <p className="text-sm font-bold text-success-600">{fmt(convPv.valor_total)}</p>
+              <p className="text-xs font-bold text-gray-700">{convOrc.nome_cliente}</p>
+              <p className="text-[11px] text-gray-500">{convOrc.itens.map(i => i.descricao).join(', ')}</p>
+              <p className="text-sm font-bold text-success-600">{fmt(convOrc.valor_total)}</p>
             </div>
 
             <div className="space-y-4">

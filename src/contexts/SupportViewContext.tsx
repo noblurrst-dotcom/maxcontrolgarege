@@ -4,7 +4,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export interface SupportViewData {
   vendas: any[]
-  pre_vendas: any[]
+  orcamentos: any[]
   agendamentos: any[]
   clientes: any[]
   financeiro: any[]
@@ -38,7 +38,7 @@ const SupportViewContext = createContext<SupportViewContextType>({
 
 // Tables to watch in real-time (excludes brand_config which is singleton)
 const REALTIME_TABLES = [
-  'vendas', 'pre_vendas', 'agendamentos', 'clientes',
+  'vendas', 'orcamentos', 'agendamentos', 'clientes',
   'financeiro', 'contas_bancarias', 'kanban_items',
 ] as const
 

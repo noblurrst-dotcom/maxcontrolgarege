@@ -974,7 +974,7 @@ export default function Clientes() {
                   <button
                     onClick={() => {
                       setDetalhe(null)
-                      navigate('/vendas', { state: { novaPreVenda: true, cliente: detalhe } })
+                      navigate('/vendas', { state: { novoOrcamento: true, cliente: detalhe } })
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors active:scale-[0.98]"
                   >
