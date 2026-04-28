@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight } from 'lucide-react'
+import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight, Users, Receipt, BarChart3 } from 'lucide-react'
+import ColaboradoresSection from '../components/financeiro/ColaboradoresSection'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { ContaFinanceira, FormaPagamento, Venda } from '../types'
@@ -21,8 +22,18 @@ interface ContaBancaria { id: string; nome: string; banco: string; saldo: number
 
 const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '' })
 
+type TabFinanceiro = 'movimentacoes' | 'colaboradores' | 'impostos' | 'visao360'
+
+const TABS: { value: TabFinanceiro; label: string; icon: typeof DollarSign; disabled?: boolean }[] = [
+  { value: 'movimentacoes', label: 'Movimentações', icon: DollarSign },
+  { value: 'colaboradores', label: 'Colaboradores', icon: Users },
+  { value: 'impostos', label: 'Impostos', icon: Receipt, disabled: true },
+  { value: 'visao360', label: 'Visão 360', icon: BarChart3, disabled: true },
+]
+
 export default function Financeiro() {
   const navigate = useNavigate()
+  const [tabAtiva, setTabAtiva] = useState<TabFinanceiro>('movimentacoes')
   const { data: contas, save: salvar } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
   const { data: bancos, save: salvarBancos } = useCloudSync<ContaBancaria>({ table: 'contas_bancarias', storageKey: 'contas_bancarias' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
@@ -77,6 +88,54 @@ export default function Financeiro() {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
+      {/* Subnav tabs */}
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm overflow-x-auto">
+        {TABS.map(tab => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.value}
+              onClick={() => !tab.disabled && setTabAtiva(tab.value)}
+              disabled={tab.disabled}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
+                tabAtiva === tab.value
+                  ? 'bg-primary-500 text-on-primary shadow-sm'
+                  : tab.disabled
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              <Icon size={14} />
+              {tab.label}
+              {tab.disabled && <span className="text-[9px] bg-gray-200 text-gray-400 px-1 py-0.5 rounded ml-1">Em breve</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab: Colaboradores */}
+      {tabAtiva === 'colaboradores' && <ColaboradoresSection />}
+
+      {/* Tab: Impostos (placeholder) */}
+      {tabAtiva === 'impostos' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+          <Receipt size={48} className="text-gray-200 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold text-lg">Impostos</p>
+          <p className="text-gray-400 text-sm mt-1">Configuração de impostos disponível na Entrega 3</p>
+        </div>
+      )}
+
+      {/* Tab: Visão 360 (placeholder) */}
+      {tabAtiva === 'visao360' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+          <BarChart3 size={48} className="text-gray-200 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold text-lg">Visão 360</p>
+          <p className="text-gray-400 text-sm mt-1">Visão completa do negócio disponível na Entrega 3</p>
+        </div>
+      )}
+
+      {/* Tab: Movimentações (conteúdo original) */}
+      {tabAtiva === 'movimentacoes' && <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
@@ -305,7 +364,7 @@ export default function Financeiro() {
       )}
 
       {/* Modal Nova Conta Bancária */}
-      {modalBanco && (
+      {modalBanco !== false && modalBanco && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setModalBanco(false)}>
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
@@ -344,6 +403,7 @@ export default function Financeiro() {
           </div>
         </div>
       )}
+      </>}
     </div>
   )
 }
