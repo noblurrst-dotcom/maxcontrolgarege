@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, CreditCard, Car, Check } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
@@ -38,8 +38,8 @@ export default function Vendas() {
   const [tab, setTab] = useState<'vendas' | 'orcamento'>('vendas')
   const [searchParams, setSearchParams] = useSearchParams()
   const [servicos, setServicos] = useState<Servico[]>([])
-  const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
-  const { data: agendamentos, save: salvarAgendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: vendas, save: salvarVendas, synced: vendasSynced } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: agendamentos, save: salvarAgendamentos, synced: agsSynced } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: todosVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const { data: kanbanItems, save: salvarKanban } = useCloudSync<any>({ table: 'kanban_items', storageKey: 'kanban_items' })
   const [busca, setBusca] = useState('')
@@ -68,28 +68,24 @@ export default function Vendas() {
     }
   }, [user])
 
-  // ── Backfill: reconcilia agendamentos ↔ vendas (1:1) ──────────────────────
+  // ── Reconciliação agendamentos ↔ vendas (1:1) ─────────────────────────────
   // Para cada agendamento sem venda_id, cria uma venda pendente.
   // Para cada venda sem agendamento, cria um agendamento na data_venda.
-  // Roda uma vez por sessão quando os dados carregam.
-  const [reconciliado, setReconciliado] = useState(false)
-  useEffect(() => {
-    if (!user || reconciliado) return
-    if (vendas.length === 0 && agendamentos.length === 0) return
-    setReconciliado(true)
-
+  const reconciliar = useCallback((opts: { silent?: boolean } = {}) => {
     const idsVendas = new Set(vendas.map(v => v.id))
     const agsSemVenda = agendamentos.filter(a => !a.venda_id || !idsVendas.has(a.venda_id))
     const vendasComAg = new Set(agendamentos.map(a => a.venda_id).filter(Boolean) as string[])
     const vendasSemAg = vendas.filter(v => !vendasComAg.has(v.id))
 
-    if (agsSemVenda.length === 0 && vendasSemAg.length === 0) return
+    if (agsSemVenda.length === 0 && vendasSemAg.length === 0) {
+      if (!opts.silent) toast.success('Tudo reconciliado — nenhum órfão encontrado', { duration: 3000 })
+      return
+    }
 
     const novasVendas: Venda[] = []
     const novosAgs: Agendamento[] = []
     const agsAtualizadas: Agendamento[] = []
 
-    // 1) Cria vendas para agendamentos órfãos
     for (const ag of agsSemVenda) {
       const novaVendaId = uid()
       const valorTotal = Math.max((ag.valor || 0) - (ag.desconto || 0), 0)
@@ -110,7 +106,6 @@ export default function Vendas() {
       agsAtualizadas.push({ ...ag, venda_id: novaVendaId })
     }
 
-    // 2) Cria agendamentos para vendas órfãs
     for (const v of vendasSemAg) {
       const dataInicio = `${v.data_venda}T09:00:00`
       const fim = new Date(dataInicio); fim.setHours(fim.getHours() + 1)
@@ -137,11 +132,21 @@ export default function Vendas() {
       salvarAgendamentos([...novosAgs, ...listaFinal])
     }
 
-    const total = novasVendas.length + novosAgs.length
-    if (total > 0) {
+    if (!opts.silent) {
       toast.success(`Reconciliação: ${novasVendas.length} venda(s) e ${novosAgs.length} agendamento(s) criados`, { duration: 5000 })
     }
-  }, [user, vendas, agendamentos, reconciliado, salvarVendas, salvarAgendamentos])
+  }, [vendas, agendamentos, salvarVendas, salvarAgendamentos])
+
+  // Auto-reconcile UMA VEZ, apenas após AMBOS estarem sincronizados com o Supabase.
+  // Isso evita race condition: se vendas carregar antes de agendamentos (ou vice-versa),
+  // não há risco de criar pares duplicados.
+  const [jaReconciliou, setJaReconciliou] = useState(false)
+  useEffect(() => {
+    if (!user || jaReconciliou) return
+    if (!vendasSynced || !agsSynced) return
+    setJaReconciliou(true)
+    reconciliar({ silent: false })
+  }, [user, vendasSynced, agsSynced, jaReconciliou, reconciliar])
 
   // Orçamento state
   const { data: orcamentos, save: salvarOrcamentos } = useCloudSync<Orcamento>({ table: 'orcamentos', storageKey: 'orcamentos' })
@@ -475,6 +480,28 @@ export default function Vendas() {
             </button>
           ))}
         </div>
+        {/* Contador de órfãos + botão manual de reconciliação */}
+        {(() => {
+          const idsV = new Set(vendas.map(v => v.id))
+          const idsAgVenda = new Set(agendamentos.map(a => a.venda_id).filter(Boolean) as string[])
+          const agsOrfaos = agendamentos.filter(a => !a.venda_id || !idsV.has(a.venda_id)).length
+          const vendasOrfas = vendas.filter(v => !idsAgVenda.has(v.id)).length
+          const total = agsOrfaos + vendasOrfas
+          if (total === 0) return null
+          return (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-warning-50 border border-warning-200 rounded-xl">
+              <p className="text-[11px] font-semibold text-warning-700">
+                ⚠ {agsOrfaos} agendamento(s) sem venda · {vendasOrfas} venda(s) sem agendamento
+              </p>
+              <button
+                onClick={() => reconciliar({ silent: false })}
+                className="text-[11px] font-bold bg-warning-600 hover:bg-warning-700 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              >
+                Reconciliar
+              </button>
+            </div>
+          )
+        })()}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
