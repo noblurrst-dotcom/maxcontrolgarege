@@ -15,6 +15,11 @@ export interface Checklist {
   data_entrada_loja?: string | null;
   data_entrada_oficina?: string | null;
   data_saida_oficina?: string | null;
+  foto_frente?: string | null;
+  foto_traseira?: string | null;
+  foto_direita?: string | null;
+  foto_esquerda?: string | null;
+  km_veiculo?: number | null;
   created_at: string;
   expires_at: string;
 }

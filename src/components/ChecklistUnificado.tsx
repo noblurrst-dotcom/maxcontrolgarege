@@ -54,6 +54,35 @@ export default function ChecklistUnificado({
   const [dataEntradaOficina, setDataEntradaOficina] = useState('')
   const [dataSaidaOficina, setDataSaidaOficina] = useState('')
   const [observacoes, setObservacoes] = useState('')
+  const [kmVeiculo, setKmVeiculo] = useState('')
+
+  // ── Fotos do veículo (4 lados) ──
+  type LadoCarro = 'frente' | 'traseira' | 'direita' | 'esquerda'
+  type FotoLado = { file: File | null; preview: string | null; url: string | null }
+  const [fotosVeiculo, setFotosVeiculo] = useState<Record<LadoCarro, FotoLado>>({
+    frente:   { file: null, preview: null, url: null },
+    traseira: { file: null, preview: null, url: null },
+    direita:  { file: null, preview: null, url: null },
+    esquerda: { file: null, preview: null, url: null },
+  })
+
+  const setFotoLado = (lado: LadoCarro, files: FileList | null) => {
+    if (!files || !files[0]) return
+    const f = files[0]
+    const erro = validarArquivo(f)
+    if (erro) { toast.error(erro); return }
+    setFotosVeiculo(prev => {
+      if (prev[lado].preview) URL.revokeObjectURL(prev[lado].preview!)
+      return { ...prev, [lado]: { file: f, preview: URL.createObjectURL(f), url: null } }
+    })
+  }
+
+  const removerFotoLado = (lado: LadoCarro) => {
+    setFotosVeiculo(prev => {
+      if (prev[lado].preview) URL.revokeObjectURL(prev[lado].preview!)
+      return { ...prev, [lado]: { file: null, preview: null, url: null } }
+    })
+  }
 
   // Carregar serviços (para o PDF marcar quais foram contratados)
   useEffect(() => {
@@ -159,6 +188,23 @@ export default function ChecklistUnificado({
         ? (origem as Orcamento).valor_total
         : (origem as Venda).valor_total
 
+      // Upload das fotos do veículo (4 lados) ANTES de criar o checklist (para já salvar URLs)
+      const lados: LadoCarro[] = ['frente', 'traseira', 'direita', 'esquerda']
+      const urlsLados: Record<LadoCarro, string | null> = {
+        frente: null, traseira: null, direita: null, esquerda: null,
+      }
+      for (const lado of lados) {
+        const f = fotosVeiculo[lado].file
+        if (!f) continue
+        const fotoExp = new Date(); fotoExp.setDate(fotoExp.getDate() + 180)
+        const fileName = `${user.id}/veiculo/${Date.now()}-${lado}-${f.name}`
+        const { error: upErr } = await supabase.storage.from('fotos-checklist')
+          .upload(fileName, f, { cacheControl: '3600', upsert: false })
+        if (upErr) { console.error('upload lado', lado, upErr); continue }
+        const { data: urlD } = supabase.storage.from('fotos-checklist').getPublicUrl(fileName)
+        urlsLados[lado] = urlD.publicUrl
+      }
+
       const { data: chk, error: chkErr } = await supabase
         .from('checklists').insert({
           user_id: user.id,
@@ -175,9 +221,22 @@ export default function ChecklistUnificado({
           data_entrada_loja: dataEntradaLoja || null,
           data_entrada_oficina: dataEntradaOficina || null,
           data_saida_oficina: dataSaidaOficina || null,
+          foto_frente:   urlsLados.frente,
+          foto_traseira: urlsLados.traseira,
+          foto_direita:  urlsLados.direita,
+          foto_esquerda: urlsLados.esquerda,
+          km_veiculo:    kmVeiculo ? parseInt(kmVeiculo, 10) : null,
           expires_at: expiresAt.toISOString(),
         }).select().single()
       if (chkErr) throw chkErr
+
+      // Atualiza estado local para que o PDF gerado a seguir tenha as URLs salvas
+      setFotosVeiculo(prev => ({
+        frente:   { ...prev.frente,   url: urlsLados.frente },
+        traseira: { ...prev.traseira, url: urlsLados.traseira },
+        direita:  { ...prev.direita,  url: urlsLados.direita },
+        esquerda: { ...prev.esquerda, url: urlsLados.esquerda },
+      }))
 
       // Inserir defeitos (item_tipo null, usa pos_x/pos_y/descricao)
       const fotosUrlsPorDefeito: Record<string, string[]> = {}
@@ -260,6 +319,13 @@ export default function ChecklistUnificado({
           x: d.x, y: d.y, descricao: d.descricao,
           fotos: d.previews, // usa previews (data URLs locais) já que ainda não salvou
         })),
+        fotosVeiculo: {
+          frente:   fotosVeiculo.frente.preview   || fotosVeiculo.frente.url   || null,
+          traseira: fotosVeiculo.traseira.preview || fotosVeiculo.traseira.url || null,
+          direita:  fotosVeiculo.direita.preview  || fotosVeiculo.direita.url  || null,
+          esquerda: fotosVeiculo.esquerda.preview || fotosVeiculo.esquerda.url || null,
+        },
+        kmVeiculo: kmVeiculo ? parseInt(kmVeiculo, 10) : undefined,
         estadoPintura: estadoPintura || undefined,
         lavador, tecnicoPolidor,
         dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
@@ -379,6 +445,51 @@ export default function ChecklistUnificado({
           ))}
         </div>
       )}
+
+      {/* Fotos do veículo (4 lados) + KM */}
+      <div>
+        <label className="text-xs font-bold text-gray-600 mb-2 block">Fotos do Veículo</label>
+        <div className="grid grid-cols-2 gap-2">
+          {(['frente', 'traseira', 'esquerda', 'direita'] as LadoCarro[]).map(lado => {
+            const f = fotosVeiculo[lado]
+            const labelMap: Record<LadoCarro, string> = {
+              frente: 'Frente', traseira: 'Traseira', esquerda: 'Lado Esquerdo', direita: 'Lado Direito',
+            }
+            return (
+              <div key={lado} className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+                <div className="aspect-[4/3] relative bg-gray-100 flex items-center justify-center">
+                  {f.preview ? (
+                    <>
+                      <img src={f.preview} alt={labelMap[lado]} className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => removerFotoLado(lado)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-danger-500 text-white rounded-full flex items-center justify-center shadow-lg">
+                        <X size={12} />
+                      </button>
+                    </>
+                  ) : (
+                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors">
+                      <Camera size={20} />
+                      <span className="text-[10px] mt-1">Adicionar</span>
+                      <input type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={e => setFotoLado(lado, e.target.files)} />
+                    </label>
+                  )}
+                </div>
+                <p className="text-[10px] font-bold text-gray-600 text-center py-1">{labelMap[lado]}</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* KM do veículo */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 mb-1 block">Quilometragem (KM)</label>
+        <input type="number" inputMode="numeric" value={kmVeiculo}
+          onChange={e => setKmVeiculo(e.target.value.replace(/\D/g, ''))}
+          placeholder="Ex: 45000"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+      </div>
 
       {/* Estado da pintura */}
       <div>

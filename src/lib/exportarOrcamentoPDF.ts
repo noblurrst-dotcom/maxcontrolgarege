@@ -19,6 +19,13 @@ interface DefeitoDetalhado {
   fotos: string[] // URLs ou data URLs
 }
 
+interface FotosVeiculo {
+  frente: string | null
+  traseira: string | null
+  direita: string | null
+  esquerda: string | null
+}
+
 interface DadosOrcamento {
   orcamento: Orcamento
   servicos: Servico[]
@@ -26,6 +33,8 @@ interface DadosOrcamento {
   tipo?: 'orcamento' | 'venda'
   marcacoesDefeitos?: { x: number; y: number }[]
   defeitosDetalhados?: DefeitoDetalhado[]
+  fotosVeiculo?: FotosVeiculo
+  kmVeiculo?: number
   estadoPintura?: 'otimo' | 'bom' | 'regular' | 'ruim'
   lavador?: string
   tecnicoPolidor?: string
@@ -38,6 +47,8 @@ interface DadosOrcamento {
 export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void> {
   const { orcamento, servicos, brand, tipo = 'orcamento', marcacoesDefeitos = [],
     defeitosDetalhados = [],
+    fotosVeiculo,
+    kmVeiculo,
     estadoPintura, lavador, tecnicoPolidor,
     dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
     observacoes } = dados
@@ -269,6 +280,56 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   }
 
   y += diagramaH + 5
+
+  // ── FOTOS DO VEÍCULO (4 lados) + KM ──
+  const temAlgumaFoto = fotosVeiculo && (fotosVeiculo.frente || fotosVeiculo.traseira || fotosVeiculo.direita || fotosVeiculo.esquerda)
+  if (temAlgumaFoto || kmVeiculo) {
+    if (y > ph - 60) { doc.addPage(); y = margin }
+    doc.setFillColor(corSec.r, corSec.g, corSec.b)
+    doc.rect(margin, y, pw - margin * 2, 6, 'F')
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(corPri.r, corPri.g, corPri.b)
+    const tituloFotos = kmVeiculo ? `• FOTOS DO VEÍCULO   |   KM: ${kmVeiculo.toLocaleString('pt-BR')}` : '• FOTOS DO VEÍCULO'
+    doc.text(tituloFotos, margin + 3, y + 4)
+    y += 9
+
+    if (temAlgumaFoto && fotosVeiculo) {
+      // Grid 2x2 de fotos
+      const fotoW = (pw - margin * 2 - 4) / 2
+      const fotoH = 30
+      const itens = [
+        { label: 'Frente',   url: fotosVeiculo.frente,   col: 0, row: 0 },
+        { label: 'Traseira', url: fotosVeiculo.traseira, col: 1, row: 0 },
+        { label: 'Esquerda', url: fotosVeiculo.esquerda, col: 0, row: 1 },
+        { label: 'Direita',  url: fotosVeiculo.direita,  col: 1, row: 1 },
+      ]
+      itens.forEach(({ label, url, col, row }) => {
+        const fx = margin + col * (fotoW + 4)
+        const fy = y + row * (fotoH + 8)
+        // Caixa com label
+        doc.setDrawColor(200, 200, 200)
+        doc.setLineWidth(0.3)
+        doc.rect(fx, fy, fotoW, fotoH)
+        if (url) {
+          try {
+            doc.addImage(url, 'JPEG', fx + 0.5, fy + 0.5, fotoW - 1, fotoH - 1, undefined, 'FAST')
+          } catch {
+            doc.setFontSize(7); doc.setTextColor(180, 180, 180)
+            doc.text('(falha imagem)', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' })
+          }
+        } else {
+          doc.setFontSize(7); doc.setTextColor(180, 180, 180); doc.setFont('helvetica', 'normal')
+          doc.text('(sem foto)', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' })
+        }
+        doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 80, 80)
+        doc.text(label, fx + fotoW / 2, fy + fotoH + 4, { align: 'center' })
+      })
+      y += fotoH * 2 + 16
+    } else {
+      y += 2
+    }
+  }
 
   // ── DESCRIÇÃO DOS DEFEITOS (se detalhados) ──
   if (defeitosDetalhados.length > 0) {
