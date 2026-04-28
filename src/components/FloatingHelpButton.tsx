@@ -1,14 +1,36 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { HelpCircle, X, Send } from 'lucide-react'
 
 export default function FloatingHelpButton() {
   const [open, setOpen] = useState(false)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollTimer = useRef<number | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (open) return
+      setIsScrolling(true)
+      if (scrollTimer.current) window.clearTimeout(scrollTimer.current)
+      scrollTimer.current = window.setTimeout(() => {
+        setIsScrolling(false)
+      }, 250)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimer.current) window.clearTimeout(scrollTimer.current)
+    }
+  }, [open])
+
+  const hiddenClasses = isScrolling && !open
+    ? 'opacity-0 translate-y-4 pointer-events-none'
+    : 'opacity-100 translate-y-0 pointer-events-auto'
 
   return (
     <>
       {/* Chat placeholder panel */}
       {open && (
-        <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-[60] w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-24 right-6 z-[60] w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-secondary-500">
             <div className="flex items-center gap-2">
@@ -57,16 +79,10 @@ export default function FloatingHelpButton() {
         </div>
       )}
 
-      {/*
-       * Floating button:
-       * - <lg (até 1023px): há bottom nav (lg:hidden); o FAB sobe respeitando safe-area
-       *   + altura da nav (5rem). Não sobrepõe nenhum item.
-       * - lg+ (1024+): bottom nav some; FAB volta ao canto inferior padrão.
-       */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] right-4 lg:bottom-6 lg:right-6 z-30 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 bg-primary-500 text-on-primary"
-        title="Ajuda"
+        className={`fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-95 bg-primary-500 text-on-primary focus-within:opacity-100 focus-within:pointer-events-auto ${hiddenClasses}`}
+        aria-label="Abrir suporte"
       >
         {open ? <X size={22} /> : <HelpCircle size={22} />}
       </button>
