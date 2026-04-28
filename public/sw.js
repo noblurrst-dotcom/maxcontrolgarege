@@ -8,7 +8,7 @@
  * - skipWaiting + clients.claim: nova versão assume controle imediato.
  * - activate: remove TODOS os caches que não são o atual (limpa v1, v2, estetica-automotiva-v1 etc).
  */
-const CACHE_NAME = 'ata-gestao-v3';
+const CACHE_NAME = 'ata-gestao-v4';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json'

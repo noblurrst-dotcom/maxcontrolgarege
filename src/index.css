@@ -67,11 +67,11 @@
 
 /* =====================================================================
  * Safety net: impede overflow horizontal em qualquer viewport.
- * Proteção contra elementos filhos que ultrapassem a largura da tela
- * (bug em mobile onde se consegue arrastar para os lados).
+ * Aplicado apenas no body para não criar scroll containers aninhados
+ * que bloqueiam o scroll vertical em Chrome desktop e Android.
  * ===================================================================== */
-html, body, #root {
-  overflow-x: hidden;
+body {
+  overflow-x: clip;
   max-width: 100vw;
 }
 
@@ -83,7 +83,6 @@ html, body, #root {
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
@@ -91,15 +90,6 @@ html, body, #root {
   .dark body,
   html.dark body {
     @apply bg-[#111118] text-gray-100;
-  }
-
-  html {
-    /* Prevenir scroll horizontal */
-    overflow-x: hidden;
-    /* Altura 100% em mobile */
-    height: 100%;
-    /* Viewport height fix para iOS */
-    height: -webkit-fill-available;
   }
 
   input, select, textarea {
