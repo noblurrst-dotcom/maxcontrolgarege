@@ -188,16 +188,44 @@ export default function VitrineConfig() {
         </button>
       </div>
 
-      {/* Link da vitrine */}
+      {/* Link + QR Code */}
       {config.slug && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center gap-2 mb-3">
             <Link2 size={14} className="text-gray-400" />
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Link da vitrine</span>
           </div>
-          <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
-            <Globe size={14} className="text-primary-500 shrink-0" />
-            <p className="text-sm text-primary-600 font-medium truncate">{vitrineUrl}</p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                <Globe size={14} className="text-primary-500 shrink-0" />
+                <p className="text-sm text-primary-600 font-medium truncate">{vitrineUrl}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleCopyLink} className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex-1">
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Copiado!' : 'Copiar link'}
+                </button>
+                <a href={vitrineUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors">
+                  <ExternalLink size={14} /> Abrir
+                </a>
+              </div>
+              <p className="text-[10px] text-gray-400">Compartilhe este link nas redes sociais, no cartão de visitas ou imprima o QR Code.</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(vitrineUrl)}&bgcolor=ffffff&color=000000&margin=8`}
+                alt="QR Code"
+                className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl border border-gray-200"
+              />
+              <a
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(vitrineUrl)}&bgcolor=ffffff&color=000000&margin=16&format=png`}
+                download={`vitrine-${config.slug}-qr.png`}
+                className="text-[10px] font-bold text-primary-600 hover:underline"
+              >
+                Baixar QR em alta resolução
+              </a>
+            </div>
           </div>
         </div>
       )}
