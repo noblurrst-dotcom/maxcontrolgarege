@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, CreditCard } from 'lucide-react'
+import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, CreditCard, Car, Check } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
-import type { Venda, FormaPagamento, Orcamento, OrcamentoItem, Servico, Agendamento } from '../types'
+import type { Venda, FormaPagamento, Orcamento, OrcamentoItem, Servico, Agendamento, Veiculo } from '../types'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
@@ -30,7 +30,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: '' as FormaPagamento | '', data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', colaborador_id: '' as string | null, observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', clienteId: '', descricao: '', valor: '', desconto: '', forma_pagamento: '' as FormaPagamento | '', data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', colaborador_id: '' as string | null, observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   useBrand()
@@ -40,6 +40,7 @@ export default function Vendas() {
   const [servicos, setServicos] = useState<Servico[]>([])
   const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos, save: salvarAgendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: todosVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const { data: kanbanItems, save: salvarKanban } = useCloudSync<any>({ table: 'kanban_items', storageKey: 'kanban_items' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
@@ -482,7 +483,14 @@ export default function Vendas() {
             <div className="space-y-4">
               <ClientePicker
                 value={form.nome_cliente}
-                onChange={(nome) => setForm({ ...form, nome_cliente: nome })}
+                onChange={(nome, _tel, _veic, _placa, clienteId) => setForm(prev => ({
+                  ...prev,
+                  nome_cliente: nome,
+                  clienteId: clienteId || '',
+                  // se trocou de cliente, limpa veículo selecionado
+                  placa_agendamento: clienteId !== prev.clienteId ? '' : prev.placa_agendamento,
+                  veiculo_agendamento: clienteId !== prev.clienteId ? '' : prev.veiculo_agendamento,
+                }))}
               />
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Serviço</label>
@@ -609,25 +617,99 @@ export default function Vendas() {
                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50" />
                   </div>
                 </div>
-                {/* Placa + Modelo */}
-                {form.data_agendamento && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
-                      <input type="text" value={form.placa_agendamento}
-                        onChange={(e) => setForm({ ...form, placa_agendamento: e.target.value.toUpperCase() })}
-                        placeholder="ABC-1234" maxLength={8}
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none uppercase" />
+                {/* Veículo do cliente — picker inteligente */}
+                {form.data_agendamento && (() => {
+                  const veiculosCliente = form.clienteId
+                    ? todosVeiculos.filter(v => v.cliente_id === form.clienteId)
+                    : []
+
+                  // Auto-seleciona se for o único veículo
+                  if (veiculosCliente.length === 1 && !form.placa_agendamento) {
+                    const v = veiculosCliente[0]
+                    setTimeout(() => setForm(prev => ({
+                      ...prev,
+                      placa_agendamento: v.placa,
+                      veiculo_agendamento: `${v.marca} ${v.modelo}`.trim(),
+                    })), 0)
+                  }
+
+                  // Caso: cliente tem 2+ veículos → mostrar picker
+                  if (veiculosCliente.length > 1) {
+                    return (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1.5 block">
+                          Veículo do cliente <span className="text-gray-400">({veiculosCliente.length} disponíveis)</span>
+                        </label>
+                        <div className="space-y-2">
+                          {veiculosCliente.map(v => {
+                            const selecionado = form.placa_agendamento === v.placa
+                            return (
+                              <button key={v.id} type="button"
+                                onClick={() => setForm({
+                                  ...form,
+                                  placa_agendamento: v.placa,
+                                  veiculo_agendamento: `${v.marca} ${v.modelo}`.trim(),
+                                })}
+                                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border-2 transition-all text-left ${
+                                  selecionado
+                                    ? 'border-primary-500 bg-primary-50'
+                                    : 'border-gray-100 hover:border-gray-200 bg-white'
+                                }`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${selecionado ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                                  <Car size={18} className={selecionado ? 'text-primary-600' : 'text-gray-400'} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-bold text-gray-900 truncate">{v.placa}</p>
+                                  <p className="text-[11px] text-gray-400 truncate">
+                                    {[v.marca, v.modelo, v.ano].filter(Boolean).join(' · ')}
+                                  </p>
+                                </div>
+                                {v.cor && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full shrink-0">{v.cor}</span>
+                                )}
+                                {selecionado && <Check size={16} className="text-primary-600 shrink-0" />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Caso: cliente tem 1 veículo (já auto-selecionado) → mostra info compacta
+                  if (veiculosCliente.length === 1 && form.placa_agendamento) {
+                    const v = veiculosCliente[0]
+                    return (
+                      <div className="flex items-center gap-3 px-3 py-2.5 bg-primary-50 border border-primary-200 rounded-xl">
+                        <Car size={16} className="text-primary-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">{v.placa} · {[v.marca, v.modelo].filter(Boolean).join(' ')}</p>
+                          <p className="text-[10px] text-gray-500">Veículo do cliente</p>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Caso: cliente sem veículo cadastrado OU sem cliente selecionado → inputs manuais
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Placa</label>
+                        <input type="text" value={form.placa_agendamento}
+                          onChange={(e) => setForm({ ...form, placa_agendamento: e.target.value.toUpperCase() })}
+                          placeholder="ABC-1234" maxLength={8}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none uppercase" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Modelo</label>
+                        <input type="text" value={form.veiculo_agendamento}
+                          onChange={(e) => setForm({ ...form, veiculo_agendamento: e.target.value })}
+                          placeholder="Ex: Toyota Corolla"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 mb-1 block">Modelo</label>
-                      <input type="text" value={form.veiculo_agendamento}
-                        onChange={(e) => setForm({ ...form, veiculo_agendamento: e.target.value })}
-                        placeholder="Ex: Toyota Corolla"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-400 outline-none" />
-                    </div>
-                  </div>
-                )}
+                  )
+                })()}
                 {/* Cor */}
                 {form.data_agendamento && (
                   <div>
