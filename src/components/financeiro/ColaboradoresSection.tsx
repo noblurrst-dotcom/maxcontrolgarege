@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User, Pencil } from 'lucide-react'
+import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User, Pencil, X, Info } from 'lucide-react'
 import { useCloudSync } from '../../hooks/useCloudSync'
 import { useDebounce } from '../../hooks/useDebounce'
 import { fmt, uid } from '../../lib/utils'
 import type { Colaborador, TipoColaborador } from '../../types'
 import ColaboradorFormModal from './ColaboradorFormModal'
+import { calcularCustoMensal, type CustoMensal } from '../../lib/colaboradores'
 
 type Filtro = 'todos' | 'ativos' | 'inativos' | 'clt' | 'freelancer_pj' | 'freelancer_autonomo'
 
@@ -42,6 +43,7 @@ export default function ColaboradoresSection() {
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Colaborador | null>(null)
+  const [detalheCusto, setDetalheCusto] = useState<{ colaborador: Colaborador; custo: CustoMensal } | null>(null)
 
   const filtrados = useMemo(() => {
     return colaboradores.filter(c => {
@@ -209,10 +211,20 @@ export default function ColaboradoresSection() {
                   </p>
                 </div>
 
-                {/* Salário base */}
+                {/* Custo mensal */}
                 <div className="text-right shrink-0">
-                  <p className="text-xs text-gray-400">Base</p>
-                  <p className="text-sm font-bold text-gray-900">{fmt(c.salario || 0)}</p>
+                  <p className="text-xs text-gray-400">Custo/mês</p>
+                  <button
+                    onClick={() => {
+                      const custo = calcularCustoMensal(c)
+                      setDetalheCusto({ colaborador: c, custo })
+                    }}
+                    className="text-sm font-bold text-primary-600 hover:underline flex items-center gap-0.5 ml-auto"
+                    title="Ver detalhamento"
+                  >
+                    {fmt(calcularCustoMensal(c).total)}
+                    <Info size={12} className="text-gray-400" />
+                  </button>
                 </div>
 
                 {/* Ações */}
@@ -249,6 +261,44 @@ export default function ColaboradoresSection() {
           onSave={salvarColaborador}
           onClose={fecharModal}
         />
+      )}
+
+      {/* Modal detalhamento de custo mensal */}
+      {detalheCusto && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setDetalheCusto(null)}>
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Custo mensal estimado</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{detalheCusto.colaborador.nome} · {TIPO_LABEL[detalheCusto.colaborador.tipo]}</p>
+              </div>
+              <button onClick={() => setDetalheCusto(null)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+              <div className="space-y-2">
+                {detalheCusto.custo.itens.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-700">{item.label}</p>
+                      <p className="text-[10px] text-gray-400">
+                        {item.descricao}
+                        {item.percentual ? ` (${item.percentual}%)` : ''}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 shrink-0 ml-3">{fmt(item.valor)}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-3 border-t-2 border-gray-200 flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-900">Total estimado</p>
+                <p className="text-lg font-bold text-primary-600">{fmt(detalheCusto.custo.total)}</p>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-3">* Estimativa baseada no regime Simples Nacional. Valores reais podem variar.</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
