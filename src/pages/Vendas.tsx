@@ -596,14 +596,18 @@ export default function Vendas() {
             <div className="space-y-4">
               <ClientePicker
                 value={form.nome_cliente}
-                onChange={(nome, _tel, _veic, _placa, clienteId) => setForm(prev => ({
-                  ...prev,
-                  nome_cliente: nome,
-                  clienteId: clienteId || '',
-                  // se trocou de cliente, limpa veículo selecionado
-                  placa_agendamento: clienteId !== prev.clienteId ? '' : prev.placa_agendamento,
-                  veiculo_agendamento: clienteId !== prev.clienteId ? '' : prev.veiculo_agendamento,
-                }))}
+                onChange={(nome, _tel, veic, placa, clienteId) => setForm(prev => {
+                  const trocouCliente = clienteId !== prev.clienteId
+                  return {
+                    ...prev,
+                    nome_cliente: nome,
+                    clienteId: clienteId || '',
+                    // Se trocou cliente: usa o veículo passado pelo picker (legado ou veiculos[0]);
+                    // se não trocou, mantém o que já estava selecionado
+                    placa_agendamento: trocouCliente ? (placa || '') : prev.placa_agendamento,
+                    veiculo_agendamento: trocouCliente ? (veic || '') : prev.veiculo_agendamento,
+                  }
+                })}
               />
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Serviço</label>
