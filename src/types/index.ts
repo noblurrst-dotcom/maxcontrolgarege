@@ -129,6 +129,7 @@ export interface Venda {
   funcionario: string;                // legacy: texto livre (compat)
   colaborador_id?: string | null;     // FK opcional → funcionarios.id (migration 008+)
   observacoes: string;
+  checklist_id: string | null;
   created_at: string;
 }
 
@@ -168,25 +169,33 @@ export interface Agendamento {
 }
 
 
-export interface PreVendaItem {
+export interface OrcamentoItem {
   descricao: string;
   quantidade: number;
   valor_unitario: number;
 }
 
-export interface PreVenda {
+export type StatusOrcamento = 'pendente' | 'aprovado' | 'recusado'
+
+export interface Orcamento {
   id: string;
   user_id: string;
   cliente_id: string | null;
   nome_cliente: string;
   telefone_cliente: string;
-  itens: PreVendaItem[];
+  itens: OrcamentoItem[];
   valor_total: number;
-  status: 'pendente' | 'aprovado' | 'recusado';
+  status: StatusOrcamento;
   validade: string;
   observacoes: string;
+  checklist_id: string | null;
   created_at: string;
 }
+
+/** @deprecated Use OrcamentoItem */
+export type PreVendaItem = OrcamentoItem
+/** @deprecated Use Orcamento */
+export type PreVenda = Orcamento
 
 export interface Cliente {
   id: string;

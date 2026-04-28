@@ -109,7 +109,7 @@ export default function Vendas() {
       id: uid(), user_id: '', cliente_id: null, nome_cliente: pvForm.nome_cliente,
       telefone_cliente: pvForm.telefone_cliente, itens: validItens,
       valor_total: pvTotal, status: 'pendente', validade: pvForm.validade || '',
-      observacoes: pvForm.observacoes, created_at: new Date().toISOString(),
+      observacoes: pvForm.observacoes, checklist_id: null, created_at: new Date().toISOString(),
     }
     salvarPv([novo, ...preVendas])
     setPvModal(false)
@@ -141,8 +141,8 @@ export default function Vendas() {
       desconto: 0, valor_total: pv.valor_total, valor_pago: 0,
       forma_pagamento: null, status_pagamento: 'pendente',
       data_venda: convData, status: 'aberta',
-      parcelas: 1, funcionario: '', observacoes: `Convertido de pré-venda. ${pv.observacoes}`,
-      created_at: new Date().toISOString(),
+      parcelas: 1, funcionario: '', observacoes: `Convertido de orçamento. ${pv.observacoes}`,
+      checklist_id: null, created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
     salvarPv(preVendas.map(p => p.id === pv.id ? { ...p, status: 'aprovado' as const } : p))
@@ -250,7 +250,7 @@ export default function Vendas() {
       hora_agendamento: form.data_agendamento ? form.hora_agendamento : undefined,
       status: 'fechada', parcelas: parseInt(form.parcelas),
       funcionario: form.funcionario, colaborador_id: form.colaborador_id || null, observacoes: form.observacoes,
-      created_at: new Date().toISOString(),
+      checklist_id: null, created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
 
