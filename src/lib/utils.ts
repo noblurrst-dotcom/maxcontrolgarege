@@ -121,3 +121,81 @@ export function truncate(str: string, max: number): string {
   if (!str || str.length <= max) return str
   return str.slice(0, max) + '…'
 }
+
+// --- Parse de string legada de veículo ---
+// Tenta separar uma string como "Honda Civic 2020 Preto" em { marca, modelo, ano, cor }.
+// Heurística simples: extrai ano (4 dígitos 19xx/20xx), extrai cor conhecida,
+// primeiro token restante = marca, resto = modelo.
+const CORES_CONHECIDAS = [
+  'preto', 'branco', 'prata', 'vermelho', 'azul', 'cinza', 'grafite',
+  'verde', 'amarelo', 'marrom', 'bege', 'dourado', 'laranja', 'vinho',
+  'roxo', 'rosa', 'bronze', 'chumbo', 'champagne',
+]
+
+const MARCAS_CONHECIDAS = [
+  'chevrolet', 'volkswagen', 'vw', 'fiat', 'ford', 'toyota', 'honda',
+  'hyundai', 'nissan', 'renault', 'peugeot', 'citroen', 'citroën', 'jeep',
+  'mitsubishi', 'kia', 'bmw', 'mercedes', 'mercedes-benz', 'audi', 'volvo',
+  'land rover', 'porsche', 'ferrari', 'lamborghini', 'mini', 'subaru',
+  'suzuki', 'mazda', 'chery', 'jac', 'caoa', 'byd', 'gm', 'ram', 'dodge',
+  'lexus', 'acura', 'infiniti', 'jaguar', 'tesla', 'iveco', 'troller',
+]
+
+export function parseVeiculoString(raw: string): { marca: string; modelo: string; ano: string; cor: string } {
+  const result = { marca: '', modelo: '', ano: '', cor: '' }
+  if (!raw || typeof raw !== 'string') return result
+  let s = raw.trim()
+  if (!s) return result
+
+  // 1) Extrair ano (19xx ou 20xx)
+  const anoMatch = s.match(/\b(19|20)\d{2}\b/)
+  if (anoMatch) {
+    result.ano = anoMatch[0]
+    s = s.replace(anoMatch[0], ' ')
+  }
+
+  // 2) Extrair cor (primeira cor conhecida encontrada)
+  const sLower = s.toLowerCase()
+  for (const c of CORES_CONHECIDAS) {
+    const re = new RegExp(`\\b${c}\\b`, 'i')
+    if (re.test(sLower)) {
+      result.cor = c.charAt(0).toUpperCase() + c.slice(1)
+      s = s.replace(re, ' ')
+      break
+    }
+  }
+
+  // 3) Normaliza espaços
+  s = s.replace(/\s+/g, ' ').trim()
+  if (!s) return result
+
+  // 4) Tenta detectar marca conhecida (suporta marcas com 2 palavras, ex: "Land Rover")
+  const sLowerClean = s.toLowerCase()
+  let marcaDetectada = ''
+  for (const m of MARCAS_CONHECIDAS) {
+    if (sLowerClean.startsWith(m + ' ') || sLowerClean === m) {
+      marcaDetectada = m
+      break
+    }
+  }
+
+  if (marcaDetectada) {
+    // Capitaliza marca
+    result.marca = marcaDetectada.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
+    result.modelo = s.slice(marcaDetectada.length).trim()
+  } else {
+    // Fallback: 1ª palavra = marca, resto = modelo
+    const parts = s.split(' ')
+    if (parts.length === 1) {
+      // Uma palavra só → assume que é modelo (sem marca identificada)
+      result.modelo = parts[0]
+    } else {
+      result.marca = parts[0]
+      result.modelo = parts.slice(1).join(' ')
+    }
+  }
+
+  return result
+}

@@ -12,11 +12,11 @@ interface Props {
 
 export default function ClientePicker({ value, onChange }: Props) {
   const { data: clientes, save: salvarClientes } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
-  const { data: veiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
+  const { data: veiculos, save: salvarVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [aberto, setAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [novoCliente, setNovoCliente] = useState(false)
-  const [novoForm, setNovoForm] = useState({ nome: '', telefone: '', veiculo: '', placa: '' })
+  const [novoForm, setNovoForm] = useState({ nome: '', telefone: '', placa: '', marca: '', modelo: '', cor: '' })
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,15 +40,17 @@ export default function ClientePicker({ value, onChange }: Props) {
 
   const salvarNovoCliente = () => {
     if (!novoForm.nome.trim()) return
+    const veiculoStr = [novoForm.marca, novoForm.modelo].filter(Boolean).join(' ').trim()
+    const novoId = uid()
     const novo: Cliente = {
-      id: uid(),
+      id: novoId,
       user_id: '',
       nome: novoForm.nome.trim(),
       telefone: novoForm.telefone,
       email: '',
       cpf_cnpj: '',
-      veiculo: novoForm.veiculo,
-      placa: novoForm.placa,
+      veiculo: veiculoStr, // legado (compat)
+      placa: novoForm.placa.toUpperCase(),
       endereco: '',
       aniversario: '',
       observacoes: '',
@@ -57,8 +59,26 @@ export default function ClientePicker({ value, onChange }: Props) {
     }
     const atualizada = [novo, ...clientes]
     salvarClientes(atualizada)
-    onChange(novo.nome, novo.telefone)
-    setNovoForm({ nome: '', telefone: '', veiculo: '', placa: '' })
+
+    // Cria o registro separado em `veiculos` se houver qualquer dado de veículo
+    if (veiculoStr || novoForm.placa) {
+      const novoVeiculo: Veiculo = {
+        id: uid(),
+        user_id: '',
+        cliente_id: novoId,
+        placa: novoForm.placa.toUpperCase(),
+        marca: novoForm.marca,
+        modelo: novoForm.modelo,
+        ano: '',
+        cor: novoForm.cor,
+        observacoes: '',
+        created_at: new Date().toISOString(),
+      }
+      salvarVeiculos([novoVeiculo, ...veiculos])
+    }
+
+    onChange(novo.nome, novo.telefone, veiculoStr || undefined, novo.placa || undefined, novoId)
+    setNovoForm({ nome: '', telefone: '', placa: '', marca: '', modelo: '', cor: '' })
     setNovoCliente(false)
     setAberto(false)
   }
@@ -169,22 +189,38 @@ export default function ClientePicker({ value, onChange }: Props) {
               placeholder="Telefone"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
             />
+            {/* Veículo: placa (destaque) + marca + modelo + cor */}
+            <input
+              type="text"
+              value={novoForm.placa}
+              onChange={(e) => setNovoForm({ ...novoForm, placa: e.target.value.toUpperCase() })}
+              placeholder="Placa (ex: ABC-1234)"
+              maxLength={8}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono font-bold tracking-wider uppercase focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            />
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
-                value={novoForm.veiculo}
-                onChange={(e) => setNovoForm({ ...novoForm, veiculo: e.target.value })}
-                placeholder="Veículo"
+                value={novoForm.marca}
+                onChange={(e) => setNovoForm({ ...novoForm, marca: e.target.value })}
+                placeholder="Marca"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
               />
               <input
                 type="text"
-                value={novoForm.placa}
-                onChange={(e) => setNovoForm({ ...novoForm, placa: e.target.value.toUpperCase() })}
-                placeholder="Placa"
+                value={novoForm.modelo}
+                onChange={(e) => setNovoForm({ ...novoForm, modelo: e.target.value })}
+                placeholder="Modelo"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
               />
             </div>
+            <input
+              type="text"
+              value={novoForm.cor}
+              onChange={(e) => setNovoForm({ ...novoForm, cor: e.target.value })}
+              placeholder="Cor (opcional)"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            />
             <button
               type="button"
               onClick={salvarNovoCliente}

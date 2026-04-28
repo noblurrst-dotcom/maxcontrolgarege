@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { Users, Plus, Search, Car, Trash2, X, MessageCircle, Cake, MapPin, Upload, FileDown, AlertCircle, CheckCircle2, Download, Pencil, Camera, Loader2, ChevronDown, ChevronUp, ClipboardCheck, Mail, CreditCard, ShoppingCart, CalendarDays, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { Cliente, Venda, Agendamento, Veiculo } from '../types'
-import { uid, fmt, sanitizePhone } from '../lib/utils'
+import { uid, fmt, sanitizePhone, parseVeiculoString } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import { supabase, garantirBucketFotosVeiculos } from '../lib/supabase'
@@ -87,10 +87,10 @@ const CAMPOS_CSV: { value: string; label: string }[] = [
 export default function Clientes() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { data: lista, save: salvar } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
+  const { data: lista, save: salvar, synced: clientesSynced } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
-  const { data: veiculos, save: salvarVeiculos } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
+  const { data: veiculos, save: salvarVeiculos, synced: veiculosSynced } = useCloudSync<Veiculo>({ table: 'veiculos', storageKey: 'veiculos' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [modal, setModal] = useState(false)
@@ -130,6 +130,62 @@ export default function Clientes() {
   }
 
   useEffect(() => { garantirBucketFotosVeiculos() }, [])
+
+  // ── Migração: cliente.veiculo/placa (legado) → tabela veiculos ────────────
+  // Roda uma vez por sessão, após AMBAS as tabelas sincronizarem com o Supabase.
+  // Mantém os campos legados intactos (não destrutivo).
+  const [migrouVeiculos, setMigrouVeiculos] = useState(false)
+  useEffect(() => {
+    if (!user || migrouVeiculos) return
+    if (!clientesSynced || !veiculosSynced) return
+    setMigrouVeiculos(true)
+
+    // Index de placas já existentes em `veiculos` (por cliente_id + placa normalizada)
+    const placasPorCliente = new Map<string, Set<string>>()
+    for (const v of veiculos) {
+      if (!v.cliente_id) continue
+      const placaNorm = (v.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (!placaNorm) continue
+      if (!placasPorCliente.has(v.cliente_id)) placasPorCliente.set(v.cliente_id, new Set())
+      placasPorCliente.get(v.cliente_id)!.add(placaNorm)
+    }
+
+    const novosVeiculos: Veiculo[] = []
+
+    for (const c of lista) {
+      const temVeiculoLegado = (c.veiculo && c.veiculo.trim()) || (c.placa && c.placa.trim())
+      if (!temVeiculoLegado) continue
+
+      const placaLegadoNorm = (c.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      const jaCadastradas = placasPorCliente.get(c.id) || new Set()
+
+      // Evita duplicar: se já existe um veículo com essa placa pra esse cliente, pula
+      if (placaLegadoNorm && jaCadastradas.has(placaLegadoNorm)) continue
+
+      // Se não tem placa legada mas já existe QUALQUER veículo cadastrado pra esse cliente, pula
+      // (pra evitar duplicar quando o user já cadastrou o veículo manualmente)
+      if (!placaLegadoNorm && jaCadastradas.size > 0) continue
+
+      const parsed = parseVeiculoString(c.veiculo || '')
+      novosVeiculos.push({
+        id: uid(),
+        user_id: user.id,
+        cliente_id: c.id,
+        placa: (c.placa || '').toUpperCase(),
+        marca: parsed.marca,
+        modelo: parsed.modelo,
+        ano: parsed.ano,
+        cor: parsed.cor,
+        observacoes: '',
+        created_at: c.created_at || new Date().toISOString(),
+      })
+    }
+
+    if (novosVeiculos.length > 0) {
+      salvarVeiculos([...novosVeiculos, ...veiculos])
+      toast.success(`Migração: ${novosVeiculos.length} veículo(s) criado(s) a partir da ficha do cliente`, { duration: 5000 })
+    }
+  }, [user, clientesSynced, veiculosSynced, migrouVeiculos, lista, veiculos, salvarVeiculos])
 
   const handleCSVFile = (file: File) => {
     const reader = new FileReader()
