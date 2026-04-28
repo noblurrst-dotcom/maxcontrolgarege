@@ -231,7 +231,14 @@ export default function Agenda() {
     toast.success(form.vendaId ? 'Agendamento criado' : 'Agendamento e venda criados (pagamento pendente)')
   }
 
-  const remover = (id: string) => salvar(lista.filter((a) => a.id !== id))
+  const remover = (id: string) => {
+    // Cascade: também remove a venda vinculada (pareamento 1:1)
+    const ag = lista.find(a => a.id === id)
+    if (ag?.venda_id) {
+      salvarVendas(vendas.filter(v => v.id !== ag.venda_id))
+    }
+    salvar(lista.filter((a) => a.id !== id))
+  }
 
   const enviarWhatsApp = (a: Agendamento) => {
     const dataStr = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''

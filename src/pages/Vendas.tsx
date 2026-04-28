@@ -357,7 +357,15 @@ export default function Vendas() {
     setChecklistSalvo(false)
   }
 
-  const remover = (id: string) => { salvar(vendas.filter((v) => v.id !== id)); setDetalhe(null) }
+  const remover = (id: string) => {
+    // Cascade: também remove o agendamento vinculado (pareamento 1:1)
+    const agsVinculados = agendamentos.filter(a => a.venda_id === id)
+    if (agsVinculados.length > 0) {
+      salvarAgendamentos(agendamentos.filter(a => a.venda_id !== id))
+    }
+    salvar(vendas.filter((v) => v.id !== id))
+    setDetalhe(null)
+  }
   const toggleStatus = (id: string) => salvar(vendas.map((v) => v.id === id ? { ...v, status: v.status === 'aberta' ? 'fechada' as const : 'aberta' as const } : v))
 
   const enviarWhatsApp = (v: Venda) => {
