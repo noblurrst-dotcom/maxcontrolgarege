@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ShoppingCart, Plus, Search, TrendingUp, Trash2, X, MessageCircle, Lock, Unlock, FileText, Download, PlusCircle, MinusCircle, CalendarDays, Clock, Filter, ChevronDown, ChevronUp, ClipboardCheck, Loader2, CreditCard } from 'lucide-react'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
@@ -37,6 +38,7 @@ export default function Vendas() {
   const { brand } = useBrand()
   const { user } = useAuth()
   const [tab, setTab] = useState<'vendas' | 'orcamento'>('vendas')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [servicos, setServicos] = useState<Servico[]>([])
   const { data: vendas, save: salvarVendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
   const { data: agendamentos, save: salvarAgendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
@@ -81,6 +83,21 @@ export default function Vendas() {
   const { data: orcamentos, save: salvarOrcamentos } = useCloudSync<Orcamento>({ table: 'orcamentos', storageKey: 'orcamentos' })
   const [orcModal, setOrcModal] = useState(false)
   const [orcDetalhe, setOrcDetalhe] = useState<Orcamento | null>(null)
+
+  // Detecta ?novo=venda|orcamento vindo do Painel e abre o modal correspondente
+  useEffect(() => {
+    const novo = searchParams.get('novo')
+    if (!novo) return
+    if (novo === 'venda') {
+      setModal(true)
+    } else if (novo === 'orcamento') {
+      setOrcModal(true)
+      setTab('orcamento')
+    }
+    searchParams.delete('novo')
+    setSearchParams(searchParams, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [exportModal, setExportModal] = useState(false)
   const [exportOrc, setExportOrc] = useState<Orcamento | null>(null)
   const [marcacoesDefeitos, setMarcacoesDefeitos] = useState<{x:number;y:number}[]>([])

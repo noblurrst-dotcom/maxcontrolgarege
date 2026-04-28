@@ -862,21 +862,21 @@ export default function Dashboard() {
           {!editMode && (
             <>
               <button
-                onClick={() => navigate('/vendas')}
+                onClick={() => navigate('/vendas?novo=venda')}
                 className="flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-[11px] sm:text-xs font-bold transition-colors shadow-sm whitespace-nowrap active:scale-95 col-span-2 sm:col-span-1 min-w-0"
               >
                 <ShoppingCart size={14} />
                 <span className="truncate">Nova Venda</span>
               </button>
               <button
-                onClick={() => navigate('/agenda')}
+                onClick={() => navigate('/agenda?novo=agendamento')}
                 className="flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <CalendarPlus size={14} />
                 <span className="truncate">Agendamento</span>
               </button>
               <button
-                onClick={() => navigate('/vendas')}
+                onClick={() => navigate('/vendas?novo=orcamento')}
                 className="flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-full text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap active:scale-95 min-w-0"
               >
                 <FileText size={14} />

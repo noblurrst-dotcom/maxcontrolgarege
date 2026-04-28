@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarDays, Plus, Search, Clock, Trash2, X, MessageCircle, Link2, Car, DollarSign, FileText, Settings2, Calendar, Check, CreditCard, AlertCircle } from 'lucide-react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -31,6 +32,18 @@ export default function Agenda() {
   const [form, setForm] = useState(initForm())
   const [agDetalhe, setAgDetalhe] = useState<Agendamento | null>(null)
   const [camposOpcionais, setCamposOpcionais] = useState<Set<string>>(new Set())
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Detecta ?novo=agendamento vindo do Painel e abre o modal
+  useEffect(() => {
+    const novo = searchParams.get('novo')
+    if (novo === 'agendamento') {
+      setModal(true)
+      searchParams.delete('novo')
+      setSearchParams(searchParams, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const toggleCampo = (campo: string) => setCamposOpcionais(prev => { const n = new Set(prev); n.has(campo) ? n.delete(campo) : n.add(campo); return n })
   const [, forceUpdate] = useState(0)
   useEffect(() => {
