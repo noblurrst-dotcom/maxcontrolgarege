@@ -188,48 +188,6 @@ export default function Vendas() {
     setTab('vendas')
   }
 
-  const exportarOrcPDFSimples = async (o: Orcamento) => {
-    const { default: jsPDF } = await import('jspdf')
-    const doc = new jsPDF()
-    const pw = doc.internal.pageSize.getWidth()
-    const margin = 20
-    let y = 20
-    const hexToRgb = (hex: string) => ({ r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) })
-    const corPri = hexToRgb(brand.cor_primaria || '#CFFF04')
-    const corSec = hexToRgb(brand.cor_secundaria || '#0d0d1a')
-    if (brand.pdf_mostrar_logo && brand.logo_url) { try { doc.addImage(brand.logo_url, 'PNG', margin, y, 30, 30) } catch { /* ignore */ } y += 2 }
-    const headerX = brand.pdf_mostrar_logo && brand.logo_url ? margin + 36 : margin
-    doc.setFontSize(18); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold')
-    doc.text(brand.nome_empresa || 'Orçamento', headerX, y + 8)
-    if (brand.slogan) { doc.setFontSize(9); doc.setTextColor(150, 150, 150); doc.setFont('helvetica', 'normal'); doc.text(brand.slogan, headerX, y + 14) }
-    if (brand.pdf_mostrar_dados) {
-      doc.setFontSize(8); doc.setTextColor(130, 130, 130); let infoY = y + (brand.slogan ? 20 : 16)
-      if (brand.cnpj) { doc.text(`CNPJ: ${brand.cnpj}`, headerX, infoY); infoY += 4 }
-      if (brand.telefone) { doc.text(`Tel: ${brand.telefone}`, headerX, infoY); infoY += 4 }
-      if (brand.endereco) { doc.text(brand.endereco, headerX, infoY); infoY += 4 }
-      if (brand.email) { doc.text(brand.email, headerX, infoY) }
-    }
-    y += (brand.pdf_mostrar_logo && brand.logo_url ? 34 : 22)
-    doc.setDrawColor(corPri.r, corPri.g, corPri.b); doc.setLineWidth(1.5); doc.line(margin, y, pw - margin, y); y += 10
-    doc.setFontSize(14); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold'); doc.text('ORÇAMENTO', margin, y)
-    doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.setFont('helvetica', 'normal'); doc.text(`Data: ${new Date(o.created_at).toLocaleDateString('pt-BR')}`, pw - margin, y, { align: 'right' }); y += 8
-    doc.setFontSize(10); doc.setTextColor(60, 60, 60); doc.text(`Cliente: ${o.nome_cliente}`, margin, y)
-    if (o.telefone_cliente) { doc.text(`Tel: ${o.telefone_cliente}`, pw - margin, y, { align: 'right' }) }; y += 6
-    if (o.validade) { doc.setFontSize(9); doc.setTextColor(130, 130, 130); doc.text(`Válido até: ${new Date(o.validade).toLocaleDateString('pt-BR')}`, margin, y); y += 6 }; y += 4
-    const colX = [margin, pw - margin - 60, pw - margin - 30, pw - margin]
-    doc.setFillColor(corSec.r, corSec.g, corSec.b); doc.roundedRect(margin, y, pw - 2 * margin, 8, 2, 2, 'F')
-    doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold')
-    doc.text('Serviço', colX[0] + 4, y + 5.5); doc.text('Qtd', colX[1], y + 5.5, { align: 'center' }); doc.text('Unit.', colX[2], y + 5.5, { align: 'center' }); doc.text('Subtotal', colX[3], y + 5.5, { align: 'right' }); y += 12
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); let subT = 0
-    o.itens.forEach((item) => { const sub = item.quantidade * item.valor_unitario; subT += sub; doc.setFontSize(9); doc.text(item.descricao, colX[0] + 4, y); doc.text(String(item.quantidade), colX[1], y, { align: 'center' }); doc.text(fmt(item.valor_unitario), colX[2], y, { align: 'center' }); doc.setFont('helvetica', 'bold'); doc.text(fmt(sub), colX[3], y, { align: 'right' }); doc.setFont('helvetica', 'normal'); y += 7; doc.setDrawColor(230, 230, 230); doc.setLineWidth(0.2); doc.line(margin, y - 2, pw - margin, y - 2) })
-    y += 4; doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.text('Subtotal:', pw - margin - 40, y); doc.text(fmt(subT), pw - margin, y, { align: 'right' }); y += 6
-    if (subT > o.valor_total) { doc.setTextColor(220, 50, 50); doc.text('Desconto:', pw - margin - 40, y); doc.text(`-${fmt(subT - o.valor_total)}`, pw - margin, y, { align: 'right' }); y += 6 }
-    doc.setFontSize(12); doc.setTextColor(corSec.r, corSec.g, corSec.b); doc.setFont('helvetica', 'bold'); doc.text('TOTAL:', pw - margin - 40, y); doc.text(fmt(o.valor_total), pw - margin, y, { align: 'right' }); y += 10
-    if (o.observacoes) { doc.setFontSize(8); doc.setTextColor(130, 130, 130); doc.setFont('helvetica', 'italic'); doc.text(`Obs: ${o.observacoes}`, margin, y, { maxWidth: pw - 2 * margin }); y += 10 }
-    if (brand.pdf_termos) { doc.setDrawColor(230, 230, 230); doc.setLineWidth(0.3); doc.line(margin, y, pw - margin, y); y += 6; doc.setFontSize(7); doc.setTextColor(150, 150, 150); doc.setFont('helvetica', 'normal'); const tl = doc.splitTextToSize(brand.pdf_termos, pw - 2 * margin); doc.text(tl, margin, y); y += tl.length * 4 + 6 }
-    if (brand.pdf_rodape) { doc.setDrawColor(corPri.r, corPri.g, corPri.b); doc.setLineWidth(1); doc.line(margin, y, pw - margin, y); y += 6; doc.setFontSize(9); doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'bold'); doc.text(brand.pdf_rodape, pw / 2, y, { align: 'center' }) }
-    doc.save(`orcamento_${o.nome_cliente.replace(/\s+/g, '_').toLowerCase()}.pdf`)
-  }
 
   const adicionar = async () => {
     if (!form.nome_cliente || !form.valor) return
@@ -1089,14 +1047,11 @@ export default function Vendas() {
                     <CalendarDays size={14} /> Agendar e Converter
                   </button>
                 )}
-                <button onClick={() => exportarOrcPDFSimples(orcDetalhe)} className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
-                  <Download size={14} /> Exportar PDF
-                </button>
                 <button
                   onClick={() => { setExportOrc(orcDetalhe); setExportModal(true) }}
                   className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
                 >
-                  <FileText size={14} /> Check List PDF
+                  <Download size={14} /> Exportar PDF
                 </button>
               </div>
               {orcDetalhe.telefone_cliente && (

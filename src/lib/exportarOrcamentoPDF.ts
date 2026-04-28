@@ -16,6 +16,7 @@ interface DadosOrcamento {
   orcamento: Orcamento
   servicos: Servico[]
   brand: BrandConfig
+  tipo?: 'orcamento' | 'venda'
   marcacoesDefeitos?: { x: number; y: number }[]
   estadoPintura?: 'otimo' | 'bom' | 'regular' | 'ruim'
   lavador?: string
@@ -27,10 +28,11 @@ interface DadosOrcamento {
 }
 
 export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void> {
-  const { orcamento, servicos, brand, marcacoesDefeitos = [],
+  const { orcamento, servicos, brand, tipo = 'orcamento', marcacoesDefeitos = [],
     estadoPintura, lavador, tecnicoPolidor,
     dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
     observacoes } = dados
+  const labelTipo = tipo === 'venda' ? 'VENDA' : 'ORÇAMENTO'
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const pw = doc.internal.pageSize.getWidth()
@@ -82,7 +84,7 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(corPri.r, corPri.g, corPri.b)
-  doc.text('CHECK LIST / ORÇAMENTO', pw - margin, 13, { align: 'right' })
+  doc.text(`CHECK LIST / ${labelTipo}`, pw - margin, 13, { align: 'right' })
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(180, 180, 180)
@@ -121,7 +123,7 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.setTextColor(120, 120, 120)
   doc.setFont('helvetica', 'normal')
   doc.text('VEÍCULO / SERVIÇO', margin, y)
-  doc.text('NÚMERO DO ORÇAMENTO', pw / 2 + 2, y)
+  doc.text(`NÚMERO DO ${labelTipo}`, pw / 2 + 2, y)
   y += 4
 
   doc.setFontSize(9)
@@ -421,6 +423,6 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
     doc.text(brand.endereco, pw / 2, ph - 3, { align: 'center' })
   }
 
-  const nomeArq = `orcamento_${orcamento.nome_cliente.replace(/\s+/g, '_').toLowerCase()}_${orcamento.id.slice(0, 6)}.pdf`
+  const nomeArq = `${tipo}_${orcamento.nome_cliente.replace(/\s+/g, '_').toLowerCase()}_${orcamento.id.slice(0, 6)}.pdf`
   doc.save(nomeArq)
 }
