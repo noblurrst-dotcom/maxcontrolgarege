@@ -52,6 +52,16 @@ export default function Vendas() {
   const [descontoTipo, setDescontoTipo] = useState<'valor' | 'percentual'>('valor')
   const [mostrarChecklist, setMostrarChecklist] = useState(false)
   const [checklistSalvo, setChecklistSalvo] = useState(false)
+  const [vendaExportModal, setVendaExportModal] = useState(false)
+  const [vendaMarcacoesDefeitos, setVendaMarcacoesDefeitos] = useState<{x:number;y:number}[]>([])
+  const [vendaEstadoPintura, setVendaEstadoPintura] = useState<'otimo'|'bom'|'regular'|'ruim'|''>('')
+  const [vendaLavador, setVendaLavador] = useState('')
+  const [vendaTecnicoPolidor, setVendaTecnicoPolidor] = useState('')
+  const [vendaDataEntradaLoja, setVendaDataEntradaLoja] = useState('')
+  const [vendaDataEntradaOficina, setVendaDataEntradaOficina] = useState('')
+  const [vendaDataSaidaOficina, setVendaDataSaidaOficina] = useState('')
+  const [vendaObsExport, setVendaObsExport] = useState('')
+  const [vendaGerandoPDF, setVendaGerandoPDF] = useState(false)
   const [vendaPagModal, setVendaPagModal] = useState(false)
   const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
@@ -902,6 +912,37 @@ export default function Vendas() {
                   </button>
                 </div>
               )}
+              {/* Checklist + Export PDF */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setMostrarChecklist(!mostrarChecklist); setChecklistSalvo(false) }}
+                  className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                >
+                  <ClipboardCheck size={14} /> {detalhe.checklist_id ? 'Ver Checklist' : 'Criar Checklist'}
+                </button>
+                {detalhe.checklist_id && (
+                  <button
+                    onClick={() => setVendaExportModal(true)}
+                    className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Download size={14} /> Exportar PDF
+                  </button>
+                )}
+              </div>
+              {mostrarChecklist && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <ChecklistEmbutido
+                    nomeCliente={detalhe.nome_cliente}
+                    placa=""
+                    onSalvo={(checklistId) => {
+                      const atualizada = { ...detalhe, checklist_id: checklistId }
+                      salvar(vendas.map(v => v.id === detalhe.id ? atualizada : v))
+                      setDetalhe(atualizada)
+                      setChecklistSalvo(true)
+                    }}
+                  />
+                </div>
+              )}
               <button onClick={() => remover(detalhe.id)} className="w-full py-2.5 border border-danger-200 text-danger-600 hover:bg-danger-50 rounded-xl text-xs font-bold transition-colors">
                 Excluir Venda
               </button>
@@ -1263,6 +1304,124 @@ export default function Vendas() {
                 <CalendarDays size={14} /> Confirmar
               </button>
             </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Exportação Check List PDF — Venda */}
+      {vendaExportModal && detalhe && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => setVendaExportModal(false)}>
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[96vh] sm:max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">Gerar Check List PDF — Venda</h2>
+              <button onClick={() => setVendaExportModal(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4">
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-2 block">
+                  Identificação de Defeitos
+                </label>
+                <DiagramaDefeitos
+                  marcacoes={vendaMarcacoesDefeitos}
+                  onChange={setVendaMarcacoesDefeitos}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-2 block">Estado da Pintura</label>
+                <div className="flex gap-2">
+                  {(['otimo','bom','regular','ruim'] as const).map(e => (
+                    <button key={e} type="button"
+                      onClick={() => setVendaEstadoPintura(v => v === e ? '' : e)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${
+                        vendaEstadoPintura === e
+                          ? 'bg-primary-500 text-on-primary'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      {e === 'otimo' ? 'Ótimo' : e.charAt(0).toUpperCase() + e.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Lavador</label>
+                  <input type="text" value={vendaLavador} onChange={e => setVendaLavador(e.target.value)}
+                    placeholder="Nome do lavador"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Técnico Polidor</label>
+                  <input type="text" value={vendaTecnicoPolidor} onChange={e => setVendaTecnicoPolidor(e.target.value)}
+                    placeholder="Nome do técnico"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Entrada na Loja', val: vendaDataEntradaLoja, set: setVendaDataEntradaLoja },
+                  { label: 'Entrada Oficina', val: vendaDataEntradaOficina, set: setVendaDataEntradaOficina },
+                  { label: 'Saída Oficina', val: vendaDataSaidaOficina, set: setVendaDataSaidaOficina },
+                ].map(({ label, val, set }) => (
+                  <div key={label}>
+                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">{label}</label>
+                    <input type="date" value={val} onChange={e => set(e.target.value)}
+                      className="w-full px-2 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-primary-500 outline-none" />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Observações</label>
+                <textarea value={vendaObsExport} onChange={e => setVendaObsExport(e.target.value)}
+                  placeholder="Observações gerais sobre o veículo ou serviço..."
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
+              </div>
+
+              <button
+                onClick={async () => {
+                  setVendaGerandoPDF(true)
+                  try {
+                    const orcLike = {
+                      ...detalhe,
+                      itens: [{ descricao: detalhe.descricao, quantidade: 1, valor_unitario: detalhe.valor_total }],
+                      telefone_cliente: '',
+                    }
+                    await exportarOrcamentoPDF({
+                      orcamento: orcLike as any,
+                      servicos,
+                      brand,
+                      tipo: 'venda',
+                      marcacoesDefeitos: vendaMarcacoesDefeitos,
+                      estadoPintura: vendaEstadoPintura || undefined,
+                      lavador: vendaLavador, tecnicoPolidor: vendaTecnicoPolidor,
+                      dataEntradaLoja: vendaDataEntradaLoja, dataEntradaOficina: vendaDataEntradaOficina, dataSaidaOficina: vendaDataSaidaOficina,
+                      observacoes: vendaObsExport,
+                    })
+                    setVendaExportModal(false)
+                  } finally {
+                    setVendaGerandoPDF(false)
+                  }
+                }}
+                disabled={vendaGerandoPDF}
+                className="w-full py-3 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-xl text-sm font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {vendaGerandoPDF
+                  ? <><Loader2 size={16} className="animate-spin" /> Gerando PDF...</>
+                  : <><Download size={16} /> Baixar Check List PDF</>
+                }
+              </button>
             </div>
           </div>
         </div>
