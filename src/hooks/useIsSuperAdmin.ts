@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { SUPER_ADMIN_IDS } from '../pages/AdminSuporte'
+import { SUPER_ADMIN_IDS } from '../lib/superAdmins'
 
 /**
  * Verifica se o usuário logado é superadmin.

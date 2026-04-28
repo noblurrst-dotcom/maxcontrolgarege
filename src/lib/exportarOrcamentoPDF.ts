@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf'
 import type { Orcamento, Servico } from '../types'
 
 interface BrandConfig {
@@ -54,6 +53,8 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
     observacoes } = dados
   const labelTipo = tipo === 'venda' ? 'VENDA' : 'ORÇAMENTO'
 
+  // Carrega jsPDF apenas quando o usuário gera um PDF (lazy)
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const pw = doc.internal.pageSize.getWidth()
   const ph = doc.internal.pageSize.getHeight()

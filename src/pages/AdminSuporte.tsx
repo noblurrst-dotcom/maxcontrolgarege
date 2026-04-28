@@ -12,12 +12,8 @@ import {
   XCircle,
 } from 'lucide-react'
 
-// ========================================================================
-// IDs dos super administradores (adicione seu user_id do Supabase aqui)
-// ========================================================================
-export const SUPER_ADMIN_IDS: string[] = [
-  '22cf7ac8-0e64-481e-b0a6-c71b8fc11823',
-]
+import { SUPER_ADMIN_IDS } from '../lib/superAdmins'
+export { SUPER_ADMIN_IDS }
 
 
 export default function AdminSuporte() {

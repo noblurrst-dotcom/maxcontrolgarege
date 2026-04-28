@@ -10,7 +10,7 @@ import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import jsPDF from 'jspdf'
+// jsPDF é importado dinamicamente dentro de gerarPDFTabela() para reduzir o bundle inicial
 import type { Venda, Agendamento, Cliente, Servico, Orcamento, ContaFinanceira } from '../types'
 
 // ─── Utilitário CSV ───────────────────────────────────────────────────────────
@@ -34,12 +34,13 @@ function baixarCSV(nome: string, cabecalho: string[], linhas: (string | number)[
 }
 
 // ─── Utilitário PDF ───────────────────────────────────────────────────────────
-function gerarPDFTabela(
+async function gerarPDFTabela(
   nomeRelatorio: string,
   cabecalho: string[],
   linhas: (string | number)[][],
   brand: { nome_empresa: string; cor_primaria: string; cor_secundaria: string }
 ) {
+  const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
   const pw = doc.internal.pageSize.getWidth()
   const ph = doc.internal.pageSize.getHeight()
@@ -298,10 +299,10 @@ export default function Relatorios() {
     }
   }
 
-  const exportarPDF = (rel: typeof relatorios[0]) => {
+  const exportarPDF = async (rel: typeof relatorios[0]) => {
     setGerando(rel.id + '_pdf')
     try {
-      gerarPDFTabela(rel.nome, rel.cabecalho, rel.linhas(), {
+      await gerarPDFTabela(rel.nome, rel.cabecalho, rel.linhas(), {
         nome_empresa: brand.nome_empresa || 'Empresa',
         cor_primaria: brand.cor_primaria || '#CFFF04',
         cor_secundaria: brand.cor_secundaria || '#0d0d1a',
