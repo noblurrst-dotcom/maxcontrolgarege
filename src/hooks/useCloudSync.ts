@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { safeGetStorage, safeSetStorage } from '../lib/utils'
 import { useSupportView } from '../contexts/SupportViewContext'
+import toast from 'react-hot-toast'
 
 // =====================================================================
 // useCloudSync — Sincroniza arrays de dados com Supabase + localStorage
@@ -115,18 +116,36 @@ export function useCloudSync<T extends Record<string, any>>(
     if (!user || !isSupabaseConfigured) return
 
     try {
-      // Delete all user rows then re-insert (simple full-sync approach)
-      await supabase.from(table).delete().eq(userIdField, user.id)
+      // Estratégia segura: upsert PRIMEIRO; só deleta os IDs que sobraram depois.
+      // Se algum erro acontecer no upsert, NÃO apaga nada do banco (evita perder dados).
       if (items.length > 0) {
         const toInsert = items.map((item) => ({
           ...item,
           [userIdField]: user.id,
         }))
-        const { error } = await supabase.from(table).upsert(toInsert, { onConflict: 'id' })
-        if (error) console.warn(`[CloudSync] Erro ao salvar "${table}":`, error.message)
+        const { error: upErr } = await supabase.from(table).upsert(toInsert, { onConflict: 'id' })
+        if (upErr) {
+          console.error(`[CloudSync] Erro ao salvar "${table}":`, upErr)
+          toast.error(`Erro ao salvar ${table}: ${upErr.message}`, { duration: 6000 })
+          return // não deleta nada — preserva dados do banco
+        }
       }
-    } catch (err) {
-      console.warn(`[CloudSync] Erro ao sincronizar "${table}":`, err)
+
+      // Apaga apenas IDs que NÃO estão no items (limpeza de removidos)
+      const idsManter = items.map(i => (i as any).id).filter(Boolean)
+      if (idsManter.length > 0) {
+        const { error: delErr } = await supabase
+          .from(table).delete()
+          .eq(userIdField, user.id)
+          .not('id', 'in', `(${idsManter.map(id => `"${id}"`).join(',')})`)
+        if (delErr) console.warn(`[CloudSync] Erro ao limpar removidos "${table}":`, delErr.message)
+      } else {
+        // items vazio → apaga tudo do usuário
+        await supabase.from(table).delete().eq(userIdField, user.id)
+      }
+    } catch (err: any) {
+      console.error(`[CloudSync] Erro ao sincronizar "${table}":`, err)
+      toast.error(`Erro de sincronização: ${err?.message || 'desconhecido'}`, { duration: 6000 })
     }
   }, [user, table, storageKey, userIdField])
 
