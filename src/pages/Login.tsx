@@ -139,12 +139,12 @@ export default function Login() {
               </p>
             </div>
 
-            {/* Supabase warning */}
+            {/* Aviso de configuração */}
             {!configured && (
               <div className="bg-warning-50 border border-warning-200 rounded-xl p-3 sm:p-4 mb-5 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-warning-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-warning-800">Supabase não configurado</p>
+                  <p className="text-sm font-medium text-warning-800">Servidor não configurado</p>
                   <p className="text-xs text-warning-600 mt-1">
                     Configure o <code className="bg-warning-100 px-1 rounded">.env</code> com suas credenciais.
                   </p>
@@ -282,10 +282,6 @@ export default function Login() {
               </p>
             )}
 
-            {/* Resend badge */}
-            <p className="text-center mt-6 text-[11px] text-gray-300">
-              Emails enviados com <span className="font-medium">Resend</span>
-            </p>
 
           </div>
         </div>
