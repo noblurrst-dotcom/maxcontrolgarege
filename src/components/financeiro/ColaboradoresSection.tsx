@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User, Pencil, X, Info } from 'lucide-react'
+import { Plus, Search, Users, UserCheck, UserX, Briefcase, Building2, User, Pencil, X, Info, DollarSign } from 'lucide-react'
 import { useCloudSync } from '../../hooks/useCloudSync'
 import { useDebounce } from '../../hooks/useDebounce'
 import { fmt, uid } from '../../lib/utils'
 import type { Colaborador, TipoColaborador } from '../../types'
 import ColaboradorFormModal from './ColaboradorFormModal'
 import { calcularCustoMensal, type CustoMensal } from '../../lib/colaboradores'
+import FolhaSection from './FolhaSection'
 
 type Filtro = 'todos' | 'ativos' | 'inativos' | 'clt' | 'freelancer_pj' | 'freelancer_autonomo'
 
@@ -41,6 +42,7 @@ export default function ColaboradoresSection() {
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
   const [filtro, setFiltro] = useState<Filtro>('todos')
+  const [subTab, setSubTab] = useState<'lista' | 'folha'>('lista')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<Colaborador | null>(null)
   const [detalheCusto, setDetalheCusto] = useState<{ colaborador: Colaborador; custo: CustoMensal } | null>(null)
@@ -108,13 +110,45 @@ export default function ColaboradoresSection() {
             {contadores.total} cadastrado{contadores.total !== 1 ? 's' : ''} · {contadores.ativos} ativo{contadores.ativos !== 1 ? 's' : ''}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={abrirNovo}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors"
+          >
+            <Plus size={14} /> Novo colaborador
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-tabs: Lista / Folha */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
         <button
-          onClick={abrirNovo}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-hover text-on-primary rounded-full text-xs font-bold transition-colors self-start sm:self-auto"
+          onClick={() => setSubTab('lista')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors flex-1 justify-center ${
+            subTab === 'lista'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <Plus size={14} /> Novo colaborador
+          <Users size={14} /> Lista
+        </button>
+        <button
+          onClick={() => setSubTab('folha')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors flex-1 justify-center ${
+            subTab === 'folha'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <DollarSign size={14} /> Folha
         </button>
       </div>
+
+      {/* Sub-tab: Folha */}
+      {subTab === 'folha' && <FolhaSection />}
+
+      {/* Sub-tab: Lista */}
+      {subTab !== 'lista' ? null : (<>
 
       {/* Cards resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -253,6 +287,8 @@ export default function ColaboradoresSection() {
           })}
         </div>
       )}
+
+      </>)}
 
       {/* Modal cadastro/edição */}
       {modalAberto && (
