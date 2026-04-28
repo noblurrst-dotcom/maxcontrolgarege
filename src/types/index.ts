@@ -368,5 +368,6 @@ export interface Veiculo {
   created_at: string
 }
 
-
-
+// Re-export impostos types
+export type { RegimeTributario, ConfiguracaoImpostos, ItemImposto, EstimativaImpostos } from './impostos'
+export { CONFIG_IMPOSTOS_DEFAULT } from './impostos'
