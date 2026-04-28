@@ -10,7 +10,7 @@ create table if not exists public.pagamentos_colaboradores (
   valor numeric(10,2) not null,
   mes_referencia text not null,
   data_pagamento date not null,
-  venda_id uuid references public.vendas(id) on delete set null,
+  venda_id text references public.vendas(id) on delete set null,
   observacoes text default '',
   created_at timestamptz default now()
 );
