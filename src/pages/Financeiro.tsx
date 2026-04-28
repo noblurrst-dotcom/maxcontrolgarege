@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight, Users, Receipt, BarChart3 } from 'lucide-react'
 import ColaboradoresSection from '../components/financeiro/ColaboradoresSection'
 import ImpostosSection from '../components/financeiro/ImpostosSection'
+import Visao360Section from '../components/financeiro/Visao360Section'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { ContaFinanceira, FormaPagamento, Venda } from '../types'
@@ -29,7 +30,7 @@ const TABS: { value: TabFinanceiro; label: string; icon: typeof DollarSign; disa
   { value: 'movimentacoes', label: 'Movimentações', icon: DollarSign },
   { value: 'colaboradores', label: 'Colaboradores', icon: Users },
   { value: 'impostos', label: 'Impostos', icon: Receipt },
-  { value: 'visao360', label: 'Visão 360', icon: BarChart3, disabled: true },
+  { value: 'visao360', label: 'Visão 360', icon: BarChart3 },
 ]
 
 export default function Financeiro() {
@@ -120,14 +121,8 @@ export default function Financeiro() {
       {/* Tab: Impostos */}
       {tabAtiva === 'impostos' && <ImpostosSection />}
 
-      {/* Tab: Visão 360 (placeholder) */}
-      {tabAtiva === 'visao360' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-          <BarChart3 size={48} className="text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-900 font-semibold text-lg">Visão 360</p>
-          <p className="text-gray-400 text-sm mt-1">Visão completa do negócio disponível na Entrega 3</p>
-        </div>
-      )}
+      {/* Tab: Visão 360 */}
+      {tabAtiva === 'visao360' && <Visao360Section />}
 
       {/* Tab: Movimentações (conteúdo original) */}
       {tabAtiva === 'movimentacoes' && <>
