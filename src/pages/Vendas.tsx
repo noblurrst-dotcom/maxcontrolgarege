@@ -11,7 +11,6 @@ import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
-import ChecklistEmbutido from '../components/ChecklistEmbutido'
 import ChecklistUnificado from '../components/ChecklistUnificado'
 import toast from 'react-hot-toast'
 import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
@@ -680,14 +679,30 @@ export default function Vendas() {
 
                 {mostrarChecklist && (
                   <div className="px-4 pb-4 border-t border-gray-100">
-                    <ChecklistEmbutido
+                    <ChecklistUnificado
+                      tipo="venda"
                       nomeCliente={form.nome_cliente}
-                      placa=""
-                      telefone=""
+                      origem={{
+                        id: 'pendente',
+                        user_id: user?.id || '',
+                        cliente_id: null,
+                        nome_cliente: form.nome_cliente,
+                        descricao: form.descricao,
+                        valor: parseFloat(form.valor) || 0,
+                        desconto: 0,
+                        valor_total: parseFloat(form.valor) || 0,
+                        forma_pagamento: form.forma_pagamento || 'pix',
+                        data_venda: form.data_venda,
+                        parcelas: parseInt(form.parcelas) || 1,
+                        funcionario: form.funcionario,
+                        observacoes: form.observacoes,
+                        checklist_id: null,
+                        created_at: new Date().toISOString(),
+                      } as Venda}
                       onSalvo={() => {
                         setChecklistSalvo(true)
                         setMostrarChecklist(false)
-                        toast.success('Checklist vinculado à venda!')
+                        toast.success('Checklist salvo. Será vinculado à venda ao registrar.')
                       }}
                     />
                   </div>
