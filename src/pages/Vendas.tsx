@@ -44,7 +44,6 @@ export default function Vendas() {
   const { data: kanbanItems, save: salvarKanban } = useCloudSync<any>({ table: 'kanban_items', storageKey: 'kanban_items' })
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebounce(busca, 300)
-  const [filtroStatus, setFiltroStatus] = useState<'todas' | 'aberta' | 'fechada'>('todas')
   const [filtroPagamento, setFiltroPagamento] = useState<'todos' | 'pendente' | 'parcial' | 'pago' | 'cortesia' | 'cancelada'>('todos')
   const [modal, setModal] = useState(false)
   const [detalhe, setDetalhe] = useState<Venda | null>(null)
@@ -287,9 +286,8 @@ export default function Vendas() {
     const result = vendas.filter((v) => {
       const t = buscaDebounced.toLowerCase()
       const matchBusca = v.nome_cliente.toLowerCase().includes(t) || v.descricao.toLowerCase().includes(t)
-      const matchStatus = filtroStatus === 'todas' || v.status === filtroStatus
       const matchPag = filtroPagamento === 'todos' || (v.status_pagamento || 'pago') === filtroPagamento
-      return matchBusca && matchStatus && matchPag && isInRange(v.data_venda)
+      return matchBusca && matchPag && isInRange(v.data_venda)
     })
     // Sort: pendentes → parciais → resto por data desc
     const ORDER: Record<string, number> = { pendente: 0, parcial: 1, pago: 2, cortesia: 3, cancelada: 4 }
@@ -300,7 +298,7 @@ export default function Vendas() {
       return new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime()
     })
     return result
-  }, [vendas, buscaDebounced, filtroStatus, filtroPagamento, isInRange])
+  }, [vendas, buscaDebounced, filtroPagamento, isInRange])
 
   // Contadores de status_pagamento (no período)
   const contagensPag = useMemo(() => {
@@ -371,16 +369,9 @@ export default function Vendas() {
       {tab === 'vendas' && (<>
       {/* Filtros: busca + status venda + chips pagamento */}
       <div className="space-y-3">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente ou descrição..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
-          </div>
-          <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as any)} className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-            <option value="todas">Todas</option>
-            <option value="aberta">Abertas</option>
-            <option value="fechada">Fechadas</option>
-          </select>
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente ou descrição..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm" />
         </div>
         {/* Chips de status de pagamento */}
         <div className="flex flex-wrap gap-1.5">
@@ -432,19 +423,21 @@ export default function Vendas() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtradas.map((v) => (
-            <div key={v.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 active:bg-gray-50 transition-colors" onClick={() => setDetalhe(v)}>
+          {filtradas.map((v) => {
+            const semPagamento = !v.status_pagamento || v.status_pagamento === 'pendente'
+            const parcial = v.status_pagamento === 'parcial'
+            return (
+            <div key={v.id} className={`bg-white rounded-xl shadow-sm p-3 sm:p-4 active:bg-gray-50 transition-colors cursor-pointer border ${
+              semPagamento ? 'border-warning-300 ring-1 ring-warning-100' : 'border-gray-100'
+            }`} onClick={() => setDetalhe(v)}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${v.status === 'aberta' ? 'bg-warning-100' : 'bg-success-100'}`}>
                     {v.status === 'aberta' ? <Unlock size={16} className="text-warning-600" /> : <Lock size={16} className="text-success-600" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-gray-900 truncate">{v.nome_cliente}</p>
-                      <span className={`hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${v.status === 'aberta' ? 'bg-warning-100 text-warning-700' : 'bg-success-100 text-success-700'}`}>
-                        {v.status === 'aberta' ? 'Aberta' : 'Fechada'}
-                      </span>
                       {v.status_pagamento && v.status_pagamento !== 'pago' && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           v.status_pagamento === 'pendente' ? 'bg-warning-100 text-warning-700' :
@@ -452,7 +445,7 @@ export default function Vendas() {
                           v.status_pagamento === 'cortesia' ? 'bg-gray-100 text-gray-500' :
                           v.status_pagamento === 'cancelada' ? 'bg-danger-100 text-danger-600' : ''
                         }`}>
-                          {v.status_pagamento === 'pendente' ? '$ Pendente' : v.status_pagamento === 'parcial' ? '$ Parcial' : v.status_pagamento === 'cortesia' ? 'Cortesia' : v.status_pagamento === 'cancelada' ? 'Cancelada' : ''}
+                          {v.status_pagamento === 'pendente' ? '⚠ Pagamento pendente' : v.status_pagamento === 'parcial' ? '⚠ Pagamento parcial' : v.status_pagamento === 'cortesia' ? 'Cortesia' : v.status_pagamento === 'cancelada' ? 'Cancelada' : ''}
                         </span>
                       )}
                     </div>
@@ -460,13 +453,19 @@ export default function Vendas() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
-                  <p className="text-sm font-bold text-success-600">{fmt(v.valor_total || v.valor)}</p>
+                  <p className={`text-sm font-bold ${semPagamento ? 'text-warning-600' : parcial ? 'text-blue-600' : 'text-success-600'}`}>{fmt(v.valor_total || v.valor)}</p>
                   <button onClick={(e) => { e.stopPropagation(); enviarWhatsApp(v) }} className="p-1.5 text-gray-300 hover:text-green-500 transition-colors hidden sm:block"><MessageCircle size={14} /></button>
                   <button onClick={(e) => { e.stopPropagation(); remover(v.id) }} className="p-1.5 text-gray-300 hover:text-danger-500 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
+              {semPagamento && (
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-warning-700 bg-warning-50 rounded-md px-2 py-1">
+                  ⚠ Esta venda ainda não tem pagamento registrado. Clique para capturar.
+                </div>
+              )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
       </>)}
