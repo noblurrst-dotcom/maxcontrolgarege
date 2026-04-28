@@ -68,6 +68,81 @@ export default function Vendas() {
     }
   }, [user])
 
+  // ── Backfill: reconcilia agendamentos ↔ vendas (1:1) ──────────────────────
+  // Para cada agendamento sem venda_id, cria uma venda pendente.
+  // Para cada venda sem agendamento, cria um agendamento na data_venda.
+  // Roda uma vez por sessão quando os dados carregam.
+  const [reconciliado, setReconciliado] = useState(false)
+  useEffect(() => {
+    if (!user || reconciliado) return
+    if (vendas.length === 0 && agendamentos.length === 0) return
+    setReconciliado(true)
+
+    const idsVendas = new Set(vendas.map(v => v.id))
+    const agsSemVenda = agendamentos.filter(a => !a.venda_id || !idsVendas.has(a.venda_id))
+    const vendasComAg = new Set(agendamentos.map(a => a.venda_id).filter(Boolean) as string[])
+    const vendasSemAg = vendas.filter(v => !vendasComAg.has(v.id))
+
+    if (agsSemVenda.length === 0 && vendasSemAg.length === 0) return
+
+    const novasVendas: Venda[] = []
+    const novosAgs: Agendamento[] = []
+    const agsAtualizadas: Agendamento[] = []
+
+    // 1) Cria vendas para agendamentos órfãos
+    for (const ag of agsSemVenda) {
+      const novaVendaId = uid()
+      const valorTotal = Math.max((ag.valor || 0) - (ag.desconto || 0), 0)
+      novasVendas.push({
+        id: novaVendaId, user_id: '', cliente_id: null,
+        nome_cliente: ag.nome_cliente,
+        descricao: ag.servico || ag.titulo || 'Serviço agendado',
+        valor: ag.valor || 0, desconto: ag.desconto || 0, valor_total: valorTotal,
+        valor_pago: 0, forma_pagamento: null,
+        status_pagamento: 'pendente',
+        data_venda: ag.data_hora ? ag.data_hora.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        status: 'aberta', parcelas: 1,
+        funcionario: '', colaborador_id: null,
+        observacoes: ag.observacoes || '',
+        checklist_id: null,
+        created_at: ag.created_at || new Date().toISOString(),
+      })
+      agsAtualizadas.push({ ...ag, venda_id: novaVendaId })
+    }
+
+    // 2) Cria agendamentos para vendas órfãs
+    for (const v of vendasSemAg) {
+      const dataInicio = `${v.data_venda}T09:00:00`
+      const fim = new Date(dataInicio); fim.setHours(fim.getHours() + 1)
+      const dataFim = fim.toISOString().slice(0, 19)
+      novosAgs.push({
+        id: uid(), user_id: '', cliente_id: null, venda_id: v.id,
+        nome_cliente: v.nome_cliente, telefone_cliente: '',
+        placa: '', veiculo: '',
+        servico: v.descricao || 'Serviço', titulo: v.descricao || '',
+        data_hora: dataInicio, data_hora_fim: dataFim,
+        duracao_min: 60,
+        status: v.status_pagamento === 'pago' ? 'concluido' : 'pendente',
+        observacoes: v.observacoes || '', valor: v.valor_total || v.valor, desconto: v.desconto || 0,
+        cor: '#4285F4', created_at: v.created_at || new Date().toISOString(),
+      })
+    }
+
+    if (novasVendas.length > 0) {
+      salvarVendas([...novasVendas, ...vendas])
+    }
+    if (novosAgs.length > 0 || agsAtualizadas.length > 0) {
+      const agsAtualMap = new Map(agsAtualizadas.map(a => [a.id, a]))
+      const listaFinal = agendamentos.map(a => agsAtualMap.get(a.id) || a)
+      salvarAgendamentos([...novosAgs, ...listaFinal])
+    }
+
+    const total = novasVendas.length + novosAgs.length
+    if (total > 0) {
+      toast.success(`Reconciliação: ${novasVendas.length} venda(s) e ${novosAgs.length} agendamento(s) criados`, { duration: 5000 })
+    }
+  }, [user, vendas, agendamentos, reconciliado, salvarVendas, salvarAgendamentos])
+
   // Orçamento state
   const { data: orcamentos, save: salvarOrcamentos } = useCloudSync<Orcamento>({ table: 'orcamentos', storageKey: 'orcamentos' })
   const [orcModal, setOrcModal] = useState(false)
@@ -232,31 +307,35 @@ export default function Vendas() {
       })
     }
 
-    // Se data de agendamento preenchida → criar agendamento automaticamente
+    // SEMPRE cria agendamento vinculado (pareamento 1:1 com venda).
+    // Se usuário preencheu data_agendamento, usa ela; senão usa data_venda + 09:00.
+    const agData = form.data_agendamento || form.data_venda
+    const agHora = form.data_agendamento ? (form.hora_agendamento || '09:00') : '09:00'
+    const dataHoraInicio = `${agData}T${agHora}:00`
+    let dataHoraFim: string
+    if (form.data_agendamento && form.data_agendamento_fim && form.hora_agendamento_fim) {
+      dataHoraFim = `${form.data_agendamento_fim}T${form.hora_agendamento_fim}:00`
+    } else {
+      const fimAuto = new Date(dataHoraInicio)
+      fimAuto.setHours(fimAuto.getHours() + 1)
+      dataHoraFim = fimAuto.toISOString().slice(0, 19)
+    }
+    const duracaoMin = Math.max(Math.round((new Date(dataHoraFim).getTime() - new Date(dataHoraInicio).getTime()) / 60000), 30)
+    const novoAg: Agendamento = {
+      id: uid(), user_id: '', cliente_id: null, venda_id: vendaId,
+      nome_cliente: form.nome_cliente, telefone_cliente: '',
+      placa: form.placa_agendamento || '', veiculo: form.veiculo_agendamento || '',
+      servico: form.descricao, titulo: form.descricao,
+      data_hora: dataHoraInicio,
+      data_hora_fim: dataHoraFim,
+      duracao_min: duracaoMin, status: 'pendente',
+      observacoes: form.observacoes, desconto, valor: valorTotal,
+      cor: form.cor_agendamento || '#4285F4', created_at: new Date().toISOString(),
+    }
+    salvarAgendamentos([novoAg, ...agendamentos])
+
+    // Kanban só quando o usuário deliberadamente agendou (preencheu data)
     if (form.data_agendamento) {
-      const dataHoraInicio = `${form.data_agendamento}T${form.hora_agendamento || '09:00'}:00`
-      let dataHoraFim: string
-      if (form.data_agendamento_fim && form.hora_agendamento_fim) {
-        dataHoraFim = `${form.data_agendamento_fim}T${form.hora_agendamento_fim}:00`
-      } else {
-        const fimAuto = new Date(dataHoraInicio)
-        fimAuto.setHours(fimAuto.getHours() + 1)
-        dataHoraFim = fimAuto.toISOString().slice(0, 19)
-      }
-      const duracaoMin = Math.max(Math.round((new Date(dataHoraFim).getTime() - new Date(dataHoraInicio).getTime()) / 60000), 30)
-      const novoAg: Agendamento = {
-        id: uid(), user_id: '', cliente_id: null, venda_id: vendaId,
-        nome_cliente: form.nome_cliente, telefone_cliente: '',
-        placa: form.placa_agendamento || '', veiculo: form.veiculo_agendamento || '',
-        servico: form.descricao, titulo: form.descricao,
-        data_hora: dataHoraInicio,
-        data_hora_fim: dataHoraFim,
-        duracao_min: duracaoMin, status: 'pendente',
-        observacoes: form.observacoes, desconto, valor: valorTotal,
-        cor: form.cor_agendamento || '#4285F4', created_at: new Date().toISOString(),
-      }
-      salvarAgendamentos([novoAg, ...agendamentos])
-      // Criar item no kanban na etapa Agendado
       const novoKanban = {
         id: uid(), user_id: '', etapa: 'agendado',
         nome_cliente: form.nome_cliente, telefone_cliente: '', placa: '', veiculo: '',

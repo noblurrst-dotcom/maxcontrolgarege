@@ -185,9 +185,37 @@ export default function Agenda() {
     const duracaoMin = form.data_hora && form.data_hora_fim
       ? Math.max(Math.round((new Date(form.data_hora_fim).getTime() - new Date(form.data_hora).getTime()) / 60000), 30)
       : 60
+
+    // Se já tem venda vinculada (criado a partir de uma venda existente), não cria outra
+    let vendaIdFinal = form.vendaId || null
+
+    // Se NÃO tem venda → auto-cria uma venda em "pendente" pra manter o pareamento 1:1
+    if (!vendaIdFinal) {
+      const novaVendaId = uid()
+      const valorTotal = Math.max(valor - desconto, 0)
+      const novaVenda: Venda = {
+        id: novaVendaId, user_id: '', cliente_id: null,
+        nome_cliente: form.nome_cliente,
+        descricao: form.servico || form.titulo || 'Serviço agendado',
+        valor, desconto, valor_total: valorTotal,
+        valor_pago: 0,
+        forma_pagamento: null,
+        status_pagamento: 'pendente',
+        data_venda: form.data_hora.slice(0, 10),
+        status: 'aberta',
+        parcelas: 1,
+        funcionario: '', colaborador_id: null,
+        observacoes: form.observacoes,
+        checklist_id: null,
+        created_at: new Date().toISOString(),
+      }
+      salvarVendas([novaVenda, ...vendas])
+      vendaIdFinal = novaVendaId
+    }
+
     const novo: Agendamento = {
       id: uid(), user_id: '', cliente_id: null,
-      venda_id: form.vendaId || null,
+      venda_id: vendaIdFinal,
       nome_cliente: form.nome_cliente, telefone_cliente: form.telefone_cliente,
       placa: form.placa || '', veiculo: form.veiculo || '',
       servico: form.servico, titulo: form.titulo,
@@ -200,6 +228,7 @@ export default function Agenda() {
     salvar([novo, ...lista])
     setModal(false)
     setForm(initForm())
+    toast.success(form.vendaId ? 'Agendamento criado' : 'Agendamento e venda criados (pagamento pendente)')
   }
 
   const remover = (id: string) => salvar(lista.filter((a) => a.id !== id))
