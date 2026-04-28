@@ -1,18 +1,31 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight, Users, Receipt, BarChart3 } from 'lucide-react'
+import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight, Users, Receipt, BarChart3, Repeat, Zap } from 'lucide-react'
 import ColaboradoresSection from '../components/financeiro/ColaboradoresSection'
 import ImpostosSection from '../components/financeiro/ImpostosSection'
 import Visao360Section from '../components/financeiro/Visao360Section'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
-import type { ContaFinanceira, FormaPagamento, Venda } from '../types'
+import type { ContaFinanceira, FormaPagamento, Venda, NaturezaDespesa } from '../types'
 import { uid, fmt } from '../lib/utils'
 import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 
 const CATEGORIAS_ENTRADA = ['Serviço', 'Venda', 'Comissão', 'Investimento', 'Outros']
-const CATEGORIAS_SAIDA = ['Material', 'Aluguel', 'Salário', 'Fornecedor', 'Água/Luz', 'Internet', 'Manutenção', 'Outros']
+const CATEGORIAS_SAIDA = ['Material', 'Aluguel', 'Salário', 'Fornecedor', 'Água/Luz', 'Internet', 'Manutenção', 'Produtos', 'Outros']
+
+// Mapeamento automático categoria → natureza default
+const NATUREZA_POR_CATEGORIA: Record<string, NaturezaDespesa> = {
+  'Aluguel': 'fixa',
+  'Salário': 'fixa',
+  'Internet': 'fixa',
+  'Material': 'variavel',
+  'Fornecedor': 'variavel',
+  'Água/Luz': 'variavel',
+  'Manutenção': 'variavel',
+  'Produtos': 'variavel',
+  'Outros': 'variavel',
+}
 const FORMAS: { value: FormaPagamento | ''; label: string }[] = [
   { value: '', label: 'Nenhuma' },
   { value: 'pix', label: 'Pix' }, { value: 'credito', label: 'Crédito' },
@@ -22,7 +35,7 @@ const FORMAS: { value: FormaPagamento | ''; label: string }[] = [
 
 interface ContaBancaria { id: string; nome: string; banco: string; saldo: number; tipo: string; ativo: boolean }
 
-const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '' })
+const initForm = () => ({ categoria: '', descricao: '', valor: '', data: new Date().toISOString().split('T')[0], pago: true, conta_bancaria: '', forma_pagamento: '' as FormaPagamento | '', natureza: '' as NaturezaDespesa | '' })
 
 type TabFinanceiro = 'movimentacoes' | 'colaboradores' | 'impostos' | 'visao360'
 
@@ -50,12 +63,17 @@ export default function Financeiro() {
 
   const adicionar = () => {
     if (!form.descricao || !form.valor || !modal) return
+    const cat = form.categoria || (modal === 'entrada' ? 'Serviço' : 'Material')
+    const natureza = modal === 'saida'
+      ? (form.natureza || NATUREZA_POR_CATEGORIA[cat] || 'variavel') as NaturezaDespesa
+      : null
     const nova: ContaFinanceira = {
       id: uid(), user_id: '', tipo: modal,
-      categoria: form.categoria || (modal === 'entrada' ? 'Serviço' : 'Material'),
+      categoria: cat,
       descricao: form.descricao, valor: parseFloat(form.valor),
       data: form.data, pago: form.pago,
       conta_bancaria: form.conta_bancaria, forma_pagamento: form.forma_pagamento,
+      natureza,
       created_at: new Date().toISOString(),
     }
     salvar([nova, ...contas])
@@ -75,11 +93,14 @@ export default function Financeiro() {
   const removerBanco = (id: string) => salvarBancos(bancos.filter(b => b.id !== id))
   const togglePago = (id: string) => salvar(contas.map(c => c.id === id ? { ...c, pago: !c.pago } : c))
 
-  const { entradas, saidas, saldo, pendentes } = useMemo(() => {
+  const { entradas, saidas, saldo, pendentes, fixas, variaveis } = useMemo(() => {
     const contasPeriodo = contas.filter(c => isInRange(c.data))
-    const ent = contasPeriodo.filter(c => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
-    const sai = contasPeriodo.filter(c => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
-    return { entradas: ent, saidas: sai, saldo: ent - sai, pendentes: contas.filter(c => !c.pago).length }
+    const entradas = contasPeriodo.filter(c => c.tipo === 'entrada').reduce((a, c) => a + c.valor, 0)
+    const saidas = contasPeriodo.filter(c => c.tipo === 'saida').reduce((a, c) => a + c.valor, 0)
+    const pendentes = contasPeriodo.filter(c => !c.pago).length
+    const fixas = contasPeriodo.filter(c => c.tipo === 'saida' && c.natureza === 'fixa').reduce((a, c) => a + c.valor, 0)
+    const variaveis = contasPeriodo.filter(c => c.tipo === 'saida' && c.natureza === 'variavel').reduce((a, c) => a + c.valor, 0)
+    return { entradas, saidas, saldo: entradas - saidas, pendentes, fixas, variaveis }
   }, [contas, isInRange])
 
   const filtradas = useMemo(() => contas.filter(c => {
@@ -188,6 +209,28 @@ export default function Financeiro() {
         </div>
       </div>
 
+      {/* Despesas fixas vs variáveis */}
+      {saidas > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-violet-100 rounded-xl flex items-center justify-center"><Repeat size={16} className="text-violet-600" /></div>
+              <p className="text-[10px] sm:text-xs font-medium text-gray-400">Despesas fixas</p>
+            </div>
+            <p className="text-lg sm:text-xl font-bold text-violet-600">{fmt(fixas)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">Aluguel, salários, internet...</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-amber-100 rounded-xl flex items-center justify-center"><Zap size={16} className="text-amber-600" /></div>
+              <p className="text-[10px] sm:text-xs font-medium text-gray-400">Despesas variáveis</p>
+            </div>
+            <p className="text-lg sm:text-xl font-bold text-amber-600">{fmt(variaveis)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">Água, luz, produtos, materiais...</p>
+          </div>
+        </div>
+      )}
+
       {/* Contas bancárias */}
       {bancos.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
@@ -271,10 +314,15 @@ export default function Financeiro() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{c.descricao}</p>
-                  <p className="text-[11px] sm:text-xs text-gray-400 truncate">
-                    {c.categoria} · {new Date(c.data).toLocaleDateString('pt-BR')}
-                    {c.forma_pagamento ? ` · ${FORMAS.find(f => f.value === c.forma_pagamento)?.label}` : ''}
-                    {c.conta_bancaria ? ` · ${bancos.find(b => b.id === c.conta_bancaria)?.nome || ''}` : ''}
+                  <p className="text-[11px] sm:text-xs text-gray-400 truncate flex items-center gap-1 flex-wrap">
+                    <span>{c.categoria} · {new Date(c.data).toLocaleDateString('pt-BR')}</span>
+                    {c.tipo === 'saida' && c.natureza && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${c.natureza === 'fixa' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {c.natureza === 'fixa' ? 'Fixa' : 'Variável'}
+                      </span>
+                    )}
+                    {c.forma_pagamento ? <span>· {FORMAS.find(f => f.value === c.forma_pagamento)?.label}</span> : null}
+                    {c.conta_bancaria ? <span>· {bancos.find(b => b.id === c.conta_bancaria)?.nome || ''}</span> : null}
                   </p>
                 </div>
               </div>
@@ -305,7 +353,11 @@ export default function Financeiro() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Categoria</label>
-                  <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                  <select value={form.categoria} onChange={(e) => {
+                    const cat = e.target.value
+                    const naturezaSugerida = NATUREZA_POR_CATEGORIA[cat] || ''
+                    setForm({ ...form, categoria: cat, natureza: form.natureza || naturezaSugerida })
+                  }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
                     <option value="">Selecione</option>
                     {(modal === 'entrada' ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA).map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -317,6 +369,20 @@ export default function Financeiro() {
                   </select>
                 </div>
               </div>
+              {modal === 'saida' && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-2 block">Natureza da despesa</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setForm({ ...form, natureza: 'fixa' })} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${form.natureza === 'fixa' ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-gray-100 text-gray-500 hover:border-gray-200'}`}>
+                      <Repeat size={14} /> Fixa (recorrente)
+                    </button>
+                    <button type="button" onClick={() => setForm({ ...form, natureza: 'variavel' })} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${form.natureza === 'variavel' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-100 text-gray-500 hover:border-gray-200'}`}>
+                      <Zap size={14} /> Variável
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">{form.natureza === 'fixa' ? 'Ex: aluguel, salários, internet — valor recorrente mensal' : form.natureza === 'variavel' ? 'Ex: água, luz, produtos — valor muda mês a mês' : 'Selecione o tipo para categorizar a despesa'}</p>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Descrição *</label>
                 <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Polimento completo" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />

@@ -264,6 +264,8 @@ export interface PagamentoColaborador {
   created_at: string;
 }
 
+export type NaturezaDespesa = 'fixa' | 'variavel'
+
 export interface ContaFinanceira {
   id: string;
   user_id: string;
@@ -275,6 +277,7 @@ export interface ContaFinanceira {
   pago: boolean;
   conta_bancaria: string;
   forma_pagamento: FormaPagamento | '';
+  natureza?: NaturezaDespesa | null;
   created_at: string;
 }
 

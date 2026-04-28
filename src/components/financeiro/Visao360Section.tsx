@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Users, Receipt, DollarSign } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingUp, Users, Receipt, DollarSign, Repeat, Zap } from 'lucide-react'
 import { useCloudSync } from '../../hooks/useCloudSync'
 import { useCloudSyncSingle } from '../../hooks/useCloudSync'
 import { fmt } from '../../lib/utils'
@@ -33,6 +33,8 @@ interface DREMes {
   receita: number
   impostos: number
   pessoal: number
+  despesasFixas: number
+  despesasVariaveis: number
   despesas: number
   lucro: number
   margem: number
@@ -65,15 +67,16 @@ function calcularDRE(
   const pessoalEstimadoFlag = pessoalReal === 0 && ativos.length > 0
   const pessoal = pessoalReal > 0 ? pessoalReal : pessoalEstimado
 
-  // Outras despesas (saidas financeiras, excluindo o que ja e pessoal)
-  const despesas = contas
-    .filter(c => c.tipo === 'saida' && c.data && c.data.startsWith(prefix))
-    .reduce((a, c) => a + c.valor, 0)
+  // Outras despesas (saidas financeiras)
+  const saidasMes = contas.filter(c => c.tipo === 'saida' && c.data && c.data.startsWith(prefix))
+  const despesasFixas = saidasMes.filter(c => c.natureza === 'fixa').reduce((a, c) => a + c.valor, 0)
+  const despesasVariaveis = saidasMes.filter(c => c.natureza !== 'fixa').reduce((a, c) => a + c.valor, 0)
+  const despesas = despesasFixas + despesasVariaveis
 
   const lucro = receita - impostos - pessoal - despesas
   const margem = receita > 0 ? (lucro / receita) * 100 : 0
 
-  return { mes, receita, impostos, pessoal, despesas, lucro, margem, pessoalEstimado: pessoalEstimadoFlag }
+  return { mes, receita, impostos, pessoal, despesasFixas, despesasVariaveis, despesas, lucro, margem, pessoalEstimado: pessoalEstimadoFlag }
 }
 
 export default function Visao360Section() {
@@ -153,15 +156,26 @@ export default function Visao360Section() {
             <p className="text-sm font-bold text-blue-600">- {fmt(dreAtual.pessoal)}</p>
           </div>
 
-          {/* Despesas */}
+          {/* Despesas fixas */}
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-danger-100 rounded-lg flex items-center justify-center">
-                <TrendingDown size={16} className="text-danger-600" />
+              <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
+                <Repeat size={16} className="text-violet-600" />
               </div>
-              <p className="text-sm font-medium text-gray-700">(-) Outras despesas</p>
+              <p className="text-sm font-medium text-gray-700">(-) Despesas fixas</p>
             </div>
-            <p className="text-sm font-bold text-danger-600">- {fmt(dreAtual.despesas)}</p>
+            <p className="text-sm font-bold text-violet-600">- {fmt(dreAtual.despesasFixas)}</p>
+          </div>
+
+          {/* Despesas variáveis */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Zap size={16} className="text-amber-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-700">(-) Despesas variáveis</p>
+            </div>
+            <p className="text-sm font-bold text-amber-600">- {fmt(dreAtual.despesasVariaveis)}</p>
           </div>
 
           {/* Divider */}
