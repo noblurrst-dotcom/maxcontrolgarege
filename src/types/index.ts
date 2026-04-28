@@ -9,6 +9,12 @@ export interface Checklist {
   valor: number;
   status: 'pendente' | 'em_andamento' | 'concluido';
   observacoes: string;
+  estado_pintura?: 'otimo' | 'bom' | 'regular' | 'ruim' | null;
+  lavador?: string;
+  tecnico_polidor?: string;
+  data_entrada_loja?: string | null;
+  data_entrada_oficina?: string | null;
+  data_saida_oficina?: string | null;
   created_at: string;
   expires_at: string;
 }
@@ -16,8 +22,11 @@ export interface Checklist {
 export interface ChecklistItem {
   id: string;
   checklist_id: string;
-  item_tipo: string;
+  item_tipo: string | null;
   observacao: string;
+  descricao?: string;
+  pos_x?: number | null;
+  pos_y?: number | null;
   tem_foto: boolean;
   ordem: number;
 }

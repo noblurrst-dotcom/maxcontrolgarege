@@ -12,12 +12,20 @@ interface BrandConfig {
   slogan?: string
 }
 
+interface DefeitoDetalhado {
+  x: number
+  y: number
+  descricao: string
+  fotos: string[] // URLs ou data URLs
+}
+
 interface DadosOrcamento {
   orcamento: Orcamento
   servicos: Servico[]
   brand: BrandConfig
   tipo?: 'orcamento' | 'venda'
   marcacoesDefeitos?: { x: number; y: number }[]
+  defeitosDetalhados?: DefeitoDetalhado[]
   estadoPintura?: 'otimo' | 'bom' | 'regular' | 'ruim'
   lavador?: string
   tecnicoPolidor?: string
@@ -29,6 +37,7 @@ interface DadosOrcamento {
 
 export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void> {
   const { orcamento, servicos, brand, tipo = 'orcamento', marcacoesDefeitos = [],
+    defeitosDetalhados = [],
     estadoPintura, lavador, tecnicoPolidor,
     dataEntradaLoja, dataEntradaOficina, dataSaidaOficina,
     observacoes } = dados
@@ -240,17 +249,69 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
   doc.text('ESQ', margin + 3, dy, { align: 'left' })
   doc.text('DIR', pw - margin - 3, dy, { align: 'right' })
 
-  if (marcacoesDefeitos.length > 0) {
-    doc.setFillColor(255, 0, 0)
-    doc.setDrawColor(200, 0, 0)
-    marcacoesDefeitos.forEach(ponto => {
+  // Se temos defeitos detalhados, usa eles (numerados); caso contrário, fallback para marcacoesDefeitos
+  const pontosNumerados = defeitosDetalhados.length > 0
+    ? defeitosDetalhados.map((d, i) => ({ x: d.x, y: d.y, n: i + 1 }))
+    : marcacoesDefeitos.map((p, i) => ({ x: p.x, y: p.y, n: i + 1 }))
+
+  if (pontosNumerados.length > 0) {
+    doc.setFillColor(239, 68, 68)
+    doc.setDrawColor(220, 38, 38)
+    pontosNumerados.forEach(ponto => {
       const px = margin + ponto.x * (pw - margin * 2)
       const py = y + ponto.y * diagramaH
-      doc.circle(px, py, 1.5, 'FD')
+      doc.circle(px, py, 2.5, 'FD')
+      doc.setFontSize(6)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(255, 255, 255)
+      doc.text(String(ponto.n), px, py + 1.5, { align: 'center' })
     })
   }
 
   y += diagramaH + 5
+
+  // ── DESCRIÇÃO DOS DEFEITOS (se detalhados) ──
+  if (defeitosDetalhados.length > 0) {
+    if (y > ph - 50) { doc.addPage(); y = margin }
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(80, 80, 80)
+    doc.text('DETALHES DOS DEFEITOS', margin, y)
+    y += 4
+
+    for (let i = 0; i < defeitosDetalhados.length; i++) {
+      const d = defeitosDetalhados[i]
+      const desc = d.descricao || '(sem descrição)'
+      const linhasDesc = doc.splitTextToSize(`${i + 1}. ${desc}`, pw - margin * 2 - (d.fotos.length > 0 ? 22 : 0))
+      const alturaLinhas = linhasDesc.length * 3.5
+      const alturaCard = Math.max(alturaLinhas + 2, d.fotos.length > 0 ? 20 : 6)
+
+      if (y + alturaCard > ph - 25) { doc.addPage(); y = margin }
+
+      doc.setFontSize(7.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(50, 50, 50)
+      doc.text(linhasDesc, margin, y + 3)
+
+      // Render até 1 foto inline (thumbnail à direita)
+      if (d.fotos.length > 0) {
+        try {
+          const fotoUrl = d.fotos[0]
+          // tenta adicionar como imagem (PNG/JPEG); se falhar, ignora
+          doc.addImage(fotoUrl, 'JPEG', pw - margin - 18, y, 18, 18, undefined, 'FAST')
+          if (d.fotos.length > 1) {
+            doc.setFontSize(6)
+            doc.setTextColor(120, 120, 120)
+            doc.text(`+${d.fotos.length - 1}`, pw - margin - 9, y + 21, { align: 'center' })
+          }
+        } catch {
+          // imagem inválida, segue sem
+        }
+      }
+      y += alturaCard + 2
+    }
+    y += 2
+  }
 
   // ── ESTADO DA PINTURA ──
   doc.setFillColor(corSec.r, corSec.g, corSec.b)
