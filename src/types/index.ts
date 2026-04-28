@@ -374,3 +374,7 @@ export interface Veiculo {
 // Re-export impostos types
 export type { RegimeTributario, ConfiguracaoImpostos, ItemImposto, EstimativaImpostos } from './impostos'
 export { CONFIG_IMPOSTOS_DEFAULT } from './impostos'
+
+// Re-export vitrine types
+export type { VitrineConfig, VitrineServico, VitrineAgendamento } from './vitrine'
+export { VITRINE_CONFIG_DEFAULT } from './vitrine'
