@@ -126,7 +126,8 @@ export interface Venda {
   hora_agendamento?: string;
   status: 'aberta' | 'fechada';
   parcelas: number;
-  funcionario: string;
+  funcionario: string;                // legacy: texto livre (compat)
+  colaborador_id?: string | null;     // FK opcional → funcionarios.id (migration 008+)
   observacoes: string;
   created_at: string;
 }
@@ -207,16 +208,43 @@ export interface Cliente {
   foto_esquerda?: string | null;
 }
 
-export interface Funcionario {
+// ============================================================
+// Colaborador (CLT, Freelancer PJ, Autônomo)
+// ============================================================
+export type TipoColaborador = 'clt' | 'freelancer_pj' | 'freelancer_autonomo'
+
+export interface Colaborador {
   id: string;
   user_id: string;
   nome: string;
   cargo: string;
   telefone: string;
-  salario: number;
+  email: string;
+  cpf_cnpj: string;
+  tipo: TipoColaborador;
+  data_admissao: string | null;  // ISO date (yyyy-mm-dd) ou null
   ativo: boolean;
+  // Pagamento base
+  salario: number;                // mensal CLT, ou base mensal PJ/Autônomo
+  // CLT-only
+  vale_transporte: number;
+  vale_alimentacao: number;
+  plano_saude: number;
+  outros_beneficios: number;
+  // Freelancer-only
+  valor_servico_padrao: number;
+  iss_retido_percentual: number;  // 0-100
+  // Comum
+  comissao_percentual: number;    // 0-100, aplicado sobre venda atribuída
+  observacoes: string;
   created_at: string;
 }
+
+/**
+ * @deprecated Use `Colaborador`. Mantido como alias para compat com
+ * código que eventualmente importe `Funcionario`.
+ */
+export type Funcionario = Colaborador
 
 export interface ContaFinanceira {
   id: string;
