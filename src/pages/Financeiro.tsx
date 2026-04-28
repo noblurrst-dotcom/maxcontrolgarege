@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DollarSign, Plus, TrendingUp, TrendingDown, CreditCard, X, Trash2, Search, CheckCircle2, Clock, Landmark, Filter, AlertCircle, ArrowRight, Users, Receipt, BarChart3 } from 'lucide-react'
 import ColaboradoresSection from '../components/financeiro/ColaboradoresSection'
+import ImpostosSection from '../components/financeiro/ImpostosSection'
 import { useDateRange } from '../hooks/useDateRange'
 import DateRangeFilter from '../components/DateRangeFilter'
 import type { ContaFinanceira, FormaPagamento, Venda } from '../types'
@@ -27,7 +28,7 @@ type TabFinanceiro = 'movimentacoes' | 'colaboradores' | 'impostos' | 'visao360'
 const TABS: { value: TabFinanceiro; label: string; icon: typeof DollarSign; disabled?: boolean }[] = [
   { value: 'movimentacoes', label: 'Movimentações', icon: DollarSign },
   { value: 'colaboradores', label: 'Colaboradores', icon: Users },
-  { value: 'impostos', label: 'Impostos', icon: Receipt, disabled: true },
+  { value: 'impostos', label: 'Impostos', icon: Receipt },
   { value: 'visao360', label: 'Visão 360', icon: BarChart3, disabled: true },
 ]
 
@@ -116,14 +117,8 @@ export default function Financeiro() {
       {/* Tab: Colaboradores */}
       {tabAtiva === 'colaboradores' && <ColaboradoresSection />}
 
-      {/* Tab: Impostos (placeholder) */}
-      {tabAtiva === 'impostos' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-          <Receipt size={48} className="text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-900 font-semibold text-lg">Impostos</p>
-          <p className="text-gray-400 text-sm mt-1">Configuração de impostos disponível na Entrega 3</p>
-        </div>
-      )}
+      {/* Tab: Impostos */}
+      {tabAtiva === 'impostos' && <ImpostosSection />}
 
       {/* Tab: Visão 360 (placeholder) */}
       {tabAtiva === 'visao360' && (
