@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react'
 import {
   BarChart2, ShoppingCart, CalendarDays, Users,
   Briefcase, FileText, TrendingUp, TrendingDown,
-  Download, Search, FileDown, Loader2,
+  Download, Search, FileDown, Loader2, Filter,
 } from 'lucide-react'
 import { useCloudSync } from '../hooks/useCloudSync'
 import { useBrand } from '../contexts/BrandContext'
+import { useDateRange } from '../hooks/useDateRange'
+import DateRangeFilter from '../components/DateRangeFilter'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import jsPDF from 'jspdf'
@@ -108,13 +110,20 @@ export default function Relatorios() {
   const { brand } = useBrand()
   const [busca, setBusca] = useState('')
   const [gerando, setGerando] = useState<string | null>(null)
+  const { preset, setPreset, customInicio, setCustomInicio, customFim, setCustomFim, isInRange, periodoLabel } = useDateRange()
 
-  const { data: vendas } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
-  const { data: agendamentos } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
+  const { data: vendasAll } = useCloudSync<Venda>({ table: 'vendas', storageKey: 'vendas' })
+  const { data: agendamentosAll } = useCloudSync<Agendamento>({ table: 'agendamentos', storageKey: 'agendamentos' })
   const { data: clientes } = useCloudSync<Cliente>({ table: 'clientes', storageKey: 'clientes' })
   const { data: servicos } = useCloudSync<Servico>({ table: 'servicos', storageKey: 'servicos' })
-  const { data: preVendas } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
-  const { data: financeiro } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
+  const { data: preVendasAll } = useCloudSync<PreVenda>({ table: 'pre_vendas', storageKey: 'pre_vendas' })
+  const { data: financeiroAll } = useCloudSync<ContaFinanceira>({ table: 'financeiro', storageKey: 'financeiro' })
+
+  // Filtrar por período
+  const vendas = useMemo(() => vendasAll.filter(v => isInRange(v.data_venda)), [vendasAll, isInRange])
+  const agendamentos = useMemo(() => agendamentosAll.filter(a => isInRange(a.data_hora)), [agendamentosAll, isInRange])
+  const preVendas = useMemo(() => preVendasAll.filter(pv => isInRange(pv.created_at)), [preVendasAll, isInRange])
+  const financeiro = useMemo(() => financeiroAll.filter(f => isInRange(f.data)), [financeiroAll, isInRange])
 
   // ── Definição dos relatórios ──────────────────────────────────────────────
   const relatorios = useMemo(() => [
@@ -318,6 +327,22 @@ export default function Relatorios() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter size={12} className="text-gray-400" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Período — {periodoLabel}</span>
+        </div>
+        <DateRangeFilter
+          preset={preset}
+          onChange={setPreset}
+          customInicio={customInicio}
+          customFim={customFim}
+          onCustomInicioChange={setCustomInicio}
+          onCustomFimChange={setCustomFim}
+        />
       </div>
 
       {/* Busca */}
