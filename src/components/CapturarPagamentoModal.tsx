@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { fmt } from '../lib/utils'
 import toast from 'react-hot-toast'
+import ColaboradorPicker from './ColaboradorPicker'
 
 const FORMAS: { value: FormaPagamento; label: string; icon: React.ReactNode }[] = [
   { value: 'pix', label: 'Pix', icon: <Smartphone size={18} /> },
@@ -45,6 +46,7 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
   const [parcelas, setParcelas] = useState('1')
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split('T')[0])
   const [funcionario, setFuncionario] = useState('')
+  const [colaboradorId, setColaboradorId] = useState<string | null>(null)
   const [obs, setObs] = useState('')
   const [lancarFinanceiro, setLancarFinanceiro] = useState(true)
 
@@ -56,6 +58,7 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
       setParcelas('1')
       setDataPagamento(new Date().toISOString().split('T')[0])
       setFuncionario('')
+      setColaboradorId(null)
       setObs('')
       setLancarFinanceiro(true)
 
@@ -99,6 +102,7 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
         observacoes: obs,
         lancar_financeiro: lancarFinanceiro,
         funcionario,
+        colaborador_id: colaboradorId || null,
       }
 
       if (venda) {
@@ -281,6 +285,15 @@ export default function CapturarPagamentoModal({ open, onClose, agendamento, ven
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                 />
               </div>
+
+              {/* Colaborador */}
+              <ColaboradorPicker
+                value={funcionario}
+                colaboradorId={colaboradorId}
+                onChange={(id, nome) => { setColaboradorId(id); setFuncionario(nome) }}
+                label="Colaborador"
+                placeholder="Opcional"
+              />
 
               {/* Observações */}
               <div>

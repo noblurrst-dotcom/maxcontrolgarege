@@ -15,6 +15,7 @@ import toast from 'react-hot-toast'
 import { exportarOrcamentoPDF } from '../lib/exportarOrcamentoPDF'
 import DiagramaDefeitos from '../components/DiagramaDefeitos'
 import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
+import ColaboradorPicker from '../components/ColaboradorPicker'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
@@ -30,7 +31,7 @@ const PARCELAS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 
-const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: '' as FormaPagamento | '', data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', observacoes: '', servicoSelecionado: '' })
+const initForm = () => ({ nome_cliente: '', descricao: '', valor: '', desconto: '', forma_pagamento: '' as FormaPagamento | '', data_venda: new Date().toISOString().split('T')[0], data_agendamento: '', hora_agendamento: '09:00', hora_agendamento_fim: '10:00', data_agendamento_fim: '', cor_agendamento: '#4285F4', placa_agendamento: '', veiculo_agendamento: '', parcelas: '1', funcionario: '', colaborador_id: '' as string | null, observacoes: '', servicoSelecionado: '' })
 
 export default function Vendas() {
   const { brand } = useBrand()
@@ -248,7 +249,7 @@ export default function Vendas() {
       data_agendamento: form.data_agendamento || undefined,
       hora_agendamento: form.data_agendamento ? form.hora_agendamento : undefined,
       status: 'fechada', parcelas: parseInt(form.parcelas),
-      funcionario: form.funcionario, observacoes: form.observacoes,
+      funcionario: form.funcionario, colaborador_id: form.colaborador_id || null, observacoes: form.observacoes,
       created_at: new Date().toISOString(),
     }
     salvar([nova, ...vendas])
@@ -598,10 +599,13 @@ export default function Vendas() {
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Data de Pagamento *</label>
                   <input type="date" value={form.data_venda} onChange={(e) => setForm({ ...form, data_venda: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Funcionário</label>
-                  <input type="text" value={form.funcionario} onChange={(e) => setForm({ ...form, funcionario: e.target.value })} placeholder="Opcional" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
-                </div>
+                <ColaboradorPicker
+                  value={form.funcionario}
+                  colaboradorId={form.colaborador_id}
+                  onChange={(id, nome) => setForm({ ...form, colaborador_id: id, funcionario: nome })}
+                  label="Colaborador"
+                  placeholder="Opcional"
+                />
               </div>
               {/* Agendamento automático */}
               <div className="border border-blue-100 bg-blue-50 rounded-xl p-4 space-y-3">
