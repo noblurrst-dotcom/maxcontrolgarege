@@ -821,7 +821,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-6">
+    <div className="space-y-6 pb-6">
       {/* Saudação + Ações */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">

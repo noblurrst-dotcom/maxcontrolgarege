@@ -12,7 +12,6 @@ import {
   DollarSign,
   Briefcase,
   BarChart2,
-  MoreHorizontal,
   Settings,
   Moon,
   Sun,
@@ -49,7 +48,6 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [supportModal, setSupportModal] = useState(false)
   const [supportCode, setSupportCode] = useState('')
@@ -131,22 +129,6 @@ export default function Layout() {
     ? todasTelas.filter(t => podeVer(t.modulo) && t.label.toLowerCase().includes(busca.toLowerCase()))
     : []
 
-  const bottomNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Painel', modulo: 'dashboard' as ModuloId },
-    { path: '/vendas', icon: ShoppingCart, label: 'Vendas', modulo: 'vendas' as ModuloId },
-    { path: '/agenda', icon: CalendarDays, label: 'Agenda', modulo: 'agenda' as ModuloId },
-    { path: '/clientes', icon: Users, label: 'Clientes', modulo: 'clientes' as ModuloId },
-  ].filter(i => podeVer(i.modulo))
-
-  const moreItems = [
-    { path: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: 'financeiro' as ModuloId },
-    { path: '/servicos', icon: Briefcase, label: 'Serviços', modulo: 'servicos' as ModuloId },
-    { path: '/relatorios', icon: BarChart2, label: 'Relatórios', modulo: 'financeiro' as ModuloId },
-    { path: '/dm', icon: MessageSquare, label: 'A.T.A DM', modulo: 'dashboard' as ModuloId },
-    { path: '/vitrine', icon: Store, label: 'Vitrine', modulo: 'dashboard' as ModuloId },
-  ].filter(i => podeVer(i.modulo))
-
-  const isMoreActive = moreItems.some(i => location.pathname === i.path)
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col overflow-x-hidden w-full max-w-full">
@@ -598,75 +580,13 @@ export default function Layout() {
       <GlobalBanner />
 
       {/* Main Content */}
-      <main className="flex-1 container-responsive container-with-bottom-nav py-4 sm:py-6">
+      <main className="flex-1 container-responsive py-4 sm:py-6">
         <Outlet />
       </main>
 
       {/* Floating Help Button — hidden in support mode */}
       {!isSupport && <FloatingHelpButton />}
 
-      {/* Bottom Navigation (mobile + tablet portrait) — visível até 1023px */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 safe-area-bottom">
-        <div className="flex justify-around py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
-          {bottomNavItems.map((item) => {
-            const isActive = location.pathname === item.path
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileMoreOpen(false) }}
-                className={`btn-mobile flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors ${
-                  isActive
-                    ? ''
-                    : 'text-gray-400'
-                }`}
-              >
-                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-primary-500' : ''} />
-                <span className={`mobile-text-xs ${isActive ? 'font-bold text-primary-500' : 'font-medium'}`}>{item.label}</span>
-              </button>
-            )
-          })}
-          {/* More button */}
-          <button
-            onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-            className={`btn-mobile flex flex-col items-center gap-0.5 min-w-[3rem] py-1 transition-colors ${
-              isMoreActive || mobileMoreOpen ? '' : 'text-gray-400'
-            }`}
-          >
-            <MoreHorizontal size={22} strokeWidth={isMoreActive || mobileMoreOpen ? 2.5 : 2} className={isMoreActive || mobileMoreOpen ? 'text-primary-500' : ''} />
-            <span className={`mobile-text-xs ${isMoreActive || mobileMoreOpen ? 'font-bold text-primary-500' : 'font-medium'}`}>Mais</span>
-          </button>
-        </div>
-
-        {/* More panel */}
-        {mobileMoreOpen && (
-          <>
-            <div className="fixed inset-0 bg-black/20 z-[-1]" onClick={() => setMobileMoreOpen(false)} />
-            <div className="absolute bottom-full left-0 right-0 bg-white border-t border-gray-100 shadow-lg rounded-t-2xl p-3 animate-in slide-in-from-bottom">
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
-              <div className="grid grid-cols-3 gap-2">
-                {moreItems.map((item) => {
-                  const isActive = location.pathname === item.path
-                  const Icon = item.icon
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => { navigate(item.path); setMobileMoreOpen(false) }}
-                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-colors active:scale-95 ${
-                        isActive
-                          ? ''
-                          : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon size={22} className={isActive ? 'text-primary-500' : ''} />
-                      <span className={`text-[11px] ${isActive ? 'font-bold text-primary-500' : 'font-medium'}`}>{item.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </>
-        )}
-      </nav>
     </div>
   )
 }

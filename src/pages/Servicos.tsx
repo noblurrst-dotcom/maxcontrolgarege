@@ -192,7 +192,7 @@ export default function Servicos() {
   const fotoAtual = fotoPreview || fotoUrlExistente
 
   return (
-    <div className="pb-20 sm:pb-6">
+    <div className="pb-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Meus Serviços</h1>

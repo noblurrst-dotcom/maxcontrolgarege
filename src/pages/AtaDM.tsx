@@ -9,7 +9,7 @@ const CANAIS = [
 
 export default function AtaDM() {
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 lg:pb-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-6">
       {/* Header */}
       <div className="text-center pt-4">
         <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">

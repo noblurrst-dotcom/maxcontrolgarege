@@ -110,7 +110,7 @@ export default function Financeiro() {
   }), [contas, buscaDebounced, filtroTipo, isInRange])
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-6">
+    <div className="space-y-6 pb-6">
       {/* Subnav tabs */}
       <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm overflow-x-auto">
         {TABS.map(tab => {
