@@ -25,6 +25,7 @@ import {
   Check,
   Search,
   MessageSquare,
+  Store,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -121,6 +122,7 @@ export default function Layout() {
     { path: '/servicos', label: 'Serviços', icon: Briefcase, modulo: 'servicos' as ModuloId },
     { path: '/relatorios', label: 'Relatórios', icon: BarChart2, modulo: 'financeiro' as ModuloId },
     { path: '/dm', label: 'A.T.A DM', icon: MessageSquare, modulo: 'dashboard' as ModuloId },
+    { path: '/vitrine', label: 'Vitrine', icon: Store, modulo: 'dashboard' as ModuloId },
   ]
   const navItems = allNavItems.filter(i => podeVer(i.modulo))
 
@@ -141,6 +143,7 @@ export default function Layout() {
     { path: '/servicos', icon: Briefcase, label: 'Serviços', modulo: 'servicos' as ModuloId },
     { path: '/relatorios', icon: BarChart2, label: 'Relatórios', modulo: 'financeiro' as ModuloId },
     { path: '/dm', icon: MessageSquare, label: 'A.T.A DM', modulo: 'dashboard' as ModuloId },
+    { path: '/vitrine', icon: Store, label: 'Vitrine', modulo: 'dashboard' as ModuloId },
   ].filter(i => podeVer(i.modulo))
 
   const isMoreActive = moreItems.some(i => location.pathname === i.path)

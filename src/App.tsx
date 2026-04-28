@@ -21,6 +21,7 @@ const Configuracoes = lazy(() => import('./pages/Configuracoes'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Relatorios = lazy(() => import('./pages/Relatorios'))
 const AtaDM = lazy(() => import('./pages/AtaDM'))
+const VitrineConfigPage = lazy(() => import('./pages/VitrineConfig'))
 const Layout = lazy(() => import('./components/Layout'))
 const AdminSuporte = lazy(() => import('./pages/AdminSuporte'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
@@ -126,6 +127,7 @@ function App() {
               <Route path="/usuarios" element={<ModuloProtegido modulo="usuarios"><Usuarios /></ModuloProtegido>} />
               <Route path="/relatorios" element={<ModuloProtegido modulo="financeiro"><Relatorios /></ModuloProtegido>} />
               <Route path="/dm" element={<AtaDM />} />
+              <Route path="/vitrine" element={<VitrineConfigPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
