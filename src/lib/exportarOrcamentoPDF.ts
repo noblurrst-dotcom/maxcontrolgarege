@@ -1,9 +1,11 @@
 import type { Orcamento, Servico } from '../types'
 
+// Paleta A.T.A Gestão — fixa, sem customização por tenant.
+const COR_PRIMARIA = '#CFFF04'
+const COR_SECUNDARIA = '#1a1a2e'
+
 interface BrandConfig {
   nome_empresa: string
-  cor_primaria: string
-  cor_secundaria: string
   logo_url?: string
   telefone?: string
   endereco?: string
@@ -68,8 +70,8 @@ export async function exportarOrcamentoPDF(dados: DadosOrcamento): Promise<void>
     }
   }
 
-  const corPri = hexToRgb(brand.cor_primaria || '#CFFF04')
-  const corSec = hexToRgb(brand.cor_secundaria || '#0d0d1a')
+  const corPri = hexToRgb(COR_PRIMARIA)
+  const corSec = hexToRgb(COR_SECUNDARIA)
   const margin = 12
   let y = margin
 

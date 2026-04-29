@@ -34,11 +34,15 @@ function baixarCSV(nome: string, cabecalho: string[], linhas: (string | number)[
 }
 
 // ─── Utilitário PDF ───────────────────────────────────────────────────────────
+// Paleta A.T.A Gestão — fixa, sem customização por tenant.
+const REL_COR_PRIMARIA = '#CFFF04'
+const REL_COR_SECUNDARIA = '#1a1a2e'
+
 async function gerarPDFTabela(
   nomeRelatorio: string,
   cabecalho: string[],
   linhas: (string | number)[][],
-  brand: { nome_empresa: string; cor_primaria: string; cor_secundaria: string }
+  brand: { nome_empresa: string }
 ) {
   const { default: jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
@@ -49,8 +53,8 @@ async function gerarPDFTabela(
     const h = hex.replace('#', '')
     return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) }
   }
-  const pri = hexToRgb(brand.cor_primaria || '#CFFF04')
-  const sec = hexToRgb(brand.cor_secundaria || '#0d0d1a')
+  const pri = hexToRgb(REL_COR_PRIMARIA)
+  const sec = hexToRgb(REL_COR_SECUNDARIA)
 
   // Header
   doc.setFillColor(sec.r, sec.g, sec.b)
@@ -304,8 +308,6 @@ export default function Relatorios() {
     try {
       await gerarPDFTabela(rel.nome, rel.cabecalho, rel.linhas(), {
         nome_empresa: brand.nome_empresa || 'Empresa',
-        cor_primaria: brand.cor_primaria || '#CFFF04',
-        cor_secundaria: brand.cor_secundaria || '#0d0d1a',
       })
     } finally {
       setGerando(null)
