@@ -2,7 +2,22 @@
 
 Documentação para treinar a IA do Crisp Chat para responder dúvidas dos usuários sobre o A.T.A Gestão.
 
-## Como usar
+## ⚡ Versão compilada (5 documentos)
+
+Para planos do Crisp que limitam a quantidade de artigos, use os 5 documentos consolidados em [`./compilado/`](./compilado/):
+
+1. [`01-introducao-e-acesso.md`](./compilado/01-introducao-e-acesso.md) — Visão geral, login, painel, mobile/PWA, suporte
+2. [`02-cadastros-base.md`](./compilado/02-cadastros-base.md) — Clientes, veículos, serviços, colaboradores
+3. [`03-operacao.md`](./compilado/03-operacao.md) — Vendas, orçamentos, pagamentos, agenda, checklists, kanban
+4. [`04-financeiro-folha-relatorios.md`](./compilado/04-financeiro-folha-relatorios.md) — Financeiro, folha, relatórios, impostos
+5. [`05-configuracoes-vitrine-usuarios-faq.md`](./compilado/05-configuracoes-vitrine-usuarios-faq.md) — Configurações, vitrine, usuários, FAQ
+
+Os arquivos compilados são gerados a partir dos 23 originais via [`./compilar.sh`](./compilar.sh). Para regenerar após edições:
+```bash
+cd docs/crisp && bash compilar.sh
+```
+
+## Como usar (versão completa, 23 artigos)
 
 1. Acesse [app.crisp.chat](https://app.crisp.chat) → seu workspace
 2. Vá em **Helpdesk** ou **Knowledge Base** → **Articles**
