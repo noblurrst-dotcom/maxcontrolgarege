@@ -107,6 +107,7 @@ export default function AgendaSemanal({
 
   interface DragState {
     id: string
+    mode: 'move' | 'resize'
     startX: number
     startY: number
     curX: number
@@ -132,28 +133,38 @@ export default function AgendaSemanal({
    * Retorna null se o drag não está ativo ou é inválido (ex: agendamento multi-dia).
    */
   const computeTarget = useCallback((d: DragState): { novoInicio: Date; novoFim: Date; diaIdx: number } | null => {
+    const dy = d.curY - d.startY
+    const minShift = Math.round(dy / SNAP_PX_Y) * SNAP_MIN
+
+    // ── Modo RESIZE: ajusta apenas o fim, mantendo dia e início. ──
+    if (d.mode === 'resize') {
+      const novoInicio = new Date(d.origInicio.getTime())
+      const origFimMin = d.origFim.getHours() * 60 + d.origFim.getMinutes()
+      const inicioMin = d.origInicio.getHours() * 60 + d.origInicio.getMinutes()
+      // Nova duração em minutos: mínimo SNAP_MIN, máximo até horaFinal.
+      const novoFimMin = Math.max(
+        inicioMin + SNAP_MIN,
+        Math.min(horaFinal * 60, origFimMin + minShift)
+      )
+      const novoFim = new Date(d.origInicio)
+      novoFim.setHours(Math.floor(novoFimMin / 60), novoFimMin % 60, 0, 0)
+      return { novoInicio, novoFim, diaIdx: d.origDiaIdx }
+    }
+
+    // ── Modo MOVE: deslocamento em X (dia) + Y (hora). ──
     const colWidth = getColWidth()
     if (colWidth <= 0) return null
-
     const dx = d.curX - d.startX
-    const dy = d.curY - d.startY
-
-    // Snap eixo X: deslocamento de coluna inteira.
     const colShift = Math.round(dx / colWidth)
     const novaColIdx = Math.max(0, Math.min(6, d.origDiaIdx + colShift))
 
-    // Snap eixo Y: múltiplos de SNAP_MIN minutos.
-    const minShift = Math.round(dy / SNAP_PX_Y) * SNAP_MIN
-
-    // Nova hora original + shift, clampada aos limites do grid.
     const origHoraMin = d.origInicio.getHours() * 60 + d.origInicio.getMinutes()
     const novaHoraMin = origHoraMin + minShift
     const minHoraMin = HORA_INICIO * 60
     const maxHoraMin = horaFinal * 60 - d.duracaoMin
-    if (maxHoraMin < minHoraMin) return null // grid menor que o evento
+    if (maxHoraMin < minHoraMin) return null
     const clamped = Math.max(minHoraMin, Math.min(maxHoraMin, novaHoraMin))
 
-    // Monta o Date a partir do dia da semana alvo + hora clampada.
     const diaBase = diasDaSemana[novaColIdx]
     if (!diaBase) return null
     const novoInicio = new Date(diaBase)
@@ -170,13 +181,16 @@ export default function AgendaSemanal({
   )
 
   // ── Handlers de pointer no card ─────────────────────────────────────────────
-  const onPointerDownEvento = (e: React.PointerEvent<HTMLDivElement>, ag: Agendamento) => {
+  const startDrag = (
+    e: React.PointerEvent<HTMLDivElement>,
+    ag: Agendamento,
+    mode: 'move' | 'resize'
+  ) => {
     if (!onAgendamentoMover) return
     if (ag.status === 'cancelado') return
     const inicio = new Date(ag.data_hora)
     const durMin = ag.duracao_min || 60
     const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
-    // Bloqueia drag em eventos multi-dia (edge case raro, complicação não vale).
     if (inicio.toDateString() !== fim.toDateString()) return
 
     const origDiaIdx = diasDaSemana.findIndex(d => d.toDateString() === inicio.toDateString())
@@ -186,6 +200,7 @@ export default function AgendaSemanal({
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     setDragging({
       id: ag.id,
+      mode,
       startX: e.clientX,
       startY: e.clientY,
       curX: e.clientX,
@@ -197,6 +212,12 @@ export default function AgendaSemanal({
       active: false,
     })
   }
+
+  const onPointerDownEvento = (e: React.PointerEvent<HTMLDivElement>, ag: Agendamento) =>
+    startDrag(e, ag, 'move')
+
+  const onPointerDownResize = (e: React.PointerEvent<HTMLDivElement>, ag: Agendamento) =>
+    startDrag(e, ag, 'resize')
 
   const onPointerMoveEvento = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragging) return
@@ -447,8 +468,15 @@ export default function AgendaSemanal({
                         const ehArrastavel = !!onAgendamentoMover && !ehCancelado
                         const estaArrastando = dragging?.id === ag.id && dragging.active
                         const outroArrastando = !!dragging?.active && dragging?.id !== ag.id
-                        const translateX = estaArrastando ? dragging!.curX - dragging!.startX : 0
-                        const translateY = estaArrastando ? dragging!.curY - dragging!.startY : 0
+                        const ehResize = estaArrastando && dragging!.mode === 'resize'
+                        const ehMove = estaArrastando && dragging!.mode === 'move'
+                        const translateX = ehMove ? dragging!.curX - dragging!.startX : 0
+                        const translateY = ehMove ? dragging!.curY - dragging!.startY : 0
+                        // Durante resize: a altura segue o ponteiro (sem snap visual
+                        // — o snap aparece no ghost). Soltura comita com snap.
+                        const heightAjustado = ehResize
+                          ? Math.max(ROW_H * 0.25, layout.height + (dragging!.curY - dragging!.startY))
+                          : layout.height
                         return (
                           <div
                             key={ag.id}
@@ -469,7 +497,7 @@ export default function AgendaSemanal({
                             className="absolute"
                             style={{
                               top: layout.top,
-                              height: layout.height,
+                              height: heightAjustado,
                               left: layout.left,
                               width: layout.width,
                               zIndex: estaArrastando ? 100 : layout.zIndex,
@@ -484,14 +512,48 @@ export default function AgendaSemanal({
                               overflow: 'hidden',
                               cursor: ehCancelado
                                 ? 'default'
-                                : (estaArrastando ? 'grabbing' : (ehArrastavel ? 'grab' : (onEventoClick ? 'pointer' : 'default'))),
+                                : (ehResize ? 'ns-resize' : (ehMove ? 'grabbing' : (ehArrastavel ? 'grab' : (onEventoClick ? 'pointer' : 'default')))),
                               opacity: estaArrastando ? 0.88 : (outroArrastando ? 0.55 : (ehCancelado ? 0.45 : 1)),
-                              transform: estaArrastando ? `translate(${translateX}px, ${translateY}px)` : undefined,
+                              transform: ehMove ? `translate(${translateX}px, ${translateY}px)` : undefined,
                               transition: estaArrastando ? 'none' : 'filter 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease',
                               touchAction: ehArrastavel ? 'none' : undefined,
                               userSelect: 'none',
                             }}
                           >
+                            {/* Alça de resize — borda inferior do card */}
+                            {ehArrastavel && (
+                              <div
+                                onPointerDown={(e) => onPointerDownResize(e, ag)}
+                                onPointerMove={onPointerMoveEvento}
+                                onPointerUp={(e) => onPointerUpEvento(e, ag)}
+                                onPointerCancel={onPointerCancelEvento}
+                                title="Arraste para alterar a duração"
+                                style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 8,
+                                  cursor: 'ns-resize',
+                                  zIndex: 2,
+                                  touchAction: 'none',
+                                }}
+                              >
+                                {/* Indicador visual sutil (3 risquinhos) */}
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: 2,
+                                  left: '50%',
+                                  transform: 'translateX(-50%)',
+                                  width: 18,
+                                  height: 2,
+                                  borderTop: '2px solid rgba(255,255,255,0.45)',
+                                  borderBottom: '2px solid rgba(255,255,255,0.45)',
+                                  paddingTop: 1,
+                                  pointerEvents: 'none',
+                                }} />
+                              </div>
+                            )}
                             <div style={{ padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column' }}>
                               <p style={{
                                 fontSize: 10, fontWeight: 700,
