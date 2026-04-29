@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { identifyCrispUser, resetCrispUser } from '../lib/crisp'
 
 interface AuthContextType {
   user: User | null
@@ -44,6 +45,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Sincroniza identidade no Crisp com o usuário autenticado.
+  // Durante "modo suporte" (superadmin impersonando um tenant), o `user` do
+  // Supabase auth permanece sendo o superadmin real — então o Crisp continua
+  // identificado corretamente, sem revelar o tenant impersonado.
+  useEffect(() => {
+    if (user) {
+      const nome = user.user_metadata?.nome || user.email?.split('@')[0] || ''
+      identifyCrispUser({
+        email: user.email || '',
+        nome,
+      })
+    } else {
+      resetCrispUser()
+    }
+  }, [user])
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })

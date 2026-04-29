@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client'
 import ErrorBoundary from './components/ErrorBoundary'
 import App from './App.tsx'
 import './index.css'
+import { initCrisp } from './lib/crisp'
+
+// Carrega o widget do Crisp em background (não bloqueia o paint)
+initCrisp()
 
 /*
  * Versão atual do cache. Deve bater com CACHE_NAME em public/sw.js.
