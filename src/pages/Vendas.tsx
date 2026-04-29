@@ -300,13 +300,15 @@ export default function Vendas() {
     // Se tem forma_pagamento → criar pagamento + financeiro via RPC
     if (temPagamento) {
       supabase.rpc('capturar_pagamento', {
-        p_venda_id: vendaId,
-        p_valor: valorTotal,
-        p_forma_pagamento: form.forma_pagamento,
-        p_parcelas: parseInt(form.parcelas) || 1,
-        p_data_pagamento: form.data_venda,
-        p_observacoes: null,
-        p_criar_financeiro: true,
+        p_payload: {
+          venda_id: vendaId,
+          valor: valorTotal,
+          forma_pagamento: form.forma_pagamento,
+          parcelas: parseInt(form.parcelas) || 1,
+          data_pagamento: new Date(`${form.data_venda}T12:00:00`).toISOString(),
+          observacoes: '',
+          lancar_financeiro: true,
+        },
       }).then(({ error }) => {
         if (error) console.error('Erro ao criar pagamento:', error.message)
       })
