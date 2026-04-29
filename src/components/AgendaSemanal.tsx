@@ -1,3 +1,4 @@
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { format, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -83,6 +84,7 @@ export default function AgendaSemanal({
   semanaOffset,
   onSemanaChange,
   onEventoClick,
+  onAgendamentoMover,
   horaFinal = 18,
   vendas = [],
 }: AgendaSemanalProps) {
@@ -94,6 +96,166 @@ export default function AgendaSemanal({
   const BIZ_START = 8
   const BIZ_END = 18
   const DEFAULT_COLOR = '#4285F4'
+
+  // ── Drag & Drop ─────────────────────────────────────────────────────────────
+  // Snap no eixo Y: 15 minutos (ROW_H / 4 = 12px por step).
+  const SNAP_MIN = 15
+  const SNAP_PX_Y = ROW_H / (60 / SNAP_MIN) // 12
+  const DRAG_THRESHOLD_PX = 6
+
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  interface DragState {
+    id: string
+    startX: number
+    startY: number
+    curX: number
+    curY: number
+    origInicio: Date
+    origFim: Date
+    duracaoMin: number
+    origDiaIdx: number
+    active: boolean // só vira true após threshold
+  }
+  const [dragging, setDragging] = useState<DragState | null>(null)
+
+  // Largura de uma coluna de dia (px). Memoizada via leitura do DOM a cada drag.
+  const getColWidth = useCallback((): number => {
+    const el = gridRef.current
+    if (!el) return 0
+    // Largura do grid menos a coluna fixa de horas (50px).
+    return Math.max(0, (el.clientWidth - 50) / 7)
+  }, [])
+
+  /**
+   * Calcula o alvo do drop atual (dia + hora) aplicando snap + validação de bordas.
+   * Retorna null se o drag não está ativo ou é inválido (ex: agendamento multi-dia).
+   */
+  const computeTarget = useCallback((d: DragState): { novoInicio: Date; novoFim: Date; diaIdx: number } | null => {
+    const colWidth = getColWidth()
+    if (colWidth <= 0) return null
+
+    const dx = d.curX - d.startX
+    const dy = d.curY - d.startY
+
+    // Snap eixo X: deslocamento de coluna inteira.
+    const colShift = Math.round(dx / colWidth)
+    const novaColIdx = Math.max(0, Math.min(6, d.origDiaIdx + colShift))
+
+    // Snap eixo Y: múltiplos de SNAP_MIN minutos.
+    const minShift = Math.round(dy / SNAP_PX_Y) * SNAP_MIN
+
+    // Nova hora original + shift, clampada aos limites do grid.
+    const origHoraMin = d.origInicio.getHours() * 60 + d.origInicio.getMinutes()
+    const novaHoraMin = origHoraMin + minShift
+    const minHoraMin = HORA_INICIO * 60
+    const maxHoraMin = horaFinal * 60 - d.duracaoMin
+    if (maxHoraMin < minHoraMin) return null // grid menor que o evento
+    const clamped = Math.max(minHoraMin, Math.min(maxHoraMin, novaHoraMin))
+
+    // Monta o Date a partir do dia da semana alvo + hora clampada.
+    const diaBase = diasDaSemana[novaColIdx]
+    if (!diaBase) return null
+    const novoInicio = new Date(diaBase)
+    novoInicio.setHours(Math.floor(clamped / 60), clamped % 60, 0, 0)
+    const novoFim = new Date(novoInicio.getTime() + d.duracaoMin * 60000)
+
+    return { novoInicio, novoFim, diaIdx: novaColIdx }
+  }, [diasDaSemana, getColWidth, horaFinal, HORA_INICIO, SNAP_PX_Y])
+
+  // Alvo corrente do drag ativo (memoizado via dragging state) — usado pelo ghost.
+  const dragTarget = useMemo(
+    () => (dragging && dragging.active ? computeTarget(dragging) : null),
+    [dragging, computeTarget]
+  )
+
+  // ── Handlers de pointer no card ─────────────────────────────────────────────
+  const onPointerDownEvento = (e: React.PointerEvent<HTMLDivElement>, ag: Agendamento) => {
+    if (!onAgendamentoMover) return
+    if (ag.status === 'cancelado') return
+    const inicio = new Date(ag.data_hora)
+    const durMin = ag.duracao_min || 60
+    const fim = ag.data_hora_fim ? new Date(ag.data_hora_fim) : new Date(inicio.getTime() + durMin * 60000)
+    // Bloqueia drag em eventos multi-dia (edge case raro, complicação não vale).
+    if (inicio.toDateString() !== fim.toDateString()) return
+
+    const origDiaIdx = diasDaSemana.findIndex(d => d.toDateString() === inicio.toDateString())
+    if (origDiaIdx < 0) return
+
+    e.stopPropagation()
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    setDragging({
+      id: ag.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      curX: e.clientX,
+      curY: e.clientY,
+      origInicio: inicio,
+      origFim: fim,
+      duracaoMin: Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / 60000)),
+      origDiaIdx,
+      active: false,
+    })
+  }
+
+  const onPointerMoveEvento = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return
+    const dx = e.clientX - dragging.startX
+    const dy = e.clientY - dragging.startY
+    if (!dragging.active) {
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) {
+        // Atualiza só cur para caso passe do threshold no próximo move.
+        setDragging(d => d ? { ...d, curX: e.clientX, curY: e.clientY } : null)
+        return
+      }
+      // Ativa modo drag.
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate?.(15) } catch { /* silenciar */ }
+      }
+      setDragging(d => d ? { ...d, active: true, curX: e.clientX, curY: e.clientY } : null)
+      return
+    }
+    setDragging(d => d ? { ...d, curX: e.clientX, curY: e.clientY } : null)
+  }
+
+  const onPointerUpEvento = (e: React.PointerEvent<HTMLDivElement>, ag: Agendamento) => {
+    if (!dragging) return
+    const d = dragging
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch { /* ignore */ }
+
+    if (!d.active) {
+      // Foi click curto — dispara onEventoClick manualmente (não usamos onClick
+      // nativo pra evitar que um drag acidental dispare click ao soltar).
+      setDragging(null)
+      onEventoClick?.(ag)
+      return
+    }
+
+    const target = computeTarget(d)
+    setDragging(null)
+    if (!target) return
+
+    // Se não houve mudança efetiva (mesmo dia e mesma hora), não chama o callback.
+    if (target.novoInicio.getTime() === d.origInicio.getTime()) return
+
+    onAgendamentoMover?.(d.id, target.novoInicio, target.novoFim)
+  }
+
+  const onPointerCancelEvento = () => {
+    setDragging(null)
+  }
+
+  // Cancelar drag com Escape.
+  useEffect(() => {
+    if (!dragging) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDragging(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dragging])
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex flex-col h-full">
@@ -158,6 +320,7 @@ export default function AgendaSemanal({
             {/* Time slots */}
             <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
               <div
+                ref={gridRef}
                 className="grid grid-cols-[50px_repeat(7,1fr)]"
                 style={{ minHeight: ROW_H * TOTAL_HORAS }}
               >
@@ -175,7 +338,7 @@ export default function AgendaSemanal({
                 </div>
 
                 {/* Colunas dos dias */}
-                {diasDaSemana.map((dia) => {
+                {diasDaSemana.map((dia, diaIdx) => {
                   const dStr = format(dia, 'yyyy-MM-dd')
                   const ehHoje = isToday(dia)
                   const diaStart = new Date(`${dStr}T00:00:00`)
@@ -218,6 +381,12 @@ export default function AgendaSemanal({
 
                   const layouts = calcularLayoutEventos(eventosComTempo, ROW_H, HORA_INICIO)
 
+                  const ghost = dragTarget && dragTarget.diaIdx === diaIdx && dragging ? {
+                    top: ((dragTarget.novoInicio.getHours() + dragTarget.novoInicio.getMinutes() / 60) - HORA_INICIO) * ROW_H,
+                    height: (dragging.duracaoMin / 60) * ROW_H,
+                    label: `${format(dragTarget.novoInicio, 'HH:mm')} → ${format(dragTarget.novoFim, 'HH:mm')}`,
+                  } : null
+
                   return (
                     <div
                       key={dia.toISOString()}
@@ -227,6 +396,24 @@ export default function AgendaSemanal({
                       {Array.from({ length: TOTAL_HORAS }, (_, i) => (
                         <div key={i} className="border-t border-l border-gray-100" style={{ height: ROW_H }} />
                       ))}
+
+                      {/* Ghost de destino durante drag */}
+                      {ghost && (
+                        <div
+                          className="absolute pointer-events-none rounded-lg border-2 border-dashed border-primary-500 bg-primary-500/10"
+                          style={{
+                            top: ghost.top,
+                            height: ghost.height,
+                            left: '2%',
+                            right: '2%',
+                            zIndex: 50,
+                          }}
+                        >
+                          <span className="absolute top-1 left-2 text-[10px] font-bold text-primary-700 bg-white/85 px-1.5 py-0.5 rounded shadow-sm">
+                            {ghost.label}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Linha de hora atual */}
                       {ehHoje && (() => {
@@ -257,23 +444,27 @@ export default function AgendaSemanal({
                         if (!layout) return null
                         const eventColor = ag.cor || DEFAULT_COLOR
                         const ehCancelado = ag.status === 'cancelado'
+                        const ehArrastavel = !!onAgendamentoMover && !ehCancelado
+                        const estaArrastando = dragging?.id === ag.id && dragging.active
+                        const outroArrastando = !!dragging?.active && dragging?.id !== ag.id
+                        const translateX = estaArrastando ? dragging!.curX - dragging!.startX : 0
+                        const translateY = estaArrastando ? dragging!.curY - dragging!.startY : 0
                         return (
                           <div
                             key={ag.id}
                             title={`${ag.nome_cliente}${ag.servico ? ' • ' + ag.servico : ''}${ag.valor ? ' • ' + fmt(ag.valor) : ''}`}
-                            onClick={onEventoClick ? () => onEventoClick(ag) : undefined}
+                            onPointerDown={ehArrastavel ? (e) => onPointerDownEvento(e, ag) : undefined}
+                            onPointerMove={ehArrastavel ? onPointerMoveEvento : undefined}
+                            onPointerUp={ehArrastavel ? (e) => onPointerUpEvento(e, ag) : (onEventoClick ? () => onEventoClick(ag) : undefined)}
+                            onPointerCancel={ehArrastavel ? onPointerCancelEvento : undefined}
                             onMouseEnter={(e) => {
-                              if (ehCancelado) return
+                              if (ehCancelado || estaArrastando || outroArrastando) return
                               const el = e.currentTarget as HTMLElement
                               el.style.filter = 'brightness(1.12)'
-                              el.style.transform = 'scale(1.015)'
-                              el.style.boxShadow = gerarSombraEvento(eventColor).replace('0.35', '0.55')
                             }}
                             onMouseLeave={(e) => {
                               const el = e.currentTarget as HTMLElement
                               el.style.filter = ''
-                              el.style.transform = ''
-                              el.style.boxShadow = ehCancelado ? 'none' : gerarSombraEvento(eventColor)
                             }}
                             className="absolute"
                             style={{
@@ -281,17 +472,24 @@ export default function AgendaSemanal({
                               height: layout.height,
                               left: layout.left,
                               width: layout.width,
-                              zIndex: layout.zIndex,
+                              zIndex: estaArrastando ? 100 : layout.zIndex,
                               background: ehCancelado
                                 ? 'repeating-linear-gradient(45deg, rgba(120,120,120,0.25) 0px, rgba(120,120,120,0.25) 2px, rgba(80,80,80,0.15) 2px, rgba(80,80,80,0.15) 10px)'
                                 : gerarGradienteEvento(eventColor),
-                              boxShadow: ehCancelado ? 'none' : gerarSombraEvento(eventColor),
+                              boxShadow: estaArrastando
+                                ? '0 10px 28px rgba(0,0,0,0.38)'
+                                : (ehCancelado ? 'none' : gerarSombraEvento(eventColor)),
                               border: ehCancelado ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.12)',
                               borderRadius: 10,
                               overflow: 'hidden',
-                              cursor: onEventoClick ? 'pointer' : 'default',
-                              opacity: ehCancelado ? 0.45 : 1,
-                              transition: 'filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+                              cursor: ehCancelado
+                                ? 'default'
+                                : (estaArrastando ? 'grabbing' : (ehArrastavel ? 'grab' : (onEventoClick ? 'pointer' : 'default'))),
+                              opacity: estaArrastando ? 0.88 : (outroArrastando ? 0.55 : (ehCancelado ? 0.45 : 1)),
+                              transform: estaArrastando ? `translate(${translateX}px, ${translateY}px)` : undefined,
+                              transition: estaArrastando ? 'none' : 'filter 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease',
+                              touchAction: ehArrastavel ? 'none' : undefined,
+                              userSelect: 'none',
                             }}
                           >
                             <div style={{ padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column' }}>
