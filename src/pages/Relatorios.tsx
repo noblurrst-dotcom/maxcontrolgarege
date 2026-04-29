@@ -35,7 +35,7 @@ function baixarCSV(nome: string, cabecalho: string[], linhas: (string | number)[
 
 // ─── Utilitário PDF ───────────────────────────────────────────────────────────
 // Paleta A.T.A Gestão — fixa, sem customização por tenant.
-const REL_COR_PRIMARIA = '#CFFF04'
+const REL_COR_PRIMARIA = '#3657A3'
 const REL_COR_SECUNDARIA = '#1a1a2e'
 
 async function gerarPDFTabela(

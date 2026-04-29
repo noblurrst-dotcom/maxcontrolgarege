@@ -1,7 +1,7 @@
 import type { Orcamento, Servico } from '../types'
 
 // Paleta A.T.A Gestão — fixa, sem customização por tenant.
-const COR_PRIMARIA = '#CFFF04'
+const COR_PRIMARIA = '#3657A3'
 const COR_SECUNDARIA = '#1a1a2e'
 
 interface BrandConfig {

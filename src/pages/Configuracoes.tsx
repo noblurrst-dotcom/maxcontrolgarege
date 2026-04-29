@@ -5,7 +5,7 @@ import toast from '../lib/toast'
 
 // Paleta A.T.A Gestão — fixa, usada apenas na pré-visualização do PDF.
 // A paleta real do app vem das CSS variables em src/index.css.
-const PDF_COR_PRIMARIA = '#CFFF04'
+const PDF_COR_PRIMARIA = '#3657A3'
 const PDF_COR_SECUNDARIA = '#1a1a2e'
 
 export default function Configuracoes() {

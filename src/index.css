@@ -5,17 +5,17 @@
 @import './styles/semantic-colors.css';
 
 :root {
-  /* Marca — primary (default neon yellow) */
-  --color-primary-50: #f5ffe6;
-  --color-primary-100: #e8ffbf;
-  --color-primary-200: #d9ff80;
-  --color-primary-300: #d4ff4d;
-  --color-primary-400: #d2ff2b;
-  --color-primary-500: #CFFF04;
-  --color-primary-600: #a6cc03;
-  --color-primary-700: #7d9902;
-  --color-primary-800: #536602;
-  --color-primary-900: #2a3301;
+  /* Marca — primary (azul royal A.T.A Gestão, base #3657A3) */
+  --color-primary-50: #eff2f8;
+  --color-primary-100: #e1e6f1;
+  --color-primary-200: #c3cde3;
+  --color-primary-300: #9babd1;
+  --color-primary-400: #6881ba;
+  --color-primary-500: #3657A3;
+  --color-primary-600: #2e4a8b;
+  --color-primary-700: #263d72;
+  --color-primary-800: #1e305a;
+  --color-primary-900: #162341;
 
   /* Marca — secondary (default near-black) */
   --color-secondary-50: #e6e6f2;
@@ -29,17 +29,17 @@
   --color-secondary-800: #08080f;
   --color-secondary-900: #04040a;
 
-  /* Texto contrastante automatizado (defaults; sobrescritos pelo BrandContext) */
-  --color-on-primary: #0d0d1a;
+  /* Texto contrastante (paleta fixa A.T.A Gestão) */
+  --color-on-primary: #ffffff;
   --color-on-secondary: #ffffff;
   --color-on-surface: #0f172a;
   --color-on-surface-muted: #475569;
 
-  /* Estados derivados da primary (defaults) */
-  --color-primary-hover: #a6cc03;
-  --color-primary-active: #7d9902;
-  --color-primary-disabled: #d9ff80;
-  --color-primary-contrast: #CFFF04;
+  /* Estados derivados da primary */
+  --color-primary-hover: #2e4a8b;
+  --color-primary-active: #263d72;
+  --color-primary-disabled: #c3cde3;
+  --color-primary-contrast: #3657A3;
   --color-secondary-contrast: #1a1a2e;
 
   /* Surfaces (claro por default) */
@@ -311,8 +311,8 @@ html.dark {
 .dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
 .dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.1) !important; }
 .dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.1) !important; }
-.dark .bg-primary-50 { background-color: rgba(207, 255, 4, 0.08) !important; }
-.dark .bg-primary-50\/30 { background-color: rgba(207, 255, 4, 0.04) !important; }
+.dark .bg-primary-50 { background-color: rgba(54, 87, 163, 0.18) !important; }
+.dark .bg-primary-50\/30 { background-color: rgba(54, 87, 163, 0.08) !important; }
 
 /* Soft colored backgrounds - 100 level */
 .dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
@@ -321,7 +321,7 @@ html.dark {
 .dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
 .dark .bg-violet-100 { background-color: rgba(139, 92, 246, 0.15) !important; }
 .dark .bg-gray-100 { background-color: #222235 !important; }
-.dark .bg-primary-100 { background-color: rgba(207, 255, 4, 0.12) !important; }
+.dark .bg-primary-100 { background-color: rgba(54, 87, 163, 0.25) !important; }
 
 /* Modals / overlays */
 .dark .bg-black\/40 { background-color: rgba(0, 0, 0, 0.6) !important; }

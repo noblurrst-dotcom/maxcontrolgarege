@@ -255,7 +255,7 @@ export default function VitrinePublica() {
   }
 
   // Paleta fixa A.T.A Gestão — sem customização por tenant.
-  const corPri = '#CFFF04'
+  const corPri = '#3657A3'
   const corSec = '#1a1a2e'
 
   // =====================================================================
