@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, UserPlus, Eye, EyeOff, AlertTriangle, ArrowLeft, Mail } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 
 const BRAND = '#3657a3'
 const BRAND_DARK = '#2a4580'

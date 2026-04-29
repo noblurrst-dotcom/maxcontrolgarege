@@ -12,7 +12,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import ClientePicker from '../components/ClientePicker'
 import ChecklistUnificado from '../components/ChecklistUnificado'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
 import ColaboradorPicker from '../components/ColaboradorPicker'
 // jsPDF carregado dinamicamente via import() para não pesar no bundle inicial

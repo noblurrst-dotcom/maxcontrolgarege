@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import toast from 'react-hot-toast'
+import toast from './lib/toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { BrandProvider } from './contexts/BrandContext'
 import { ThemeProvider } from './contexts/ThemeContext'

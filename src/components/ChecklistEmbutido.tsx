@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { CHECKLIST_ITENS_PADRAO } from '../types'
 import type { Servico } from '../types'
 import { Camera, X, ChevronDown, ChevronUp, ClipboardCheck, Loader2 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import { validarArquivo } from '../lib/validarArquivo'
 
 interface ItemForm {

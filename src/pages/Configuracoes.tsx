@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { Settings, Upload, X, RotateCcw, Palette, FileText, Building2, Eye, UserCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 import { useBrand } from '../contexts/BrandContext'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import {
   contrastRatio,
   classifyContrast,

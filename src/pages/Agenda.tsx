@@ -13,7 +13,7 @@ import ClientePicker from '../components/ClientePicker'
 import AgendaSemanal from '../components/AgendaSemanal'
 import AgendaMensal from '../components/AgendaMensal'
 import CapturarPagamentoModal from '../components/CapturarPagamentoModal'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 
 const CORES_AGENDA = ['#4285F4', '#33B679', '#F4B400', '#E67C73', '#7986CB', '#8E24AA', '#039BE5', '#616161', '#D50000', '#F09300', '#0B8043', '#3F51B5']
 

@@ -7,7 +7,7 @@ import {
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
-import toast from 'react-hot-toast'
+import toast from '../../lib/toast'
 
 type Tab = 'banners' | 'mensagens'
 

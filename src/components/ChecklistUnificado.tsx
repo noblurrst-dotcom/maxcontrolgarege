@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useBrand } from '../contexts/BrandContext'
 import type { Servico, Orcamento, Venda } from '../types'
 import { Camera, X, ClipboardCheck, Loader2, Trash2, Download } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import { validarArquivo } from '../lib/validarArquivo'
 import { exportarOrcamentoPDF } from '../lib/exportarOrcamentoPDF'
 

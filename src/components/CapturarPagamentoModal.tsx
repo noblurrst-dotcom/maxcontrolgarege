@@ -4,7 +4,7 @@ import type { Agendamento, Venda, FormaPagamento, Pagamento } from '../types'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { fmt } from '../lib/utils'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import ColaboradorPicker from './ColaboradorPicker'
 
 const FORMAS: { value: FormaPagamento; label: string; icon: React.ReactNode }[] = [

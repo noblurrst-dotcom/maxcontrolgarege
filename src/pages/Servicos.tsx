@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit3, Trash2, Save, X, Loader2, Settings, Camera, ImageIcon, DollarSign } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import type { Servico } from '../types'
 
 export default function Servicos() {

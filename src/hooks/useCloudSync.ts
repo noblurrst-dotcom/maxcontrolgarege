@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { safeGetStorage, safeSetStorage } from '../lib/utils'
 import { useSupportView } from '../contexts/SupportViewContext'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 
 // =====================================================================
 // useCloudSync — Sincroniza arrays de dados com Supabase + localStorage

@@ -4,7 +4,7 @@ import {
   Globe, Phone, Mail, MapPin, Instagram, Facebook, Music2,
   Clock, Calendar, GripVertical, Image, Loader2, Link2,
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useBrand } from '../contexts/BrandContext'
 import { useCloudSyncSingle } from '../hooks/useCloudSync'

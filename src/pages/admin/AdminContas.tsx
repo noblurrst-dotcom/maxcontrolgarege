@@ -4,7 +4,7 @@ import { Search, ChevronLeft, ChevronRight, Eye, Headphones, Loader2, Users, Ref
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
-import toast from 'react-hot-toast'
+import toast from '../../lib/toast'
 
 interface Conta {
   id: string

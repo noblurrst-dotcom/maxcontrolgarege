@@ -26,7 +26,8 @@ import {
   MessageSquare,
   Store,
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
+import { setToastSuperAdmin } from '../lib/toast'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useBrand } from '../contexts/BrandContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -78,6 +79,11 @@ export default function Layout() {
 
   const nomeUsuario = brand.nome_usuario || user?.user_metadata?.nome || user?.email?.split('@')[0] || 'Usuário'
   const { isSuperAdmin } = useIsSuperAdmin()
+
+  // Sincroniza flag global do wrapper de toast: só superadmins veem notificações
+  useEffect(() => {
+    setToastSuperAdmin(!!isSuperAdmin)
+  }, [isSuperAdmin])
 
   const generateSupportCode = useCallback(async () => {
     if (!user || !isSupabaseConfigured) {

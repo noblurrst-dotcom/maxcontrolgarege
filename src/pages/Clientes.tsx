@@ -7,7 +7,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import { useCloudSync } from '../hooks/useCloudSync'
 import { supabase, garantirBucketFotosVeiculos } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import toast from 'react-hot-toast'
+import toast from '../lib/toast'
 import { validarArquivo } from '../lib/validarArquivo'
 import ChecklistEmbutido from '../components/ChecklistEmbutido'
 

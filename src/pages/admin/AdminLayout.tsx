@@ -12,7 +12,7 @@ import {
   Megaphone,
 } from 'lucide-react'
 import { useState } from 'react'
-import toast from 'react-hot-toast'
+import toast from '../../lib/toast'
 
 const NAV_ITEMS = [
   { path: '/admin', label: 'Dashboard', icon: BarChart2 },

@@ -5,7 +5,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
-import toast from 'react-hot-toast'
+import toast from '../../lib/toast'
 
 interface Metricas {
   total_contas: number
