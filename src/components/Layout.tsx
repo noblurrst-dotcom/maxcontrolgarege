@@ -33,7 +33,6 @@ import { useBrand } from '../contexts/BrandContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSubUsuario } from '../contexts/SubUsuarioContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import FloatingHelpButton from './FloatingHelpButton'
 import GlobalBanner from './GlobalBanner'
 import MensagensDropdown from './MensagensDropdown'
 import { useIsSuperAdmin } from '../hooks/useIsSuperAdmin'
@@ -589,9 +588,6 @@ export default function Layout() {
       <main className="flex-1 container-responsive py-4 sm:py-6">
         <Outlet />
       </main>
-
-      {/* Floating Help Button — hidden in support mode */}
-      {!isSupport && <FloatingHelpButton />}
 
     </div>
   )
