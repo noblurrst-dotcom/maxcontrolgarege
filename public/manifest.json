@@ -4,22 +4,22 @@
   "description": "A.T.A Gestão — Plataforma completa de gestão para estética automotiva",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d0d1a",
-  "theme_color": "#CFFF04",
+  "background_color": "#ffffff",
+  "theme_color": "#3657A3",
   "orientation": "portrait",
   "scope": "/",
   "lang": "pt-BR",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/kv/favicon-dark.png",
-      "sizes": "512x512",
+      "src": "/kv/pwas.png",
+      "sizes": "any",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/kv/favicon-dark.png",
-      "sizes": "512x512",
+      "src": "/kv/pwas.png",
+      "sizes": "any",
       "type": "image/png",
       "purpose": "maskable"
     }
