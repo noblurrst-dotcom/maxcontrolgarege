@@ -133,13 +133,14 @@ BEGIN
   END IF;
 
   -- Criar pagamento
+  -- pagamentos.venda_id é uuid; v_venda_id é text → cast obrigatório
   INSERT INTO public.pagamentos (
     id, user_id, venda_id, valor, forma_pagamento, parcelas,
     data_pagamento, observacoes, financeiro_id, created_at
   ) VALUES (
     gen_random_uuid(),
     v_user_id,
-    v_venda_id,
+    v_venda_id::uuid,
     v_valor,
     v_forma,
     v_parcelas,
