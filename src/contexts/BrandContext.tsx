@@ -20,17 +20,6 @@ const DEFAULT_BRAND: BrandConfig = {
 
 const STORAGE_KEY = 'brand_config'
 
-/**
- * Remove colunas deprecated de cor que ainda podem existir no banco ou localStorage legado.
- * A paleta do app é fixa, vem de src/index.css (:root).
- * TODO(release futura): dropar colunas cor_primaria/cor_secundaria/cor_texto da tabela brand_config.
- */
-function stripDeprecatedColorFields<T extends Record<string, any>>(obj: T): Omit<T, 'cor_primaria' | 'cor_secundaria' | 'cor_texto'> {
-  const { cor_primaria, cor_secundaria, cor_texto, ...rest } = obj
-  return rest
-}
-
-// --- Context ---
 interface BrandContextType {
   brand: BrandConfig
   updateBrand: (b: Partial<BrandConfig>) => void
@@ -48,7 +37,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const [brand, setBrand] = useState<BrandConfig>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      return saved ? { ...DEFAULT_BRAND, ...stripDeprecatedColorFields(JSON.parse(saved)) } : DEFAULT_BRAND
+      return saved ? { ...DEFAULT_BRAND, ...JSON.parse(saved) } : DEFAULT_BRAND
     } catch {
       return DEFAULT_BRAND
     }
@@ -64,13 +53,13 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         if (row && !error) {
           const { user_id, updated_at, ...rest } = row
-          const cloudBrand = { ...DEFAULT_BRAND, ...stripDeprecatedColorFields(rest) } as BrandConfig
+          const cloudBrand = { ...DEFAULT_BRAND, ...rest } as BrandConfig
           setBrand(cloudBrand)
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudBrand))
         } else {
           // No cloud data — push local up
-          const local = stripDeprecatedColorFields(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'))
-          if ((local as any).nome_empresa) {
+          const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          if (local.nome_empresa) {
             await supabase.from('brand_config').upsert({ ...local, user_id: user.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
           }
         }
