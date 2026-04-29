@@ -304,6 +304,18 @@ html.dark {
   border-color: var(--color-primary-500) !important;
 }
 
+/* Exceção: inputs dentro do <header> (barra de busca) mantêm o estilo
+   transparente definido via Tailwind, sobre o fundo bg-secondary-500. */
+.dark header input,
+.dark header input:focus {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+.dark header input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
 /* Soft colored backgrounds */
 .dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
 .dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1) !important; }
