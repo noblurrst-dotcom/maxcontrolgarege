@@ -254,8 +254,9 @@ export default function VitrinePublica() {
     )
   }
 
-  const corPri = config.cor_primaria || '#CFFF04'
-  const corSec = config.cor_secundaria || '#0d0d1a'
+  // Paleta fixa A.T.A Gestão — sem customização por tenant.
+  const corPri = '#CFFF04'
+  const corSec = '#1a1a2e'
 
   // =====================================================================
   // Etapa: Confirmado

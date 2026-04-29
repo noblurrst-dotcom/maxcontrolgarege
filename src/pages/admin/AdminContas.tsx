@@ -14,7 +14,6 @@ interface Conta {
   status: 'ativa' | 'dormente' | 'inativa' | 'nunca_logou' | 'suspensa'
   nome_empresa: string
   slogan: string
-  cor_primaria: string
   total_clientes: number
   total_vendas: number
   total_agendamentos: number

@@ -21,8 +21,6 @@ interface ContaInfo {
 interface BrandInfo {
   nome_empresa: string | null
   slogan: string | null
-  cor_primaria: string | null
-  cor_secundaria: string | null
   logo_url: string | null
   nome_usuario: string | null
 }
@@ -207,7 +205,7 @@ export default function AdminContaDetalhe() {
             {brand?.logo_url ? (
               <img src={brand.logo_url} alt="" className="w-14 h-14 rounded-xl object-cover" />
             ) : (
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold text-white" style={{ backgroundColor: brand?.cor_primaria || '#6b7280' }}>
+              <div className="w-14 h-14 rounded-xl bg-primary-500 flex items-center justify-center text-xl font-bold text-on-primary">
                 {nome.charAt(0).toUpperCase()}
               </div>
             )}

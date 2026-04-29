@@ -59,8 +59,6 @@ export default function VitrineConfig() {
         email: brand.email || '',
         endereco: brand.endereco || '',
         logo_url: brand.logo_url || '',
-        cor_primaria: brand.cor_primaria || '#CFFF04',
-        cor_secundaria: brand.cor_secundaria || '#0d0d1a',
         slug: config.slug || slugify(brand.nome_empresa),
       })
     }

@@ -24,9 +24,6 @@ export interface VitrineConfig {
   instagram_url: string
   facebook_url: string
   tiktok_url: string
-  // Aparência
-  cor_primaria: string
-  cor_secundaria: string
   // Agendamento
   aceita_agendamento: boolean
   horario_inicio: string       // 'HH:mm'
@@ -57,8 +54,6 @@ export const VITRINE_CONFIG_DEFAULT: VitrineConfig = {
   instagram_url: '',
   facebook_url: '',
   tiktok_url: '',
-  cor_primaria: '#CFFF04',
-  cor_secundaria: '#0d0d1a',
   aceita_agendamento: true,
   horario_inicio: '08:00',
   horario_fim: '18:00',
