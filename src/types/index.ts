@@ -108,9 +108,6 @@ export interface BrandConfig {
   email: string;
   endereco: string;
   logo_url: string;
-  cor_primaria: string;
-  cor_secundaria: string;
-  cor_texto: string;
   pdf_rodape: string;
   pdf_termos: string;
   pdf_mostrar_logo: boolean;
