@@ -1,39 +1,12 @@
-import { useState, useRef, useMemo } from 'react'
-import { Settings, Upload, X, RotateCcw, Palette, FileText, Building2, Eye, UserCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Settings, Upload, X, RotateCcw, FileText, Building2, Eye, UserCircle } from 'lucide-react'
 import { useBrand } from '../contexts/BrandContext'
 import toast from '../lib/toast'
-import {
-  contrastRatio,
-  classifyContrast,
-  getReadableTextColor,
-  adjustForContrast,
-  type ContrastLevel,
-} from '../lib/color'
 
-function ContrastBadge({ ratio, level, label }: { ratio: number; level: ContrastLevel; label: string }) {
-  const meta: Record<ContrastLevel, { bg: string; text: string; icon: typeof CheckCircle2; msg: string }> = {
-    AAA: { bg: 'bg-success-50', text: 'text-success-700', icon: CheckCircle2, msg: 'Excelente contraste (AAA)' },
-    AA: { bg: 'bg-success-50', text: 'text-success-700', icon: CheckCircle2, msg: 'Bom contraste (AA)' },
-    weak: { bg: 'bg-warning-50', text: 'text-warning-700', icon: AlertTriangle, msg: 'Contraste fraco — pode dificultar leitura' },
-    fail: { bg: 'bg-danger-50', text: 'text-danger-700', icon: AlertTriangle, msg: 'Contraste insuficiente — ajuste automático' },
-  }
-  const m = meta[level]
-  const Icon = m.icon
-  return (
-    <div className={`flex items-start gap-2 ${m.bg} ${m.text} rounded-lg px-3 py-2`}>
-      <Icon size={14} className="shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-bold leading-tight">{label}</p>
-        <p className="text-[10px] opacity-90 leading-tight">{m.msg} · {ratio.toFixed(2)}:1</p>
-      </div>
-    </div>
-  )
-}
-
-const CORES_SUGERIDAS = [
-  '#CFFF04', '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
-  '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#14B8A6',
-]
+// Paleta A.T.A Gestão — fixa, usada apenas na pré-visualização do PDF.
+// A paleta real do app vem das CSS variables em src/index.css.
+const PDF_COR_PRIMARIA = '#CFFF04'
+const PDF_COR_SECUNDARIA = '#1a1a2e'
 
 export default function Configuracoes() {
   const { brand, updateBrand, resetBrand } = useBrand()
@@ -66,46 +39,6 @@ export default function Configuracoes() {
       toast.success('Configurações restauradas')
     }
   }
-
-  // Cálculos de contraste em tempo real (memoizados)
-  const contrastInfo = useMemo(() => {
-    const pri = brand.cor_primaria
-    const sec = brand.cor_secundaria
-    const onPrimary = (() => {
-      const c = getReadableTextColor(pri, 4.5)
-      return contrastRatio(c, pri) >= 4.5 ? c : adjustForContrast(c, pri, 4.5)
-    })()
-    const onSecondary = (() => {
-      const c = getReadableTextColor(sec, 4.5)
-      return contrastRatio(c, sec) >= 4.5 ? c : adjustForContrast(c, sec, 4.5)
-    })()
-    const ratioOnPrimary = contrastRatio(onPrimary, pri)
-    const ratioOnSecondary = contrastRatio(onSecondary, sec)
-    const ratioPriOnSurface = contrastRatio(pri, '#ffffff')
-    return {
-      onPrimary,
-      onSecondary,
-      ratioOnPrimary,
-      ratioOnSecondary,
-      ratioPriOnSurface,
-      levelOnPrimary: classifyContrast(ratioOnPrimary),
-      levelOnSecondary: classifyContrast(ratioOnSecondary),
-      levelPriOnSurface: classifyContrast(ratioPriOnSurface, true),
-    }
-  }, [brand.cor_primaria, brand.cor_secundaria])
-
-  const {
-    onPrimary, onSecondary,
-    ratioOnPrimary, ratioOnSecondary, ratioPriOnSurface,
-    levelOnPrimary, levelOnSecondary, levelPriOnSurface,
-  } = contrastInfo
-
-  const worstLevel: ContrastLevel = (() => {
-    const order: ContrastLevel[] = ['fail', 'weak', 'AA', 'AAA']
-    const levels = [levelOnPrimary, levelOnSecondary, levelPriOnSurface]
-    for (const l of order) if (levels.includes(l)) return l
-    return 'AAA'
-  })()
 
   return (
     <div className="space-y-6 pb-6">
@@ -202,160 +135,6 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      {/* Cores */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center"><Palette size={16} className="text-rose-600" /></div>
-          <h2 className="text-sm font-bold text-gray-900">Cores</h2>
-        </div>
-        <div className="space-y-5">
-          {worstLevel === 'fail' && (
-            <div className="bg-danger-50 border border-danger-200 rounded-xl p-3 flex items-start gap-2" role="alert">
-              <AlertTriangle size={16} className="text-danger-600 shrink-0 mt-0.5" />
-              <div className="flex-1 text-xs">
-                <p className="font-bold text-danger-700">Contraste insuficiente detectado</p>
-                <p className="text-danger-700 opacity-90 mt-0.5">
-                  O sistema vai ajustar automaticamente a cor de texto sobre primary/secondary para garantir legibilidade. Isso não muda as cores que você escolheu.
-                </p>
-              </div>
-            </div>
-          )}
-          {worstLevel === 'weak' && (
-            <div className="bg-warning-50 border border-warning-200 rounded-xl p-3 flex items-start gap-2" role="alert">
-              <Info size={16} className="text-warning-700 shrink-0 mt-0.5" />
-              <div className="flex-1 text-xs">
-                <p className="font-bold text-warning-700">Contraste fraco em alguma combinação</p>
-                <p className="text-warning-700 opacity-90 mt-0.5">
-                  Texto pode ficar difícil de ler em alguns elementos. Considere ajustar para passar AA (4.5:1).
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">Cor primária</label>
-            <div className="flex flex-wrap items-center gap-2">
-              {CORES_SUGERIDAS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => updateBrand({ cor_primaria: c })}
-                  className={`w-8 h-8 rounded-xl transition-all active:scale-95 ${brand.cor_primaria === c ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'hover:scale-105'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-              <div className="relative">
-                <input
-                  type="color"
-                  value={brand.cor_primaria}
-                  onChange={(e) => updateBrand({ cor_primaria: e.target.value })}
-                  className="absolute inset-0 w-8 h-8 opacity-0 cursor-pointer"
-                />
-                <div className="w-8 h-8 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center" style={{ backgroundColor: brand.cor_primaria }}>
-                  <span className="text-[10px] font-bold text-white mix-blend-difference">+</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1.5">Atual: {brand.cor_primaria}</p>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">Cor secundária (fundo do cabeçalho)</label>
-            <div className="flex flex-wrap items-center gap-2">
-              {['#0d0d1a', '#1a1a2e', '#16213e', '#1f2937', '#18181b', '#0f172a', '#171717'].map((c) => (
-                <button
-                  key={c}
-                  onClick={() => updateBrand({ cor_secundaria: c })}
-                  className={`w-8 h-8 rounded-xl transition-all active:scale-95 ${brand.cor_secundaria === c ? 'ring-2 ring-offset-2 ring-gray-900 scale-110' : 'hover:scale-105'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-              <div className="relative">
-                <input
-                  type="color"
-                  value={brand.cor_secundaria}
-                  onChange={(e) => updateBrand({ cor_secundaria: e.target.value })}
-                  className="absolute inset-0 w-8 h-8 opacity-0 cursor-pointer"
-                />
-                <div className="w-8 h-8 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center" style={{ backgroundColor: brand.cor_secundaria }}>
-                  <span className="text-[10px] font-bold text-white mix-blend-difference">+</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1.5">Atual: {brand.cor_secundaria}</p>
-          </div>
-
-          {/* Live Preview com tokens reais */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">Pré-visualização ao vivo</label>
-            <div className="rounded-xl overflow-hidden border border-gray-200">
-              {/* Header mock */}
-              <div className="h-12 flex items-center px-4 gap-3" style={{ backgroundColor: brand.cor_secundaria, color: onSecondary }}>
-                {brand.logo_url && <img src={brand.logo_url} alt="" className="w-7 h-7 object-contain" />}
-                <span className="text-sm font-bold">{brand.nome_empresa || 'Sua Empresa'}</span>
-                <span className="ml-auto text-[11px] opacity-70">Header</span>
-              </div>
-              {/* Card mock */}
-              <div className="p-4 bg-gray-50 space-y-3">
-                <div className="bg-white rounded-xl p-3 border border-gray-100">
-                  <p className="text-xs font-bold text-gray-900 mb-1">Card de exemplo</p>
-                  <p className="text-[11px] text-gray-500 mb-3">Conteúdo neutro do card.</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded-full text-xs font-bold"
-                      style={{ backgroundColor: brand.cor_primaria, color: onPrimary }}
-                    >
-                      Botão primário
-                    </button>
-                    <button type="button" className="px-4 py-2 rounded-full text-xs font-bold border border-gray-200 text-gray-600">
-                      Secundário
-                    </button>
-                  </div>
-                </div>
-                {/* Toast mock */}
-                <div className="flex gap-2">
-                  <div className="flex-1 bg-success-50 text-success-700 rounded-lg px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 size={12} /> Toast de sucesso
-                  </div>
-                  <div className="flex-1 bg-danger-50 text-danger-700 rounded-lg px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5">
-                    <AlertTriangle size={12} /> Toast de erro
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Indicadores de contraste com aria-live */}
-          <div className="space-y-2" aria-live="polite" aria-atomic="true">
-            <ContrastBadge
-              label="Texto sobre cor primária"
-              ratio={ratioOnPrimary}
-              level={levelOnPrimary}
-            />
-            <ContrastBadge
-              label="Texto sobre cor secundária (header)"
-              ratio={ratioOnSecondary}
-              level={levelOnSecondary}
-            />
-            <ContrastBadge
-              label="Cor primária em fundo claro (botão sobre página)"
-              ratio={ratioPriOnSurface}
-              level={levelPriOnSurface}
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              updateBrand({ cor_primaria: brand.cor_primaria, cor_secundaria: brand.cor_secundaria })
-              toast.success('Cores aplicadas com sucesso!')
-            }}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 bg-primary-500 text-on-primary"
-          >
-            Salvar Cores
-          </button>
-        </div>
-      </div>
-
       {/* Configuração do PDF */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-5">
@@ -405,12 +184,12 @@ export default function Configuracoes() {
             </div>
             <div className="p-6 space-y-4">
               {/* PDF Header */}
-              <div className="flex items-center gap-4 pb-4 border-b-2" style={{ borderColor: brand.cor_primaria }}>
+              <div className="flex items-center gap-4 pb-4 border-b-2" style={{ borderColor: PDF_COR_PRIMARIA }}>
                 {brand.pdf_mostrar_logo && brand.logo_url && (
                   <img src={brand.logo_url} alt="Logo" className="w-16 h-16 object-contain" />
                 )}
                 <div>
-                  <p className="text-lg font-bold" style={{ color: brand.cor_secundaria }}>{brand.nome_empresa || 'Sua Empresa'}</p>
+                  <p className="text-lg font-bold" style={{ color: PDF_COR_SECUNDARIA }}>{brand.nome_empresa || 'Sua Empresa'}</p>
                   {brand.slogan && <p className="text-xs text-gray-400">{brand.slogan}</p>}
                   {brand.pdf_mostrar_dados && (
                     <div className="mt-1 space-y-0.5">
@@ -433,7 +212,7 @@ export default function Configuracoes() {
 
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-white" style={{ backgroundColor: brand.cor_secundaria }}>
+                  <tr className="text-white" style={{ backgroundColor: PDF_COR_SECUNDARIA }}>
                     <th className="text-left p-2 rounded-l-lg">Serviço</th>
                     <th className="text-center p-2">Qtd</th>
                     <th className="text-right p-2">Valor</th>
@@ -458,7 +237,7 @@ export default function Configuracoes() {
 
               <div className="text-right space-y-1">
                 <p className="text-xs text-gray-500">Subtotal: <span className="font-semibold">R$ 550,00</span></p>
-                <p className="text-sm font-bold" style={{ color: brand.cor_secundaria }}>Total: R$ 550,00</p>
+                <p className="text-sm font-bold" style={{ color: PDF_COR_SECUNDARIA }}>Total: R$ 550,00</p>
               </div>
 
               {brand.pdf_termos && (
@@ -469,7 +248,7 @@ export default function Configuracoes() {
               )}
 
               {brand.pdf_rodape && (
-                <div className="text-center pt-3 border-t-2" style={{ borderColor: brand.cor_primaria }}>
+                <div className="text-center pt-3 border-t-2" style={{ borderColor: PDF_COR_PRIMARIA }}>
                   <p className="text-xs font-medium text-gray-500">{brand.pdf_rodape}</p>
                   {brand.email && <p className="text-[10px] text-gray-400 mt-0.5">{brand.email}</p>}
                 </div>
