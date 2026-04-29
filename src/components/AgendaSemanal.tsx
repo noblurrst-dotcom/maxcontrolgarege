@@ -59,6 +59,11 @@ interface AgendaSemanalProps {
   semanaOffset: number
   onSemanaChange: (offset: number) => void
   onEventoClick?: (ag: Agendamento) => void
+  /**
+   * Callback disparado quando um agendamento é arrastado para outra data/hora.
+   * Recebe o id, o novo início e o novo fim. Se ausente, drag fica desabilitado.
+   */
+  onAgendamentoMover?: (id: string, novoInicio: Date, novoFim: Date) => void
   horaFinal?: number
   vendas?: Venda[]
 }

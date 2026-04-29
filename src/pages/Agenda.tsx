@@ -102,6 +102,20 @@ export default function Agenda() {
   const STATUS_LABELS: Record<Agendamento['status'], string> = { pendente: 'Pendente', confirmado: 'Confirmado', em_andamento: 'Em andamento', concluido: 'Concluído', cancelado: 'Cancelado' }
   const STATUS_COLORS: Record<Agendamento['status'], string> = { pendente: 'bg-warning-100 text-warning-700', confirmado: 'bg-blue-100 text-blue-700', em_andamento: 'bg-purple-100 text-purple-700', concluido: 'bg-success-100 text-success-700', cancelado: 'bg-danger-100 text-danger-700' }
 
+  const moverAgendamento = (id: string, novoInicio: Date, novoFim: Date) => {
+    const ag = lista.find(a => a.id === id)
+    if (!ag) return
+    const duracao_min = Math.max(1, Math.round((novoFim.getTime() - novoInicio.getTime()) / 60000))
+    const atualizado: Agendamento = {
+      ...ag,
+      data_hora: novoInicio.toISOString(),
+      data_hora_fim: novoFim.toISOString(),
+      duracao_min,
+    }
+    salvar(lista.map(a => a.id === id ? atualizado : a))
+    toast.success(`Movido para ${novoInicio.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })} às ${novoInicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`)
+  }
+
   const mudarStatus = (ag: Agendamento, novoStatus: Agendamento['status']) => {
     const atualizado = { ...ag, status: novoStatus }
     salvar(lista.map(a => a.id === ag.id ? atualizado : a))
@@ -305,6 +319,7 @@ export default function Agenda() {
             semanaOffset={semanaOffset}
             onSemanaChange={setSemanaOffset}
             onEventoClick={setAgDetalhe}
+            onAgendamentoMover={moverAgendamento}
             vendas={vendas}
           />
           {/* Lista de agendamentos com busca */}
