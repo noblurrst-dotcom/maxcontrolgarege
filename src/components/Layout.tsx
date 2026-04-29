@@ -148,15 +148,15 @@ export default function Layout() {
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* Logo A.T.A Gestão — ícone em mobile (<sm), horizontal em sm+ */}
               <div className="flex items-center cursor-pointer shrink-0" onClick={() => navigate('/')} title="A.T.A Gestão">
-                {/* Mobile: ícone KV_Favicon (h-8 w-8) */}
+                {/* Mobile: ícone KV_Favicon (h-8 w-8) — sempre branco (header tem fundo escuro nos dois modos) */}
                 <img
-                  src={isDark ? '/kv/logo-compress/KV_Favicon_white_comprimido.webp' : '/kv/logo-compress/KV_Favicon_black_comprimido.webp'}
+                  src="/kv/logo-compress/KV_Favicon_white_comprimido.webp"
                   alt="A.T.A Gestão"
                   className="h-8 w-8 object-contain sm:hidden"
                 />
-                {/* sm+: logo horizontal com max-w para não dominar */}
+                {/* sm+: logo horizontal branca (header sempre escuro) */}
                 <img
-                  src={isDark ? '/kv/logo-horizontal-white.png' : '/kv/logo-horizontal-blue.png'}
+                  src="/kv/logo-horizontal-white.png"
                   alt="A.T.A Gestão"
                   className="h-7 sm:h-8 md:h-[38px] w-auto max-w-[120px] sm:max-w-[140px] md:max-w-[180px] object-contain hidden sm:block"
                 />
