@@ -258,8 +258,11 @@ export default function AgendaSemanal({
     setDragging(null)
     if (!target) return
 
-    // Se não houve mudança efetiva (mesmo dia e mesma hora), não chama o callback.
-    if (target.novoInicio.getTime() === d.origInicio.getTime()) return
+    // Se não houve mudança efetiva (mesmo início E mesmo fim), não chama o callback.
+    const semMudanca =
+      target.novoInicio.getTime() === d.origInicio.getTime() &&
+      target.novoFim.getTime() === d.origFim.getTime()
+    if (semMudanca) return
 
     onAgendamentoMover?.(d.id, target.novoInicio, target.novoFim)
   }
